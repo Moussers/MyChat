@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37027.9 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mychat", "mychat\mychat.vcxproj", "{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Debug|x64.ActiveCfg = Debug|x64
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Debug|x64.Build.0 = Debug|x64
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Debug|x86.ActiveCfg = Debug|Win32
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Debug|x86.Build.0 = Debug|Win32
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Release|x64.ActiveCfg = Release|x64
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Release|x64.Build.0 = Release|x64
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Release|x86.ActiveCfg = Release|Win32
+		{81DE40CF-4EDA-46C4-B3E8-0E895BE2643A}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8A16469B-2148-461C-95C2-1F3E76A27176}
+	EndGlobalSection
+EndGlobal
