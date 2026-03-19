@@ -1,5 +1,4 @@
 ﻿// mychat.cpp : Определяет точку входа для приложения.
-//
 
 #include "framework.h"
 #include "mychat.h"
@@ -24,8 +23,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-    // TODO: Разместите код здесь.
 
     // Инициализация глобальных строк
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -138,18 +135,11 @@ int SendPost(char* msg)
     return 0;
 }
 
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  ЦЕЛЬ: Регистрирует класс окна.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     //ATOM - 2 байтовых WORD.
     WNDCLASSEXW wcex;
-
     wcex.cbSize = sizeof(WNDCLASSEX);
-
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
@@ -164,45 +154,81 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     return RegisterClassExW(&wcex);
 }
-
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   ЦЕЛЬ: Сохраняет маркер экземпляра и создает главное окно
-//
-//   КОММЕНТАРИИ:
-//
-//        В этой функции маркер экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится главное окно программы.
-//
+LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
+{
+    switch (message) 
+    {
+    case WM_DESTROY:
+        return 0;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+//CALLBACK обработчик вызовов внутри нашего окна
+int CreateDatabase(HWND hWnd) 
+{
+    sqlite3* db;
+    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_pen - открывает если файл найден или если файл ненайден, тогда создааёт его
+    if (result) 
+    {
+        MessageBox(NULL, L"База данных не подключена", L"Ошибка!", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    else 
+    {
+        MessageBox(NULL, L"Осуществленно успешное подключение к базе дынных!", L"Инфо", MB_OK | MB_ICONINFORMATION);
+    }
+    WNDCLASSEX userWnd;
+    ZeroMemory(&userWnd, sizeof(WNDCLASSEX));
+    //WNDCLASSEX - в нем можно здать настройки отдельного окна: размер, высоту, расположение и так далее.
+    userWnd.cbSize = sizeof(WNDCLASSEX);
+    userWnd.style = CS_VREDRAW;
+    userWnd.lpfnWndProc = UserWndProc;
+    userWnd.cbClsExtra = 0;
+    //задаёт количество дополнительных байтов памяти, выделяемых для каждого класса окон после структуры класса 
+    userWnd.cbWndExtra = 0;
+    //задаёт количество дополнительных байтов памяти, выделяемых для каждого экземпляра окна 
+    userWnd.hInstance = GetModuleHandleA(NULL);
+    userWnd.hCursor = LoadCursor(NULL, IDC_ARROW);
+    //адрес на функцию где будет обрабатываться наше событие. Ссылка на сам userWnd.
+    //IDC_ARROW - указатель на курсор мышки.
+    userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    userWnd.lpszClassName = L"WindowUsers";
+    ATOM r = RegisterClassEx(&userWnd);
+    HWND winUser = CreateWindow(L"WindowUsers", L"Пользователи", WS_SIZEBOX | WS_VISIBLE, CW_USEDEFAULT, 0, 260, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    ShowWindow(winUser, SW_SHOWDEFAULT);
+    MSG msg;
+    while (GetMessage(&msg, winUser, 0, 0)) 
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    sqlite3_close(db);
+    return 0;
+}
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
 
    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
    {
       return FALSE;
    }
-   HWND rich = CreateWindow(L"RichEdit", )
+   //HWND rich = CreateWindow(L"EDIT", L"TEST", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL | 2, 2, 900, 45)
+   HWND text = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 2, 460, 900, 20, hWnd, 0, hInstance, NULL);
+   HWND button = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 490, 100, 20, hWnd, 0, hInstance, NULL);
+   //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
    return TRUE;
 }
 
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  ЦЕЛЬ: Обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND  - обработать меню приложения
-//  WM_PAINT    - Отрисовка главного окна
-//  WM_DESTROY  - отправить сообщение о выходе и вернуться
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -210,7 +236,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
-            // Разобрать выбор в меню:
             switch (wmId)
             {
             case IDM_ABOUT:
@@ -219,6 +244,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
+                break;
+            case IDM_USERS:
+                CreateDatabase(hWnd);
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
