@@ -4,6 +4,13 @@
 #include "mychat.h"
 #include "winsock2.h"       //Бибилиотека для работы с сетью
 #define MAX_LOADSTRING 100
+#define MAIN_WINDOW_POSITION_X 820
+#define MAIN_WINDOW_POSITION_Y 580
+#define WIDTH_INPUT_FIELD 800
+#define WIDTH_INFO_FIELD 790
+#define HEIGT_INFO_FIELD 440
+#define INFO_FIELD_POS_X 5
+#define INFO_FIELD_POS_Y 10
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -182,7 +189,7 @@ int CreateDatabase(HWND hWnd)
     }
     WNDCLASSEX userWnd;
     ZeroMemory(&userWnd, sizeof(WNDCLASSEX));
-    //WNDCLASSEX - в нем можно здать настройки отдельного окна: размер, высоту, расположение и так далее.
+    //WNDCLASSEX - в нем можно задать настройки отдельного окна: размер, высоту, расположение и так далее.
     userWnd.cbSize = sizeof(WNDCLASSEX);
     userWnd.style = CS_VREDRAW;
     userWnd.lpfnWndProc = UserWndProc;
@@ -197,30 +204,36 @@ int CreateDatabase(HWND hWnd)
     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     userWnd.lpszClassName = L"WindowUsers";
     ATOM r = RegisterClassEx(&userWnd);
-    HWND winUser = CreateWindow(L"WindowUsers", L"Пользователи", WS_SIZEBOX | WS_VISIBLE, CW_USEDEFAULT, 0, 260, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    HWND winUser = CreateWindow(L"WindowUsers", L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    //WS_OVERLAPPEDWINDOW - добавляет в окну занички закрыть, расширить, свернуть делая окно самостоятельным.
     ShowWindow(winUser, SW_SHOWDEFAULT);
     MSG msg;
-    while (GetMessage(&msg, winUser, 0, 0)) 
+    while (IsWindow(winUser)) 
     {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        if (GetMessage(&msg, winUser, 0, 0))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
     }
+    HWND lst_user = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     sqlite3_close(db);
     return 0;
 }
+
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
 
    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+      CW_USEDEFAULT, 0, MAIN_WINDOW_POSITION_X, MAIN_WINDOW_POSITION_Y, NULL, NULL, hInstance, NULL);
 
    if (!hWnd)
    {
       return FALSE;
    }
-   //HWND rich = CreateWindow(L"EDIT", L"TEST", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL | 2, 2, 900, 45)
-   HWND text = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 2, 460, 900, 20, hWnd, 0, hInstance, NULL);
+   HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, WIDTH_INFO_FIELD, HEIGT_INFO_FIELD, hWnd, 0, hInstance, NULL);
+   HWND text = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 2, 460, WIDTH_INPUT_FIELD, 20, hWnd, 0, hInstance, NULL);
    HWND button = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 490, 100, 20, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
@@ -228,7 +241,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    return TRUE;
 }
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
