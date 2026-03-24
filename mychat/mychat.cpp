@@ -2,7 +2,7 @@
 
 #include "framework.h"
 #include "mychat.h"
-#include "winsock2.h"       //Бибилиотека для работы с сетью
+#include "winsock2.h"               //Бибилиотека для работы с сетью
 #define MAX_LOADSTRING 100
 #define MAIN_WINDOW_POSITION_X 820
 #define MAIN_WINDOW_POSITION_Y 580
@@ -176,7 +176,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 int CreateDatabase(HWND hWnd) 
 {
     sqlite3* db;
-    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_pen - открывает если файл найден или если файл ненайден, тогда создааёт его
+    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_pen - открывает если файл найден или если файл не найден, тогда создааёт его
     if (result) 
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка!", MB_OK | MB_ICONERROR);
@@ -185,7 +185,7 @@ int CreateDatabase(HWND hWnd)
     }
     else 
     {
-        MessageBox(NULL, L"Осуществленно успешное подключение к базе дынных!", L"Инфо", MB_OK | MB_ICONINFORMATION);
+        MessageBox(NULL, L"Успешное подключение к базе дынных!", L"Инфо", MB_OK | MB_ICONINFORMATION);
     }
     WNDCLASSEX userWnd;
     ZeroMemory(&userWnd, sizeof(WNDCLASSEX));
@@ -216,7 +216,17 @@ int CreateDatabase(HWND hWnd)
             DispatchMessage(&msg);
         }
     }
-    HWND lst_user = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
+    HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
+    const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
+    sqlite3_stmt* sql_st;
+    //sqlite3_stmt - структура где хранится ифньормация об каждой из таблиц
+    if (sqlite3_prepare_v2(db, findTableUs, -1, &sql_st, NULL) == SQLITE_OK)
+    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
+    {
+        int rc = sqlite3_step(sql_st);
+        //sqlite3_step - двигаемся по записям из таблицы винимая, каждую запись
+        //if()
+    }
     sqlite3_close(db);
     return 0;
 }
