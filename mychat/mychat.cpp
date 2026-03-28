@@ -58,7 +58,71 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     return (int) msg.wParam;
 }
+int checkTables() 
+{
+    sqlite3* db;
+    int res = sqlite3_open("data.db", &db);
+    if (res)
+    {
+        MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        //sqlite3_close - прерывает связь с базой данных
+        return 1;
+    }
+    const char* sqlEx = "SELECT COUNT(*) FROM sql_master WHERE type = 'table' AND name = 'group';";
+    //sqlite_master - хранит количество таблиц
+    sqlite3_stmt* nextRow;
+    if (sqlite3_prepare_v2(db, sqlEx, -1, &nextRow, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(nextRow);
+        if (curRow == SQLITE_ROW)
+        {
+            INT countRows = sqlite3_column_int(nextRow, 0);
+            //sqlite3_column_int - выодит текущий индекс колонки
+            if (countRows == 0)
+            {
+                MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
+                const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, NULL);
+                if (status == SQLITE_OK) 
+                {
+                    MessageBox(NULL, L"Таблица группа создана", L"Информаация", MB_OK | MB_ICONERROR);
+                }
+            }
+        }
+        sqlite3_finalize(nextRow);
+        //sqlite3_finalize - очищает память от переменной.
+    }
+    const char* test_table = "SELECT COUNT(*) sqlite_master WHERE type = 'table' and name = 'users';";
+    if (sqlite3_prepare_v2(db, test_table, 1, &nextRow, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(nextRow);
+        if (curRow == SQLITE_ROW) 
+        {
+            INT countRows = sqlite3_column_int(nextRow, 0);
+            if (countRows == 0) 
+            {
 
+                const char* createTable = 
+                    "CREATE TABLE USERS (user_id INT PRIMARY KEY NOT NULL,"
+                    "first_name TEXT NOT NULL,"
+                    "last_name TEXT NOT NULL,"
+                    "middle_name TEXT,"
+                    "phone_number INT NOT NULL,"
+                    "mail TEXT NOT NULL,"
+                    "path_icon TEXT,"
+                    "icon BLOB,"
+                    "status INT NOT NULL);";
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, NULL);
+                if (status == SQLITE_OK) 
+                {
+                    MessageBox(NULL, L"Таблица пользователь создана", L"Информация", MB_OK | MB_ICONINFORMATION);
+                }
+            }
+        }
+        sqlite3_finalize(nextRow);
+    }
+}
 int SendPost(char* msg) 
 {
     //SOCKET - сетевой интферфейс для передачи данных на компьютер к примеру сервер
@@ -218,15 +282,16 @@ int CreateDatabase(HWND hWnd)
     }
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
-    sqlite3_stmt* sql_st;
-    //sqlite3_stmt - структура где хранится ифньормация об каждой из таблиц
-    if (sqlite3_prepare_v2(db, findTableUs, -1, &sql_st, NULL) == SQLITE_OK)
-    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
-    {
-        int rc = sqlite3_step(sql_st);
-        //sqlite3_step - двигаемся по записям из таблицы винимая, каждую запись
-        //if()
-    }
+    //sqlite3_stmt* sql_st;
+    ////sqlite3_stmt - структура где хранится информация об каждой из таблиц
+    //if (sqlite3_prepare_v2(db, findTableUs, -1, &sql_st, NULL) == SQLITE_OK)
+    ////sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
+    //{
+    //    int rc = sqlite3_step(sql_st);
+    //    //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
+    //    if (rc == SQLITE_ROW)
+    //    //SQLITE_ROW - идентификатор строки
+    //}
     sqlite3_close(db);
     return 0;
 }
