@@ -72,10 +72,14 @@ int checkTables()
     const char* sqlEx = "SELECT COUNT(*) FROM sql_master WHERE type = 'table' AND name = 'group';";
     //sqlite_master - хранит количество таблиц
     sqlite3_stmt* nextRow;
+    //sqlite3_stmt - структура где хранится информация об каждой из таблиц
     if (sqlite3_prepare_v2(db, sqlEx, -1, &nextRow, NULL) == SQLITE_OK)
+    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     {
         INT curRow = sqlite3_step(nextRow);
+        //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
         if (curRow == SQLITE_ROW)
+        //SQLITE_ROW - идентификатор строки
         {
             INT countRows = sqlite3_column_int(nextRow, 0);
             //sqlite3_column_int - выодит текущий индекс колонки
@@ -283,14 +287,10 @@ int CreateDatabase(HWND hWnd)
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
     //sqlite3_stmt* sql_st;
-    ////sqlite3_stmt - структура где хранится информация об каждой из таблиц
     //if (sqlite3_prepare_v2(db, findTableUs, -1, &sql_st, NULL) == SQLITE_OK)
-    ////sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     //{
-    //    int rc = sqlite3_step(sql_st);
-    //    //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
-    //    if (rc == SQLITE_ROW)
-    //    //SQLITE_ROW - идентификатор строки
+    //    int rc = sqlite3_step(sql_st);  
+    //    if (rc == SQLITE_ROW)  
     //}
     sqlite3_close(db);
     return 0;
