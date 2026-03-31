@@ -13,8 +13,17 @@
 #define IDC_MYCHAT                      109
 #define IDR_MAINFRAME                   128
 #define ID_32771                        32771
-#define IDM_USERS                       32772
 #define IDC_STATIC                      -1
+//IDB
+#define IDB_CREATE_DB                   1000
+#define IDB_ADD_USER					1001
+
+//IDR
+#define IDR_USER_LIST					100
+
+//ADB - кнопки. Стартовое значение от: 1000 до 9999
+//ADM - кнопки. Стартовое значение от: 10000 до 99999
+//IDR - статические поля (не для ввода текста). Стартовое значение: от 100 до 999
 
 // Next default values for new objects
 // 

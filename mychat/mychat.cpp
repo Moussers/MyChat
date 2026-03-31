@@ -11,6 +11,11 @@
 #define HEIGT_INFO_FIELD 440
 #define INFO_FIELD_POS_X 5
 #define INFO_FIELD_POS_Y 10
+#define SEND_MES_WINDOW_X 20
+#define SEND_MES_WINDOW_Y 490
+#define SEND_MES_WINDOW_WIDTH 100
+#define SEND_MES_WINDOW_HEIGHT 20
+CONST WCHAR WINDOW_CLASS_NAME[] = L"WindowUsers";
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -69,11 +74,11 @@ int checkTables()
         //sqlite3_close - прерывает связь с базой данных
         return 1;
     }
-    const char* sqlEx = "SELECT COUNT(*) FROM sql_master WHERE type = 'table' AND name = 'group';";
+    const char* groupTable = "SELECT COUNT(*) FROM sql_master WHERE type = 'table' AND name = 'group';";
     //sqlite_master - хранит количество таблиц
     sqlite3_stmt* nextRow;
     //sqlite3_stmt - структура где хранится информация об каждой из таблиц
-    if (sqlite3_prepare_v2(db, sqlEx, -1, &nextRow, NULL) == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, groupTable, -1, &nextRow, NULL) == SQLITE_OK)
     //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     {
         INT curRow = sqlite3_step(nextRow);
@@ -82,7 +87,7 @@ int checkTables()
         //SQLITE_ROW - идентификатор строки
         {
             INT countRows = sqlite3_column_int(nextRow, 0);
-            //sqlite3_column_int - выодит текущий индекс колонки
+            //sqlite3_column_int - выводит текущий индекс колонки
             if (countRows == 0)
             {
                 MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
@@ -90,15 +95,15 @@ int checkTables()
                 INT status = sqlite3_exec(db, createTable, NULL, NULL, NULL);
                 if (status == SQLITE_OK) 
                 {
-                    MessageBox(NULL, L"Таблица группа создана", L"Информаация", MB_OK | MB_ICONERROR);
+                    MessageBox(NULL, L"Таблица группа создана", L"Информация", MB_OK | MB_ICONERROR);
                 }
             }
         }
         sqlite3_finalize(nextRow);
         //sqlite3_finalize - очищает память от переменной.
     }
-    const char* test_table = "SELECT COUNT(*) sqlite_master WHERE type = 'table' and name = 'users';";
-    if (sqlite3_prepare_v2(db, test_table, 1, &nextRow, NULL) == SQLITE_OK)
+    const char* userTable = "SELECT COUNT(*) sqlite_master WHERE type = 'table' and name = 'users';";
+    if (sqlite3_prepare_v2(db, userTable, 1, &nextRow, NULL) == SQLITE_OK)
     {
         INT curRow = sqlite3_step(nextRow);
         if (curRow == SQLITE_ROW) 
@@ -126,6 +131,38 @@ int checkTables()
         }
         sqlite3_finalize(nextRow);
     }
+    const char* messageTable = "SELECT COUNT (*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
+    if (sqlite3_prepare_v2(db, messageTable, -1, &nextRow, NULL) == SQLITE_OK) 
+    {
+        INT curRow = sqlite3_step(nextRow);
+        if (curRow == SQLITE_ROW) 
+        {
+            int countRows = sqlite3_column_int(nextRow, 0);
+            if (countRows == 0) 
+            {
+                MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
+                const char* createTable = "CREATE TABLE messsages"
+                    "(messsage_id, PRIMARY KEY, NOT NUL,"
+                    "text_field TEXT NOT NULL,"
+                    "file_field BLOB,"
+                    "sender INT,"
+                    "group_id INT,"
+                    "recipent INT"
+                    "FOREIGN KEY (sender) REFERNCES users(user_id),"
+                    "FOREIGN KEY (recipent) REFERNCES users(user_id),"
+                    "FOREIGN KEY (group_id)) REFERNCES groups(groupd_id))";
+                char error[1000];
+                int result = sqlite3_exec(db, createTable, NULL, NULL, (char**) & error);
+                //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
+                if (result == SQLITE_OK) 
+                {
+                    MessageBox(NULL, L"Таблица пользователь создана", L"Информация", MB_OK | MB_ICONINFORMATION);
+                }
+            }
+        }
+        sqlite3_finalize(nextRow);
+    }
+    sqlite3_close(db);
 }
 int SendPost(char* msg) 
 {
@@ -270,10 +307,13 @@ int CreateDatabase(HWND hWnd)
     //адрес на функцию где будет обрабатываться наше событие. Ссылка на сам userWnd.
     //IDC_ARROW - указатель на курсор мышки.
     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    userWnd.lpszClassName = L"WindowUsers";
-    ATOM r = RegisterClassEx(&userWnd);
-    HWND winUser = CreateWindow(L"WindowUsers", L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
-    //WS_OVERLAPPEDWINDOW - добавляет в окну занички закрыть, расширить, свернуть делая окно самостоятельным.
+    userWnd.lpszClassName = WINDOW_CLASS_NAME;
+    ATOM reg = RegisterClassEx(&userWnd);
+    HWND winUser = CreateWindow(WINDOW_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    //WS_OVERLAPPEDWINDOW - добавляет в окну значки закрыть, расширить, свернуть делая окно самостоятельным.
+    CreateWindow(L"STATIC", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 20, 300, 280, winUser, (HMENU)IDR_USER_LIST, GetModuleHandle(NULL), NULL);
+    //WS_BORDER - ключ благодаря которму задаются границы окна.
+    CreateWindow(L"Button", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 100, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
     ShowWindow(winUser, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(winUser)) 
@@ -286,12 +326,6 @@ int CreateDatabase(HWND hWnd)
     }
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
-    //sqlite3_stmt* sql_st;
-    //if (sqlite3_prepare_v2(db, findTableUs, -1, &sql_st, NULL) == SQLITE_OK)
-    //{
-    //    int rc = sqlite3_step(sql_st);  
-    //    if (rc == SQLITE_ROW)  
-    //}
     sqlite3_close(db);
     return 0;
 }
@@ -309,7 +343,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
    HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, WIDTH_INFO_FIELD, HEIGT_INFO_FIELD, hWnd, 0, hInstance, NULL);
    HWND text = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 2, 460, WIDTH_INPUT_FIELD, 20, hWnd, 0, hInstance, NULL);
-   HWND button = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 490, 100, 20, hWnd, 0, hInstance, NULL);
+   HWND button = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -332,7 +366,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDM_EXIT:
                 DestroyWindow(hWnd);
                 break;
-            case IDM_USERS:
+            case IDB_CREATE_DB:
                 CreateDatabase(hWnd);
                 break;
             default:
