@@ -6,7 +6,10 @@
 #define MAX_LOADSTRING 100
 #define MAIN_WINDOW_POSITION_X 820
 #define MAIN_WINDOW_POSITION_Y 580
-#define WIDTH_INPUT_FIELD 800
+#define MES_FIELD_X 10
+#define MES_FIELD_Y 460
+#define MES_FIELD_WIDTH 760
+#define MES_FIELD_HEIGHT 20
 #define WIDTH_INFO_FIELD 790
 #define HEIGT_INFO_FIELD 440
 #define INFO_FIELD_POS_X 5
@@ -15,7 +18,8 @@
 #define SEND_MES_WINDOW_Y 490
 #define SEND_MES_WINDOW_WIDTH 100
 #define SEND_MES_WINDOW_HEIGHT 20
-CONST WCHAR WINDOW_CLASS_NAME[] = L"WindowUsers";
+CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
+CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -62,6 +66,32 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     return (int) msg.wParam;
+}
+void addUser() 
+{
+    WNDCLASSEXW userWnd;
+    //Содержит сведения о классе окна.
+    userWnd.cbSize = sizeof(WNDCLASSEX);
+    userWnd.style = CS_HREDRAW | CS_VREDRAW;
+    userWnd.lpfnWndProc = WndProc;
+    userWnd.cbClsExtra = 0;
+    //Выделение дополнительных байт для класса после его регистрации, память 
+    //будет привязана к самому классу, а не к конкретному окну.
+    userWnd.cbWndExtra = 0;
+    //Выделение дпоплнительных для каждого окна, так как каждое окно будет 
+    //уникальным, выделена память будет сохранена для окна пока оно будет 
+    //существовать.
+    userWnd.hInstance = GetModuleHandle(NULL);
+    userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));;
+    userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
+    userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    userWnd.lpszMenuName = MAKEINTRESOURCE(IDC_MYCHAT);
+    userWnd.lpszClassName = USER_ACCOUNT_CLASS_NAME;
+    ATOM reg = RegisterClassEx(&userWnd);
+    HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить Пользователя", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 50, NULL, NULL, GetModuleHandle(NULL), NULL);
+    ShowWindow(userClass, SW_SHOWDEFAULT);
+
+    
 }
 int checkTables() 
 {
@@ -253,12 +283,14 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEXW wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    //CS_HREDRAW - перерисовывает окно при перемещении или измении размера клиентской части (окна).
+    //CS_VREDRAW - перерисовывает окно при пермещении или изменении высоты клиентской части (окна).
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
     wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MYCHAT));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hCursor        = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MYCHAT);
     wcex.lpszClassName  = szWindowClass;
@@ -307,10 +339,10 @@ int CreateDatabase(HWND hWnd)
     //адрес на функцию где будет обрабатываться наше событие. Ссылка на сам userWnd.
     //IDC_ARROW - указатель на курсор мышки.
     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    userWnd.lpszClassName = WINDOW_CLASS_NAME;
+    userWnd.lpszClassName = USER_LIST_CLASS_NAME;
     ATOM reg = RegisterClassEx(&userWnd);
-    HWND winUser = CreateWindow(WINDOW_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
-    //WS_OVERLAPPEDWINDOW - добавляет в окну значки закрыть, расширить, свернуть делая окно самостоятельным.
+    HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
     CreateWindow(L"STATIC", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 20, 300, 280, winUser, (HMENU)IDR_USER_LIST, GetModuleHandle(NULL), NULL);
     //WS_BORDER - ключ благодаря которму задаются границы окна.
     CreateWindow(L"Button", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 100, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
@@ -332,8 +364,6 @@ int CreateDatabase(HWND hWnd)
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
-
    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, MAIN_WINDOW_POSITION_X, MAIN_WINDOW_POSITION_Y, NULL, NULL, hInstance, NULL);
 
@@ -342,8 +372,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
    HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, WIDTH_INFO_FIELD, HEIGT_INFO_FIELD, hWnd, 0, hInstance, NULL);
-   HWND text = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 2, 460, WIDTH_INPUT_FIELD, 20, hWnd, 0, hInstance, NULL);
-   HWND button = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
+   HWND mesFiled = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
+   HWND mesButton = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -368,6 +398,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDB_CREATE_DB:
                 CreateDatabase(hWnd);
+                break;
+            case IDB_ADD_USER:
+                addUser();
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);

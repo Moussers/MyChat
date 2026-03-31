@@ -17,6 +17,7 @@
 //IDB
 #define IDB_CREATE_DB                   1000
 #define IDB_ADD_USER					1001
+//#define
 
 //IDR
 #define IDR_USER_LIST					100
