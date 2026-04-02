@@ -10,16 +10,25 @@
 #define MES_FIELD_Y 460
 #define MES_FIELD_WIDTH 760
 #define MES_FIELD_HEIGHT 20
-#define WIDTH_INFO_FIELD 790
-#define HEIGT_INFO_FIELD 440
+#define INFO_FIELD_WIDTH 790
+#define INFO_FIELD_HEIGT 440
 #define INFO_FIELD_POS_X 5
 #define INFO_FIELD_POS_Y 10
 #define SEND_MES_WINDOW_X 20
 #define SEND_MES_WINDOW_Y 490
 #define SEND_MES_WINDOW_WIDTH 100
 #define SEND_MES_WINDOW_HEIGHT 20
+#define MAIN_FIELD_WIDTH 400
+#define MAIN_FIELD_HEIGHT 500
+#define DESCRIPT_FIELD_POS_X 20
+#define DESCRIPT_FILED_WIDTH 100
+#define DESCRIPT_FIELD_HEIGHT 150
+#define INPUT_FIELD_POS_X 100
+#define INPUT_FIELD_WIDTH 140
+#define INPUT_FIELD_HEIGHT 20
 CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
 CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
+
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -67,13 +76,30 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     return (int) msg.wParam;
 }
+LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    //LRESULT CALLBACK - это структура меню для созданного окна. Команды внутри окна
+    //выполняются через switch(message)
+    switch (message)
+    {
+    case WM_COMMAND:
+    break;
+    case WM_DESTROY:
+        return 0;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
 void addUser() 
 {
     WNDCLASSEXW userWnd;
+    ZeroMemory(&userWnd, sizeof(userWnd));
     //Содержит сведения о классе окна.
     userWnd.cbSize = sizeof(WNDCLASSEX);
     userWnd.style = CS_HREDRAW | CS_VREDRAW;
-    userWnd.lpfnWndProc = WndProc;
+    userWnd.lpfnWndProc = AddNewUserWndProc;
+    //lpfnWndProc - указатель на зарегестрированное и созданное окно.
     userWnd.cbClsExtra = 0;
     //Выделение дополнительных байт для класса после его регистрации, память 
     //будет привязана к самому классу, а не к конкретному окну.
@@ -85,13 +111,44 @@ void addUser()
     userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));;
     userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
-    userWnd.lpszMenuName = MAKEINTRESOURCE(IDC_MYCHAT);
+    userWnd.lpszMenuName = NULL;
     userWnd.lpszClassName = USER_ACCOUNT_CLASS_NAME;
     ATOM reg = RegisterClassEx(&userWnd);
-    HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить Пользователя", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 50, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HFONT fontTitle = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+        DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
+    //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
+    HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить Пользователя", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, 30, DESCRIPT_FILED_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    //HMENU - внетренее поле в котором мы можем храннить вписанный текст
+    HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, 60, DESCRIPT_FILED_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, 90, DESCRIPT_FILED_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, 120, DESCRIPT_FILED_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, 150, DESCRIPT_FILED_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    SendMessage(hFirstName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hLastName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hMiddleName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hPhone, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hMail, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, 30, INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, 60, INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, 90, INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, 120, INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, 150, INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
     ShowWindow(userClass, SW_SHOWDEFAULT);
-
-    
+    UpdateWindow(userClass);
+    MSG msg;
+    //msg - хранит сообщение которое получает окно
+    while (IsWindow(userClass))
+    {
+        if (GetMessage(&msg, userClass, 0, 0)) {
+            //GetMessage - извлекает и обрабатывает сообщение от окна
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        //структура для обработки соообщения окна
+    }
 }
 int checkTables() 
 {
@@ -302,6 +359,18 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 {
     switch (message) 
     {
+    case WM_COMMAND:
+    {
+        int wmId = LOWORD(wParam);
+        switch (wmId) {
+        case IDB_ADD_USER:
+            addUser();
+            break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    }
+        break;
     case WM_DESTROY:
         return 0;
     default:
@@ -371,7 +440,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
-   HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, WIDTH_INFO_FIELD, HEIGT_INFO_FIELD, hWnd, 0, hInstance, NULL);
+   HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
    HWND mesFiled = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
    HWND mesButton = CreateWindow(L"Button", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
@@ -398,9 +467,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDB_CREATE_DB:
                 CreateDatabase(hWnd);
-                break;
-            case IDB_ADD_USER:
-                addUser();
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
