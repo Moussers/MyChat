@@ -98,6 +98,11 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         case IDB_CANCELING_USER_ADDITION:
             SendMessage(hWnd, WM_CLOSE, 0, NULL);
             break;
+        case IDB_DEALIGN_USER_ADDITION: 
+        {
+            //InsertEntry();
+            break;
+        }
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
@@ -108,6 +113,10 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+void InsertEntry() 
+{
+    //const char* insertIntoEntry = "INSERT INTO ";
 }
 void addUser() 
 {
@@ -132,9 +141,7 @@ void addUser()
     userWnd.lpszMenuName = NULL;
     userWnd.lpszClassName = USER_ACCOUNT_CLASS_NAME;
     ATOM reg = RegisterClassEx(&userWnd);
-    HFONT fontTitle = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-        DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    HFONT fontTitle = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
     //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
     HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить Пользователя", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -175,6 +182,8 @@ void addUser()
 int checkTables() 
 {
     sqlite3* db;
+    CONST INT SIZE = 256;
+    char* mesError[SIZE];
     int res = sqlite3_open("data.db", &db);
     if (res)
     {
@@ -201,7 +210,8 @@ int checkTables()
             {
                 MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
                 const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, NULL);
+                char** errorTgroup = mesError;
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, errorTgroup);
                 if (status == SQLITE_OK) 
                 {
                     MessageBox(NULL, L"Таблица группа создана", L"Информация", MB_OK | MB_ICONERROR);
@@ -231,7 +241,8 @@ int checkTables()
                     "path_icon TEXT,"
                     "icon BLOB,"
                     "status INT NOT NULL);";
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, NULL);
+                char** errorTUser = mesError;
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, errorTUser);
                 if (status == SQLITE_OK) 
                 {
                     MessageBox(NULL, L"Таблица пользователь создана", L"Информация", MB_OK | MB_ICONINFORMATION);
@@ -260,8 +271,8 @@ int checkTables()
                     "FOREIGN KEY (sender) REFERNCES users(user_id),"
                     "FOREIGN KEY (recipent) REFERNCES users(user_id),"
                     "FOREIGN KEY (group_id)) REFERNCES groups(groupd_id))";
-                char error[1000];
-                int result = sqlite3_exec(db, createTable, NULL, NULL, (char**) & error);
+                char** errorTMes = mesError;
+                int result = sqlite3_exec(db, createTable, NULL, NULL, errorTMes);
                 //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
                 if (result == SQLITE_OK) 
                 {
@@ -403,6 +414,8 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 int CreateDatabase(HWND hWnd) 
 {
     sqlite3* db;
+    CONST INT SIZE = 256;
+    char* errorMsg[SIZE];
     int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_pen - открывает если файл найден или если файл не найден, тогда создааёт его
     if (result) 
     {
@@ -448,6 +461,8 @@ int CreateDatabase(HWND hWnd)
     }
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
+    char** errorCountT = errorMsg;
+    sqlite3_exec(db, findTableUs, NULL, NULL, errorCountT);
     sqlite3_close(db);
     return 0;
 }
