@@ -17,6 +17,8 @@
 //IDB
 #define IDB_CREATE_DB                   1000
 #define IDB_ADD_USER					1001
+#define IDB_CANCELING_USER_ADDITION		1002
+#define IDB_DEALIGN_USER_ADDITION		1003
 //#define
 
 //IDR
