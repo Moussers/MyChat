@@ -25,7 +25,11 @@
 #define IDR_USER_LIST					100
 
 //EDIT
-#define IDM_FIRST_NAME					5000
+#define IDM_LAST_NAME					5000
+#define IDM_FIRST_NAME					5001
+#define IDM_MIDDLE_NAME					5002
+#define IDM_PHONE						5003
+#define IDM_EMAIL						5004
 
 
 //IDB - кнопки. Стартовое значение от: 1000 до 4999

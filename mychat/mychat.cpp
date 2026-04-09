@@ -39,7 +39,6 @@
 CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
 CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
 
-
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
@@ -50,6 +49,8 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+int InsertEntry(HWND hwnd);
+int checkTables();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -71,7 +72,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYCHAT));
-
     MSG msg;
 
     // Цикл основного сообщения:
@@ -100,7 +100,7 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             break;
         case IDB_DEALIGN_USER_ADDITION: 
         {
-            //InsertEntry();
+            InsertEntry(hWnd);
             break;
         }
         default:
@@ -114,9 +114,50 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     }
     return 0;
 }
-void InsertEntry() 
+int InsertEntry(HWND hwnd) 
 {
-    //const char* insertIntoEntry = "INSERT INTO ";
+    CONST INT LASTSIZE = 2000;
+    CONST INT FIRSTSIZE = 2000;
+    CONST INT MIDDLESIZE = 2000;
+    CONST INT PHONESIZE = 2000;
+    CONST INT EMAILSIZE = 2000;
+    WCHAR lastName[LASTSIZE];
+    WCHAR firstName[FIRSTSIZE];
+    WCHAR middleName[MIDDLESIZE];
+    WCHAR numbrerPhone[PHONESIZE];
+    WCHAR eMail[EMAILSIZE];
+    CONST INT SIZECOMMAND = 12000;
+    CHAR command[SIZECOMMAND];
+    GetWindowText(GetDlgItem(hwnd,IDM_LAST_NAME), lastName, LASTSIZE);
+    //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
+    //с размером который мы указываем в поле buffer, последний параметр
+    GetWindowText(GetDlgItem(hwnd, IDM_FIRST_NAME), firstName, FIRSTSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_MIDDLE_NAME), middleName, MIDDLESIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_PHONE), numbrerPhone, PHONESIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_EMAIL), eMail, EMAILSIZE);
+    //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
+    //MessageBox(NULL, firstName, L"INFO", MB_OK | MB_ICONERROR);
+    const char lsUsrId[] = "SELECT MAX(USER_ID) FROM user";
+    sqlite3* db;
+    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res)
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Информация", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    sqlite3_stmt* table;
+    if (sqlite3_prepare_v2(db, lsUsrId, -1, &table, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(table);
+        if (curRow == SQLITE_ROW) 
+        {
+            int num = sqlite3_column_int(table, 0)+1;
+            //+1 - получаем следующий id;
+        }
+    }
+    sqlite3_finalize(table);
+    strcpy(command, "INSERT INTO users (user_id, last_name, middle_name, phone, email) VALUES(");
 }
 void addUser() 
 {
@@ -145,23 +186,22 @@ void addUser()
     //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
     //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
     HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить Пользователя", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     //HMENU - внутренее поле в котором мы можем храннить вписанный текст
-    HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(30), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(30), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(60), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(90), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(120), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    SendMessage(hFirstName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hLastName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hFirstName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hMiddleName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hPhone, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hMail, WM_SETFONT, (WPARAM)fontTitle, TRUE);
-    int posX = 0;
-    for (int i = 0; i < 5; ++i) 
-    {
-        CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(posX), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
-        posX += 30;
-    }
+    HWND hLast = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_LAST_NAME, GetModuleHandle(NULL), NULL);
+    HWND hFirst = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(30), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(90), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_PHONE, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(120), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_EMAIL, GetModuleHandle(NULL), NULL);
     HWND hCancMes = CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_BUTTON_POS_X, CANCEL_BUTTON_POS_Y, CANCEL_BUTTON_WIDTH, CANCEL_BUTTON_HEIGH, userClass, (HMENU)IDB_CANCELING_USER_ADDITION, GetModuleHandle(NULL), NULL);
     //Приравнивание ресурса к HMENU нужно для всех типов окон с которым юзер взаимодействует: нажатие клавиши, ввод в поле и так далее.
     HWND hDealMes = CreateWindow(L"BUTTON", L"Да", WS_VISIBLE | WS_CHILD | WS_BORDER, DEAL_BUTTON_POS_X, DEAL_BUTTON_POS_Y, DEAL_BUTTON_WIDTH, DEAL_BUTTON_HEIGHT, userClass, (HMENU)IDB_DEALIGN_USER_ADDITION, GetModuleHandle(NULL), NULL);
@@ -184,27 +224,31 @@ int checkTables()
     sqlite3* db;
     CONST INT SIZE = 256;
     char* mesError[SIZE];
-    int res = sqlite3_open("data.db", &db);
+    int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
+    //похожий вариант прочтения:
+    //if(res !=0 ) 
     {
         MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
         //sqlite3_close - прерывает связь с базой данных
         return 1;
     }
-    const char* groupTable = "SELECT COUNT(*) FROM sql_master WHERE type = 'table' AND name = 'group';";
+    const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
     //sqlite_master - хранит количество таблиц
-    sqlite3_stmt* nextRow;
-    //sqlite3_stmt - структура где хранится информация об каждой из таблиц
-    if (sqlite3_prepare_v2(db, groupTable, -1, &nextRow, NULL) == SQLITE_OK)
+    sqlite3_stmt* table;
+    //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
+    //который находится в const char* переменной
+    if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
     //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     {
-        INT curRow = sqlite3_step(nextRow);
+        INT curRow = sqlite3_step(table);
         //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
         if (curRow == SQLITE_ROW)
         //SQLITE_ROW - идентификатор строки
+        //Если int перменная получает значение sqlite_row, то это значит строка найденна
         {
-            INT countRows = sqlite3_column_int(nextRow, 0);
+            INT countRows = sqlite3_column_int(table, 0);
             //sqlite3_column_int - выводит текущий индекс колонки
             if (countRows == 0)
             {
@@ -218,26 +262,26 @@ int checkTables()
                 }
             }
         }
-        sqlite3_finalize(nextRow);
+        sqlite3_finalize(table);
         //sqlite3_finalize - очищает память от переменной.
     }
-    const char* userTable = "SELECT COUNT(*) sqlite_master WHERE type = 'table' and name = 'users';";
-    if (sqlite3_prepare_v2(db, userTable, 1, &nextRow, NULL) == SQLITE_OK)
+    const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
+    if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(nextRow);
+        INT curRow = sqlite3_step(table);
         if (curRow == SQLITE_ROW) 
         {
-            INT countRows = sqlite3_column_int(nextRow, 0);
+            INT countRows = sqlite3_column_int(table, 0);
             if (countRows == 0) 
             {
 
                 const char* createTable = 
-                    "CREATE TABLE USERS (user_id INT PRIMARY KEY NOT NULL,"
+                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
                     "first_name TEXT NOT NULL,"
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
                     "phone_number INT NOT NULL,"
-                    "mail TEXT NOT NULL,"
+                    "email TEXT NOT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
                     "status INT NOT NULL);";
@@ -249,28 +293,28 @@ int checkTables()
                 }
             }
         }
-        sqlite3_finalize(nextRow);
+        sqlite3_finalize(table);
     }
-    const char* messageTable = "SELECT COUNT (*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
-    if (sqlite3_prepare_v2(db, messageTable, -1, &nextRow, NULL) == SQLITE_OK) 
+    const char* messageTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
+    if (sqlite3_prepare_v2(db, messageTable, -1, &table, NULL) == SQLITE_OK) 
     {
-        INT curRow = sqlite3_step(nextRow);
+        INT curRow = sqlite3_step(table);
         if (curRow == SQLITE_ROW) 
         {
-            int countRows = sqlite3_column_int(nextRow, 0);
+            int countRows = sqlite3_column_int(table, 0);
             if (countRows == 0) 
             {
                 MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
-                const char* createTable = "CREATE TABLE messsages"
-                    "(messsage_id, PRIMARY KEY, NOT NUL,"
+                const char* createTable = "CREATE TABLE messages"
+                    "(message_id PRIMARY KEY NOT NULL,"
                     "text_field TEXT NOT NULL,"
                     "file_field BLOB,"
                     "sender INT,"
                     "group_id INT,"
-                    "recipent INT"
-                    "FOREIGN KEY (sender) REFERNCES users(user_id),"
-                    "FOREIGN KEY (recipent) REFERNCES users(user_id),"
-                    "FOREIGN KEY (group_id)) REFERNCES groups(groupd_id))";
+                    "recipent INT,"
+                    "FOREIGN KEY (sender) REFERENCES users(user_id),"
+                    "FOREIGN KEY (recipent) REFERENCES users(user_id),"
+                    "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
                 char** errorTMes = mesError;
                 int result = sqlite3_exec(db, createTable, NULL, NULL, errorTMes);
                 //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
@@ -280,7 +324,7 @@ int checkTables()
                 }
             }
         }
-        sqlite3_finalize(nextRow);
+        sqlite3_finalize(table);
     }
     sqlite3_close(db);
 }
@@ -416,7 +460,7 @@ int CreateDatabase(HWND hWnd)
     sqlite3* db;
     CONST INT SIZE = 256;
     char* errorMsg[SIZE];
-    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_pen - открывает если файл найден или если файл не найден, тогда создааёт его
+    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (result) 
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка!", MB_OK | MB_ICONERROR);
