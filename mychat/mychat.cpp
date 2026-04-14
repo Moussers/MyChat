@@ -38,6 +38,8 @@
 #define DEAL_BUTTON_HEIGHT 20
 CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
 CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
+CONST INT USERSIZE = 2000;
+CONST INT IDSIZE = 1000;
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -101,6 +103,7 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         case IDB_DEALIGN_USER_ADDITION: 
         {
             InsertEntry(hWnd);
+            SendMessage(hWnd, WM_CLOSE, 0, NULL);
             break;
         }
         default:
@@ -116,25 +119,26 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 }
 int InsertEntry(HWND hwnd) 
 {
-    CONST INT LASTSIZE = 2000;
-    CONST INT FIRSTSIZE = 2000;
-    CONST INT MIDDLESIZE = 2000;
-    CONST INT PHONESIZE = 2000;
-    CONST INT EMAILSIZE = 2000;
-    WCHAR lastName[LASTSIZE];
-    WCHAR firstName[FIRSTSIZE];
-    WCHAR middleName[MIDDLESIZE];
-    WCHAR numbrerPhone[PHONESIZE];
-    WCHAR eMail[EMAILSIZE];
+    WCHAR lastName[USERSIZE];
+    WCHAR firstName[USERSIZE];
+    WCHAR middleName[USERSIZE];
+    WCHAR numbrerPhone[USERSIZE];
+    WCHAR eMail[USERSIZE];
+    WCHAR userId[IDSIZE];
     CONST INT SIZECOMMAND = 12000;
     CHAR command[SIZECOMMAND];
-    GetWindowText(GetDlgItem(hwnd,IDM_LAST_NAME), lastName, LASTSIZE);
+    CHAR buffer[USERSIZE];
+    INT num = 0;
+    INT status = 0;
+    UINT codePage = 1251;
+    //UINT - безнаковый целочисленный тип числа
+    GetWindowText(GetDlgItem(hwnd,IDM_LAST_NAME), lastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
     //с размером который мы указываем в поле buffer, последний параметр
-    GetWindowText(GetDlgItem(hwnd, IDM_FIRST_NAME), firstName, FIRSTSIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_MIDDLE_NAME), middleName, MIDDLESIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_PHONE), numbrerPhone, PHONESIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_EMAIL), eMail, EMAILSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_FIRST_NAME), firstName, USERSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_MIDDLE_NAME), middleName, USERSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_PHONE), numbrerPhone, USERSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_EMAIL), eMail, USERSIZE);
     //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
     //MessageBox(NULL, firstName, L"INFO", MB_OK | MB_ICONERROR);
     const char lsUsrId[] = "SELECT MAX(USER_ID) FROM user";
@@ -152,12 +156,59 @@ int InsertEntry(HWND hwnd)
         INT curRow = sqlite3_step(table);
         if (curRow == SQLITE_ROW) 
         {
-            int num = sqlite3_column_int(table, 0)+1;
+            num = sqlite3_column_int(table, 0)+1;
             //+1 - получаем следующий id;
         }
     }
     sqlite3_finalize(table);
-    strcpy(command, "INSERT INTO users (user_id, last_name, middle_name, phone, email) VALUES(");
+    strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email) VALUES(");
+    wsprintf(userId, L"%d\0", num);
+    WideCharToMultiByte(codePage, 0, userId, wcslen(userId) + 1, buffer, USERSIZE, NULL, NULL);
+    //CodePage (кодовая страница) - отвечает за хранение тип формата в который будет приобразована строка, 
+    //в данный момент из Unicode в формат: 1251;
+    //dwFlags - флаг правила преобразования формата кодировки;
+    //LpWideChar - указатель на строку для преобразования;
+    //cchWideChar - буфер (размер) строки;
+    //LpMultiByteStr - указатель на строку в которую будет записана преобразованная строка;
+    //cbMultiByte - размер буффера строки для записи;
+    //lpDefaultChar - указатель на символ для преобразования, если он не указан в 
+    //представленной таблице;
+    //lpUsedDefaultChar - указатель для нескольких символов, если они не указаны в
+    //в представленной таблице.
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    WideCharToMultiByte(codePage, 0, lastName, wcslen(lastName) + 1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    WideCharToMultiByte(codePage, 0, firstName, wcslen(firstName) + 1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    WideCharToMultiByte(codePage, 0, middleName, wcslen(middleName) + 1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone) + 1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    WideCharToMultiByte(codePage, 0, eMail, wcslen(eMail) + 1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ",");
+    wsprintfA(buffer, "%d", status);
+    //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
+    strcat_s(command, buffer);
+    strcat_s(command, ")");
+    char* msg = (char*)malloc(2000 * sizeof(char));
+    res = sqlite3_exec(db, command, NULL, NULL, &msg);
+    if (res == SQLITE_OK) 
+    {
+        MessageBox(NULL, L"Пользователь добавлен", L"Инфо", MB_OK | MB_ICONINFORMATION);
+    }
+    else 
+    {
+        MessageBox(NULL, L"Ошибка при добавлении пользователя", L"Ошибка", MB_OK | MB_ICONERROR);
+    }
+    free(msg);
+    msg = NULL;
+    sqlite3_close(db);
 }
 void addUser() 
 {
@@ -223,7 +274,7 @@ int checkTables()
 {
     sqlite3* db;
     CONST INT SIZE = 256;
-    char* mesError[SIZE];
+    //char* mesError[SIZE];
     int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
     //похожий вариант прочтения:
@@ -254,12 +305,15 @@ int checkTables()
             {
                 MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
                 const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
-                char** errorTgroup = mesError;
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, errorTgroup);
+                //char** errorTgroup = mesError;        //Как вариант.
+                char* msg = (char*)malloc(2000 * sizeof(char));
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                 if (status == SQLITE_OK) 
                 {
-                    MessageBox(NULL, L"Таблица группа создана", L"Информация", MB_OK | MB_ICONERROR);
+                    MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONERROR);
                 }
+                free(msg);
+                msg = NULL;
             }
         }
         sqlite3_finalize(table);
@@ -285,12 +339,15 @@ int checkTables()
                     "path_icon TEXT,"
                     "icon BLOB,"
                     "status INT NOT NULL);";
-                char** errorTUser = mesError;
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, errorTUser);
+                //char** errorTUser = mesError;
+                char* msg = (char*)malloc(2000 * sizeof(char));
+                INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                 if (status == SQLITE_OK) 
                 {
-                    MessageBox(NULL, L"Таблица пользователь создана", L"Информация", MB_OK | MB_ICONINFORMATION);
+                    MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
                 }
+                free(msg);
+                msg = NULL;
             }
         }
         sqlite3_finalize(table);
@@ -315,13 +372,16 @@ int checkTables()
                     "FOREIGN KEY (sender) REFERENCES users(user_id),"
                     "FOREIGN KEY (recipent) REFERENCES users(user_id),"
                     "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
-                char** errorTMes = mesError;
-                int result = sqlite3_exec(db, createTable, NULL, NULL, errorTMes);
+                //char** errorTMes = mesError;
+                char* msg = (char*)malloc(2000 * sizeof(char));
+                int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                 //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
                 if (result == SQLITE_OK) 
                 {
-                    MessageBox(NULL, L"Таблица пользователь создана", L"Информация", MB_OK | MB_ICONINFORMATION);
+                    MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
                 }
+                free(msg);
+                msg = NULL;
             }
         }
         sqlite3_finalize(table);
@@ -494,20 +554,23 @@ int CreateDatabase(HWND hWnd)
     //WS_BORDER - ключ благодаря которму задаются границы окна.
     CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 100, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
     ShowWindow(winUser, SW_SHOWDEFAULT);
-    MSG msg;
+    MSG message;
     while (IsWindow(winUser)) 
     {
-        if (GetMessage(&msg, winUser, 0, 0))
+        if (GetMessage(&message, winUser, 0, 0))
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            TranslateMessage(&message);
+            DispatchMessage(&message);
         }
     }
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
-    char** errorCountT = errorMsg;
-    sqlite3_exec(db, findTableUs, NULL, NULL, errorCountT);
+    //char** errorCountT = errorMsg;
+    char* msg = (char*)malloc(2000 * sizeof(char));
+    sqlite3_exec(db, findTableUs, NULL, NULL, &msg);
     sqlite3_close(db);
+    free(msg);
+    msg = NULL;
     return 0;
 }
 
