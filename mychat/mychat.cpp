@@ -117,6 +117,45 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     }
     return 0;
 }
+void writtingDownLog(const WCHAR* record) 
+{
+    HANDLE logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    //dwDesiredAccess - предоставляет атрибуты, иначе говоря права доступа на чтение и запись файлу.
+    //dwShareMode - запрещает повторно открывать файл.
+    //lpSecurityAttributes - отвечает за настройки безопасности файла, если поставить NULL, тогда 
+    //применяются стандартные настройки безопасности к файлу при его создании.
+    //dwCreationDisposition - флаг за тип взаимодействия с файлом: создания или открытия:
+    //CREATE_NEW - создание нового файла;
+    //OPEN_EXISTS - открыть существующий файл.
+    //dwFlagsAndAttributes - предоставляает права программе для взаимодействия с файлом, обычно 
+    //используется флаг FILE_ATTRIBUTE_NORMAL, дающий стандартные права для чтения и записи программе 
+    //и ничего дополнительного.
+    //hTemplateFile - работа с шифрованным файлом: чтение и запись, при созддании временног файла.
+    if (logFile == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_FILE_EXISTS)
+        {
+            logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        }
+    }
+    if (logFile != INVALID_HANDLE_VALUE)
+    {
+        SetFilePointer(logFile, 0, NULL, FILE_END);
+        WriteFile(logFile, record, wcslen(record)*2, NULL, NULL);
+        WriteFile(logFile, L"\n", 2, NULL, NULL);
+        CloseHandle(logFile);
+    }
+}
+char* cleaningMemory(char* arr) 
+{
+    if (arr != NULL)
+    {
+        free(arr);
+        arr = NULL;
+        return arr;
+    }
+    return arr;
+}
 int InsertEntry(HWND hwnd) 
 {
     WCHAR lastName[USERSIZE];
@@ -131,6 +170,7 @@ int InsertEntry(HWND hwnd)
     INT num = 0;
     INT status = 0;
     UINT codePage = 1251;
+    LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
     GetWindowText(GetDlgItem(hwnd,IDM_LAST_NAME), lastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
@@ -196,19 +236,33 @@ int InsertEntry(HWND hwnd)
     //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
     strcat_s(command, buffer);
     strcat_s(command, ")");
-    char* msg = (char*)malloc(2000 * sizeof(char));
-    res = sqlite3_exec(db, command, NULL, NULL, &msg);
-    if (res == SQLITE_OK) 
-    {
-        MessageBox(NULL, L"Пользователь добавлен", L"Инфо", MB_OK | MB_ICONINFORMATION);
+    char *msg = NULL;
+    try {
+        //char* tmp = msg;
+        res = sqlite3_exec(db, command, NULL, NULL, &msg);
+        //5 параметр - сам выделяет память и создает массив без участия программиста.
+        if (res == SQLITE_OK)
+        {
+            MessageBox(NULL, L"Пользователь добавлен", L"Инфо", MB_OK | MB_ICONINFORMATION);
+        }
+        else
+        {
+            MessageBox(NULL, L"Ошибка добавления пользователя", L"Ошибка", MB_OK | MB_ICONERROR);
+            throw "SQL-Error";
+        }
     }
-    else 
+    catch (...) 
     {
-        MessageBox(NULL, L"Ошибка при добавлении пользователя", L"Ошибка", MB_OK | MB_ICONERROR);
+        CONST INT SIZE = 2000;
+        WCHAR mesError[SIZE];
+        size_t n_size;
+        mbstowcs_s(&n_size,mesError, msg, SIZE);
+        msg = cleaningMemory(msg);
+        writtingDownLog(mesError);
     }
-    free(msg);
-    msg = NULL;
+    msg = cleaningMemory(msg);
     sqlite3_close(db);
+    return 0;
 }
 void addUser() 
 {
