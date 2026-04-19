@@ -257,8 +257,16 @@ int InsertEntry(HWND hwnd)
         WCHAR mesError[SIZE];
         size_t n_size;
         mbstowcs_s(&n_size,mesError, msg, SIZE);
+        //mbstowcs_s - преобразует многобайтовую символьную строку из массива, в расширенное 
+        //символьное представление (WCHAR);
+        //retval - указатель на тип данных в котором будут храниться данные;
+        //dst - указатель на переменную в которую будут записаны преобразованные данные;
+        //src - указатель на переменную источник с которой будут считаны данные для 
+        //преобразования;
+        //len - указатель на буффер (размер) строки источник.
         msg = cleaningMemory(msg);
         writtingDownLog(mesError);
+        return 1;
     }
     msg = cleaningMemory(msg);
     sqlite3_close(db);
@@ -360,14 +368,29 @@ int checkTables()
                 MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
                 const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
                 //char** errorTgroup = mesError;        //Как вариант.
-                char* msg = (char*)malloc(2000 * sizeof(char));
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                if (status == SQLITE_OK) 
-                {
-                    MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONERROR);
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONERROR);
+                    }
+                    else 
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
                 }
-                free(msg);
-                msg = NULL;
+                catch (...) 
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    return 1;
+                }
             }
         }
         sqlite3_finalize(table);
@@ -394,11 +417,28 @@ int checkTables()
                     "icon BLOB,"
                     "status INT NOT NULL);";
                 //char** errorTUser = mesError;
-                char* msg = (char*)malloc(2000 * sizeof(char));
-                INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                if (status == SQLITE_OK) 
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...) 
                 {
-                    MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    return 1;
                 }
                 free(msg);
                 msg = NULL;
@@ -427,12 +467,29 @@ int checkTables()
                     "FOREIGN KEY (recipent) REFERENCES users(user_id),"
                     "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
                 //char** errorTMes = mesError;
-                char* msg = (char*)malloc(2000 * sizeof(char));
-                int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
-                if (result == SQLITE_OK) 
+                char* msg = NULL;
+                try {
+                    int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
+                    if (result == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы сообщение", L"Инфо", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...) 
                 {
-                    MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    return 1;
                 }
                 free(msg);
                 msg = NULL;
@@ -620,8 +677,22 @@ int CreateDatabase(HWND hWnd)
     HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
     //char** errorCountT = errorMsg;
-    char* msg = (char*)malloc(2000 * sizeof(char));
-    sqlite3_exec(db, findTableUs, NULL, NULL, &msg);
+    char* msg = NULL;
+    try 
+    {
+        sqlite3_exec(db, findTableUs, NULL, NULL, &msg);
+    }
+    catch (...) 
+    {
+        MessageBox(NULL, L"Произошла ошибка!", L"Ошибка!", MB_OK | MB_ICONERROR);
+        CONST INT SIZE = 2000;
+        WCHAR errorMes[SIZE];
+        size_t szType;
+        mbstowcs_s(&szType, errorMes, msg, SIZE);
+        msg = cleaningMemory(msg);
+        writtingDownLog(errorMes);
+        return 1;
+    }
     sqlite3_close(db);
     free(msg);
     msg = NULL;
