@@ -146,6 +146,168 @@ void writtingDownLog(const WCHAR* record)
         CloseHandle(logFile);
     }
 }
+//void setDash(INT startPos, INT endPos, WCHAR* sendArr, WCHAR* recArr, INT shiftIn)
+//{
+//    while (startPos < endPos)
+//    {
+//        recArr[startPos] = sendArr[startPos];
+//        startPos++;
+//    }
+//    if (sendArr[startPos + 1] == L'-')
+//    {
+//        startPos++;
+//        recArr[startPos] = sendArr[startPos];
+//    }
+//    else
+//    {
+//        wcscat_s(recArr, L"-");
+//        shiftIn++;
+//    }
+//}
+WCHAR checkingNumberPhone(CHAR* strPhone) 
+{
+    INT numberCharacters = 0;
+    CONST INT SIZE = 2000;
+    WCHAR buffer[SIZE]{};
+    WCHAR str[SIZE]{};
+    INT startPosition = 0;
+    if (strPhone == NULL)
+    {
+        MessageBox(NULL, L"Строка  являеться не определенной", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    if (strcmp(strPhone, " ") > 0) 
+    {
+        MessageBox(NULL, L"Строка являеться пустой", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    INT len = static_cast<INT>(strlen(strPhone));
+    if(len < 13)
+    {
+        MessageBox(NULL, L"Размер номера не соотвествует стандартному номеру", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    else 
+    {
+        int i = 0;
+        if (strPhone[0] == '+') 
+        {
+            WCHAR tmp[SIZE];
+            MultiByteToWideChar(1251, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
+            wcscat_s(str, tmp);
+            startPosition++;
+        }
+        else
+        {
+            if (iswdigit(strPhone[0]) != 0)
+            {
+                wsprintf(str, L"%s", L"");
+                wcscat_s(str, L"+");
+                WCHAR tmp[SIZE];
+                MultiByteToWideChar(1251, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
+                wcscat_s(str, tmp);
+                startPosition++;
+            }
+        }
+        INT posOpenParet = -1;
+        INT posCloseParet = -1;
+        len = static_cast<int>(wcslen(str));
+        for (int i = startPosition; i < len; ++i) 
+        {
+        if ((str[i] < L'0') || (str[i] > '9'))
+        {
+            if (str[i] != L'-' && str[i] != L'(' && str[i] != L')')
+            {
+                MessageBox(NULL, L"Неверный формат телефона", L"Ошибка", MB_OK | MB_ICONERROR);
+                return 1;
+            }
+        }
+        if (str[i] == L'(')
+        {
+            posOpenParet = i;
+        }
+        if (str[i] == L')')
+        {
+            posCloseParet = i;
+        }
+        }
+        if (posOpenParet == -1 || posOpenParet == len) 
+        {
+            MessageBox(NULL, L"Не обнаружена открывающая скобка\nили она находится в конце строки", L"Ошибка", MB_OK | MB_ICONERROR);
+            return 1;
+        }
+        if (posCloseParet == -1 || posCloseParet == len) 
+        {
+            MessageBox(NULL, L"Не обнаружена закрывающая скобка \nили она находится в конце строки!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return 1;
+        }
+        if (posOpenParet > posCloseParet) 
+        {
+            MessageBox(NULL, L"Открывающая скобка находится\nпосле закрывающей скобки!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return 1;
+        }
+        if (posOpenParet == 0) 
+        {
+            MessageBox(NULL, L"Код страны не ввидён!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return 1;
+        }
+        INT d = 0;
+        INT c = 0;
+        while(d <= posCloseParet)
+        {
+            buffer[d] = str[d];
+            d++;
+        }
+        INT shiftIn = 0;
+        c = d + 3;
+        while(d < c)
+        {
+            buffer[d] = str[d];
+            d++;
+        }
+        if (str[d+1] == L'-') 
+        {
+            d++;
+            buffer[d] = str[d];
+        }
+        else 
+        {
+            wcscat_s(buffer, L"-");
+            shiftIn++;
+        }
+        c = d + 2;
+        while (d < c) 
+        {
+            buffer[d+shiftIn] = str[d];
+            d++;
+        }
+        if (buffer[d + 1] != '\0' && buffer[d + 1] != '0') 
+        {
+            buffer[d + 1] = '\0';
+        }
+        if (str[d+1] == L'-')
+        {
+            d++;
+            buffer[d] = str[d];
+        }
+        else
+        {
+            wcscat_s(buffer, L"-");
+            shiftIn++;
+        }
+        c = d + 2;
+        while (d < c)
+        {
+            buffer[d+shiftIn] = str[d];
+            d++;
+        }
+        if (buffer[d + 1] != '\0' && buffer[d + 1] != '0')
+        {
+            buffer[d + 1] = '\0';
+        }
+    }
+    return buffer;
+}
 char* cleaningMemory(char* arr) 
 {
     if (arr != NULL)
@@ -156,7 +318,7 @@ char* cleaningMemory(char* arr)
     }
     return arr;
 }
-int InsertEntry(HWND hwnd) 
+int InsertEntry(HWND hwnd)
 {
     WCHAR lastName[USERSIZE];
     WCHAR firstName[USERSIZE];
@@ -172,7 +334,7 @@ int InsertEntry(HWND hwnd)
     UINT codePage = 1251;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
-    GetWindowText(GetDlgItem(hwnd,IDM_LAST_NAME), lastName, USERSIZE);
+    GetWindowText(GetDlgItem(hwnd, IDM_LAST_NAME), lastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
     //с размером который мы указываем в поле buffer, последний параметр
     GetWindowText(GetDlgItem(hwnd, IDM_FIRST_NAME), firstName, USERSIZE);
@@ -194,9 +356,9 @@ int InsertEntry(HWND hwnd)
     if (sqlite3_prepare_v2(db, lsUsrId, -1, &table, NULL) == SQLITE_OK)
     {
         INT curRow = sqlite3_step(table);
-        if (curRow == SQLITE_ROW) 
+        if (curRow == SQLITE_ROW)
         {
-            num = sqlite3_column_int(table, 0)+1;
+            num = sqlite3_column_int(table, 0) + 1;
             //+1 - получаем следующий id;
         }
     }
@@ -227,6 +389,10 @@ int InsertEntry(HWND hwnd)
     strcat_s(command, buffer);
     strcat_s(command, ",");
     WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone) + 1, buffer, USERSIZE, NULL, NULL);
+    if (checkingNumberPhone(buffer) == 1)
+    {
+        return 1;
+    }
     strcat_s(command, buffer);
     strcat_s(command, ",");
     WideCharToMultiByte(codePage, 0, eMail, wcslen(eMail) + 1, buffer, USERSIZE, NULL, NULL);
@@ -411,7 +577,7 @@ int checkTables()
                     "first_name TEXT NOT NULL,"
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
-                    "phone_number INT NOT NULL,"
+                    "phone_number TEXT NOT NULL,"
                     "email TEXT NOT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
