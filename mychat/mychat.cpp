@@ -146,29 +146,36 @@ void writtingDownLog(const WCHAR* record)
         CloseHandle(logFile);
     }
 }
-//void setDash(INT startPos, INT endPos, WCHAR* sendArr, WCHAR* recArr, INT shiftIn)
-//{
-//    while (startPos < endPos)
-//    {
-//        recArr[startPos] = sendArr[startPos];
-//        startPos++;
-//    }
-//    if (sendArr[startPos + 1] == L'-')
-//    {
-//        startPos++;
-//        recArr[startPos] = sendArr[startPos];
-//    }
-//    else
-//    {
-//        wcscat_s(recArr, L"-");
-//        shiftIn++;
-//    }
-//}
-WCHAR checkingNumberPhone(CHAR* strPhone) 
+void setDash(INT &startPos, INT endPos, CHAR* sendArr, CHAR* recArr, INT &shiftIn)
 {
+    CONST INT SIZE = 2000;
+    while (startPos < endPos)
+    {
+        recArr[startPos + shiftIn] = sendArr[startPos];
+        startPos++;
+    }
+    if (recArr[startPos + 1] != '\0') 
+    {
+        recArr[startPos + 1] = '\0';
+    }
+    if (sendArr[startPos + 1] == '-')
+    {
+        startPos++;
+        recArr[startPos + shiftIn] = sendArr[startPos];
+    }
+    else
+    {
+        strcat_s(recArr, SIZE, "-");
+        shiftIn++;
+    }
+}
+
+
+INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer) 
+{
+    INT codePage = 1251;
     INT numberCharacters = 0;
     CONST INT SIZE = 2000;
-    WCHAR buffer[SIZE]{};
     WCHAR str[SIZE]{};
     INT startPosition = 0;
     if (strPhone == NULL)
@@ -176,7 +183,7 @@ WCHAR checkingNumberPhone(CHAR* strPhone)
         MessageBox(NULL, L"Строка  являеться не определенной", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
-    if (strcmp(strPhone, " ") > 0) 
+    if (strcmp(strPhone, "") == 0) 
     {
         MessageBox(NULL, L"Строка являеться пустой", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
@@ -192,8 +199,9 @@ WCHAR checkingNumberPhone(CHAR* strPhone)
         int i = 0;
         if (strPhone[0] == '+') 
         {
+            
             WCHAR tmp[SIZE];
-            MultiByteToWideChar(1251, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
+            MultiByteToWideChar(codePage, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
             wcscat_s(str, tmp);
             startPosition++;
         }
@@ -231,12 +239,12 @@ WCHAR checkingNumberPhone(CHAR* strPhone)
             posCloseParet = i;
         }
         }
-        if (posOpenParet == -1 || posOpenParet == len) 
+        if (posOpenParet == -1 || posOpenParet == len-1) 
         {
             MessageBox(NULL, L"Не обнаружена открывающая скобка\nили она находится в конце строки", L"Ошибка", MB_OK | MB_ICONERROR);
             return 1;
         }
-        if (posCloseParet == -1 || posCloseParet == len) 
+        if (posCloseParet == -1 || posCloseParet == len-1) 
         {
             MessageBox(NULL, L"Не обнаружена закрывающая скобка \nили она находится в конце строки!", L"Ошибка", MB_OK | MB_ICONERROR);
             return 1;
@@ -255,58 +263,24 @@ WCHAR checkingNumberPhone(CHAR* strPhone)
         INT c = 0;
         while(d <= posCloseParet)
         {
-            buffer[d] = str[d];
+            buffer[d] = strPhone[d];
             d++;
         }
         INT shiftIn = 0;
-        c = d + 3;
-        while(d < c)
-        {
-            buffer[d] = str[d];
-            d++;
-        }
-        if (str[d+1] == L'-') 
-        {
-            d++;
-            buffer[d] = str[d];
-        }
-        else 
-        {
-            wcscat_s(buffer, L"-");
-            shiftIn++;
-        }
-        c = d + 2;
-        while (d < c) 
-        {
-            buffer[d+shiftIn] = str[d];
-            d++;
-        }
-        if (buffer[d + 1] != '\0' && buffer[d + 1] != '0') 
-        {
-            buffer[d + 1] = '\0';
-        }
-        if (str[d+1] == L'-')
-        {
-            d++;
-            buffer[d] = str[d];
-        }
-        else
-        {
-            wcscat_s(buffer, L"-");
-            shiftIn++;
-        }
+        setDash(d, d + 3, strPhone, buffer, shiftIn);
+        setDash(d, d + 2, strPhone, buffer, shiftIn);      
         c = d + 2;
         while (d < c)
         {
-            buffer[d+shiftIn] = str[d];
+            buffer[d+shiftIn] = strPhone[d];
             d++;
         }
-        if (buffer[d + 1] != '\0' && buffer[d + 1] != '0')
+        if (buffer[d + shiftIn] != '\0')
         {
-            buffer[d + 1] = '\0';
+            buffer[d + shiftIn] = '\0';
         }
     }
-    return buffer;
+    return 0;
 }
 char* cleaningMemory(char* arr) 
 {
@@ -389,11 +363,13 @@ int InsertEntry(HWND hwnd)
     strcat_s(command, buffer);
     strcat_s(command, ",");
     WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone) + 1, buffer, USERSIZE, NULL, NULL);
-    if (checkingNumberPhone(buffer) == 1)
+    CONST INT SIZE = 2000;
+    CHAR temp[SIZE]{};
+    if (checkingNumberPhone(buffer, temp) == 1)
     {
         return 1;
     }
-    strcat_s(command, buffer);
+    strcat_s(command, temp);
     strcat_s(command, ",");
     WideCharToMultiByte(codePage, 0, eMail, wcslen(eMail) + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
