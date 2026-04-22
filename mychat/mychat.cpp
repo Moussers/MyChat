@@ -72,7 +72,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         return FALSE;
     }
-
+    checkTables();
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYCHAT));
     MSG msg;
 
@@ -154,14 +154,15 @@ void setDash(INT &startPos, INT endPos, CHAR* sendArr, CHAR* recArr, INT &shiftI
         recArr[startPos + shiftIn] = sendArr[startPos];
         startPos++;
     }
-    if (recArr[startPos + 1] != '\0') 
+    if (recArr[startPos + shiftIn] != '\0') 
     {
-        recArr[startPos + 1] = '\0';
+        recArr[startPos + shiftIn] = '\0';
     }
-    if (sendArr[startPos + 1] == '-')
+    if (sendArr[startPos] == '-')
     {
-        startPos++;
+        
         recArr[startPos + shiftIn] = sendArr[startPos];
+        startPos++;
     }
     else
     {
@@ -170,7 +171,36 @@ void setDash(INT &startPos, INT endPos, CHAR* sendArr, CHAR* recArr, INT &shiftI
     }
 }
 
-
+INT checkingEMail(CHAR* eMail) 
+{
+    int numAt = 0;
+    INT len = strlen(eMail);
+    for (int i = 0; i < len; ++i) 
+    {
+        if (eMail[i] == '@') 
+        {
+            numAt++;
+        }
+        if (((eMail[i] < '0') || (eMail[i] > '9')) && ((eMail[i] < 'A') || (eMail[i] > 'Z') )
+            && ((eMail[i] < 'a') || (eMail[i] > 'z')) && (eMail[i] != '.') && (eMail[i] != '_')
+            && (eMail[i] != '-') && (eMail[i] != '@'))
+        {
+            MessageBox(NULL, L"Неверный формат почты", L"Ошибка", MB_OK | MB_ICONERROR);
+            return 1;
+        }
+    }
+    if (numAt > 1) 
+    {
+        MessageBox(NULL, L"Должен быть только один знак @!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    else if (numAt == 0) 
+    {
+        MessageBox(NULL, L"Не обнаружен знак @!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
 INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer) 
 {
     INT codePage = 1251;
@@ -337,7 +367,7 @@ int InsertEntry(HWND hwnd)
         }
     }
     sqlite3_finalize(table);
-    strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email) VALUES(");
+    strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
     wsprintf(userId, L"%d\0", num);
     WideCharToMultiByte(codePage, 0, userId, wcslen(userId) + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение тип формата в который будет приобразована строка, 
@@ -353,15 +383,22 @@ int InsertEntry(HWND hwnd)
     //в представленной таблице.
     strcat_s(command, buffer);
     strcat_s(command, ",");
+    strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, lastName, wcslen(lastName) + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
+    strcat_s(command, "'");
     strcat_s(command, ",");
+    strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, firstName, wcslen(firstName) + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
+    strcat_s(command, "'");
     strcat_s(command, ",");
+    strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, middleName, wcslen(middleName) + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
+    strcat_s(command, "'");
     strcat_s(command, ",");
+    strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone) + 1, buffer, USERSIZE, NULL, NULL);
     CONST INT SIZE = 2000;
     CHAR temp[SIZE]{};
@@ -370,9 +407,16 @@ int InsertEntry(HWND hwnd)
         return 1;
     }
     strcat_s(command, temp);
+    strcat_s(command, "'");
     strcat_s(command, ",");
+    strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, eMail, wcslen(eMail) + 1, buffer, USERSIZE, NULL, NULL);
+    if (checkingEMail(buffer) == 1) 
+    {
+        return 1;
+    }
     strcat_s(command, buffer);
+    strcat_s(command, "'");
     strcat_s(command, ",");
     wsprintfA(buffer, "%d", status);
     //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
@@ -515,7 +559,7 @@ int checkTables()
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                     if (status == SQLITE_OK)
                     {
-                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONERROR);
+                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
                     }
                     else 
                     {
@@ -547,13 +591,12 @@ int checkTables()
             INT countRows = sqlite3_column_int(table, 0);
             if (countRows == 0) 
             {
-
                 const char* createTable = 
                     "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
                     "first_name TEXT NOT NULL,"
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
-                    "phone_number TEXT NOT NULL,"
+                    "phone TEXT NOT NULL,"
                     "email TEXT NOT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
