@@ -322,6 +322,52 @@ char* cleaningMemory(char* arr)
     }
     return arr;
 }
+//int checkingUserAddition() 
+//{
+//
+//}
+int UpdateList(HWND userList) 
+{
+    INT codePage = 1251;
+    SendMessage(userList, LB_RESETCONTENT, 0, 0);
+    //LB_RESETCONTENT - очищает данные дексиптора, который является listBox.
+    sqlite3* db;
+    int result = sqlite3_open("DatabaseMessanger.db", &db);
+    if (result) 
+    //if result > 0
+    {
+        MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    sqlite3_stmt* userTb;
+    const char* getUserList = "SELECT * FROM users";
+    if (sqlite3_prepare_v2(db, getUserList, -1, &userTb, NULL) == SQLITE_OK) 
+    {
+        int nextRow;
+        while ((nextRow = sqlite3_step(userTb)) == SQLITE_ROW) 
+        {
+            int id = sqlite3_column_int(userTb, 0);
+            //sqlite3_column_int - достает int значение из массива stmt по указанной ячейке
+            CONST INT SIZE = 2000;
+            WCHAR firstName[SIZE];
+            WCHAR lastName[SIZE];
+            const char* charFirstName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
+            const char* charLastName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 2));
+            MultiByteToWideChar(codePage, 0, (char*)charFirstName, strlen((char*)charFirstName)+1, firstName, SIZE);
+            MultiByteToWideChar(codePage, 0, (char*)charLastName, strlen((char*)charLastName) + 1, lastName, SIZE);
+            WCHAR toList[SIZE];
+            wcscpy_s(toList, lastName);
+            //wcscpy - перезаписывает данные из одного массива в другой, 
+            //в последнем стирая прежние данные замещая новыми
+            wcscat_s(toList, L" ");
+            wcscat_s(toList, firstName);
+            SendMessage(userList, LB_ADDSTRING, 0, (LPARAM)toList);
+            //LB_ADDSTRING - добавить строку в lixtBox.
+        }
+    }
+    sqlite3_close(db);
+    return 0;
+}
 int InsertEntry(HWND hwnd)
 {
     WCHAR lastName[USERSIZE];
@@ -347,7 +393,7 @@ int InsertEntry(HWND hwnd)
     GetWindowText(GetDlgItem(hwnd, IDM_EMAIL), eMail, USERSIZE);
     //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
     //MessageBox(NULL, firstName, L"INFO", MB_OK | MB_ICONERROR);
-    const char lsUsrId[] = "SELECT MAX(USER_ID) FROM user";
+    const char lsUsrId[] = "SELECT MAX(USER_ID) FROM users";
     sqlite3* db;
     int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
@@ -797,6 +843,10 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         switch (wmId) {
         case IDB_ADD_USER:
             addUser();
+            if (UpdateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1) 
+            {
+                return 1;
+            }
             break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
@@ -849,9 +899,17 @@ int CreateDatabase(HWND hWnd)
     CreateWindow(L"STATIC", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 20, 300, 280, winUser, (HMENU)IDR_USER_LIST, GetModuleHandle(NULL), NULL);
     //WS_BORDER - ключ благодаря которму задаются границы окна.
     CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 100, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
+    HWND userList = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL |ES_AUTOVSCROLL |WS_BORDER |LBS_NOTIFY , 0, 0, 270, 320, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
+    //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
+    //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
+    //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
+    if (UpdateList(GetDlgItem(winUser, IDM_USER_LIST)) == 1) 
+    {
+        return 1;
+    }
     ShowWindow(winUser, SW_SHOWDEFAULT);
     MSG message;
-    while (IsWindow(winUser)) 
+    while (IsWindow(winUser))
     {
         if (GetMessage(&message, winUser, 0, 0))
         {
@@ -859,7 +917,6 @@ int CreateDatabase(HWND hWnd)
             DispatchMessage(&message);
         }
     }
-    HWND listUser = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE, 0, 0, 270, 320, winUser, NULL, 0, GetModuleHandle(NULL), NULL);
     const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
     //char** errorCountT = errorMsg;
     char* msg = NULL;

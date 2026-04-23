@@ -30,6 +30,7 @@
 #define IDM_MIDDLE_NAME					5002
 #define IDM_PHONE						5003
 #define IDM_EMAIL						5004
+#define IDM_USER_LIST					5005
 
 
 //IDB - кнопки. Стартовое значение от: 1000 до 4999
