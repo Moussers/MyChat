@@ -322,10 +322,6 @@ char* cleaningMemory(char* arr)
     }
     return arr;
 }
-//int checkingUserAddition() 
-//{
-//
-//}
 int UpdateList(HWND userList) 
 {
     INT codePage = 1251;
@@ -337,6 +333,7 @@ int UpdateList(HWND userList)
     //if result > 0
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
         return 1;
     }
     sqlite3_stmt* userTb;
@@ -415,7 +412,7 @@ int InsertEntry(HWND hwnd)
     sqlite3_finalize(table);
     strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
     wsprintf(userId, L"%d\0", num);
-    WideCharToMultiByte(codePage, 0, userId, wcslen(userId) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение тип формата в который будет приобразована строка, 
     //в данный момент из Unicode в формат: 1251;
     //dwFlags - флаг правила преобразования формата кодировки;
@@ -430,22 +427,22 @@ int InsertEntry(HWND hwnd)
     strcat_s(command, buffer);
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, lastName, wcslen(lastName) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, lastName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, firstName, wcslen(firstName) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, firstName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, middleName, wcslen(middleName) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, middleName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, numbrerPhone, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     CONST INT SIZE = 2000;
     CHAR temp[SIZE]{};
     if (checkingNumberPhone(buffer, temp) == 1)
@@ -456,7 +453,7 @@ int InsertEntry(HWND hwnd)
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, eMail, wcslen(eMail) + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, eMail, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     if (checkingEMail(buffer) == 1) 
     {
         return 1;
@@ -470,7 +467,6 @@ int InsertEntry(HWND hwnd)
     strcat_s(command, ")");
     char *msg = NULL;
     try {
-        //char* tmp = msg;
         res = sqlite3_exec(db, command, NULL, NULL, &msg);
         //5 параметр - сам выделяет память и создает массив без участия программиста.
         if (res == SQLITE_OK)
@@ -491,7 +487,8 @@ int InsertEntry(HWND hwnd)
         mbstowcs_s(&n_size,mesError, msg, SIZE);
         //mbstowcs_s - преобразует многобайтовую символьную строку из массива, в расширенное 
         //символьное представление (WCHAR);
-        //retval - указатель на тип данных в котором будут храниться данные;
+        //pReturnValue / retval - указатель на тип данных в котором будут храниться данные, 
+        //то есть размер и тип буфера;
         //dst - указатель на переменную в которую будут записаны преобразованные данные;
         //src - указатель на переменную источник с которой будут считаны данные для 
         //преобразования;
@@ -504,11 +501,57 @@ int InsertEntry(HWND hwnd)
     sqlite3_close(db);
     return 0;
 }
+int deleteUser(int idx) 
+{
+    if (idx == -1) 
+    {
+        return 1;
+    }
+    INT codePage = 1251;
+    sqlite3* db;
+    INT result = sqlite3_open("DatabaseMessanger.db", &db);
+    if (result)
+    {
+        MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    const char* selectIdUser = "SELECT user_id FROM user LIMIT 1 OFFSET ";
+    //прочитать про reinterpret_cast
+    CONST INT SIZE = 2000;
+    CHAR command[SIZE];
+    strcpy_s(command, selectIdUser);
+    WCHAR wchBuffer[SIZE];
+    CHAR buffer[SIZE];
+    wsprintf(wchBuffer, L"%d\0", idx);
+    WideCharToMultiByte(codePage, 0, wchBuffer, SIZE, buffer, SIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, ";");
+    char* errorMsg = NULL;
+    try 
+    {
+        result = sqlite3_exec(db, command, NULL, NULL, &errorMsg);
+        if (result == SQLITE_OK)
+        {
+        }
+    }
+    catch (...) 
+    {
+        CONST INT SIZE = 2000;
+        WCHAR errorMes[SIZE];
+        size_t szType;
+        mbstowcs_s(&szType, errorMes, errorMsg, SIZE);
+        errorMsg = cleaningMemory(errorMsg);
+        writtingDownLog(errorMes);
+        return 1;
+    }
+    return 0;
+}
 void addUser() 
 {
     WNDCLASSEXW userWnd;
+    //WNDCLASSEXW - Содержит сведения о классе окна.
     ZeroMemory(&userWnd, sizeof(userWnd));
-    //Содержит сведения о классе окна.
     userWnd.cbSize = sizeof(WNDCLASSEX);
     userWnd.style = CS_HREDRAW | CS_VREDRAW;
     userWnd.lpfnWndProc = AddNewUserWndProc;
@@ -517,7 +560,7 @@ void addUser()
     //Выделение дополнительных байт для класса после его регистрации, память 
     //будет привязана к самому классу, а не к конкретному окну.
     userWnd.cbWndExtra = 0;
-    //Выделение дпоплнительных для каждого окна, так как каждое окно будет 
+    //Выделение дополнительных байт для каждого окна, так как каждое окно будет 
     //уникальным, выделена память будет сохранена для окна пока оно будет 
     //существовать.
     userWnd.hInstance = GetModuleHandle(NULL);
@@ -848,6 +891,13 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 return 1;
             }
             break;
+        case IDB_DELETE_USER:
+            deleteUser(SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0));
+            if (UpdateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1)
+            {
+                return 1;
+            }
+            break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
@@ -865,7 +915,7 @@ int CreateDatabase(HWND hWnd)
 {
     sqlite3* db;
     CONST INT SIZE = 256;
-    char* errorMsg[SIZE];
+    //char* errorMsg[SIZE];
     int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (result) 
     {
@@ -896,10 +946,10 @@ int CreateDatabase(HWND hWnd)
     ATOM reg = RegisterClassEx(&userWnd);
     HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
     //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
-    CreateWindow(L"STATIC", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 20, 300, 280, winUser, (HMENU)IDR_USER_LIST, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 80, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | WS_BORDER, 190, 320, 80, 20, winUser, (HMENU)IDB_DELETE_USER, GetModuleHandle(NULL), NULL);
+    HWND userList = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, 10, 10, 270, 280, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
     //WS_BORDER - ключ благодаря которму задаются границы окна.
-    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, 20, 320, 100, 20, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
-    HWND userList = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL |ES_AUTOVSCROLL |WS_BORDER |LBS_NOTIFY , 0, 0, 270, 320, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
     //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
     //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
     //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
