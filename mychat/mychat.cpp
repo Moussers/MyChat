@@ -365,7 +365,39 @@ int UpdateList(HWND userList)
     sqlite3_close(db);
     return 0;
 }
-int InsertEntry(HWND hwnd)
+int checkingUserInfo(HWND hWnd) 
+{
+    sqlite3* db;
+    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    CONST INT SIZE = 2000;
+    WCHAR data[SIZE];
+    int len = GetWindowText(GetDlgItem(hWnd, IDM_LAST_NAME), data, SIZE);
+    //Первый аргумент - это дескрптор дескриптор, из этого дескриптора мы получаем строку, и размер 
+    //строки который сохраняется в отдельной int переменной.
+    //GetWindowText нужен чтобы получить саму строку которую мы записываем в перменную вторым аргументом 
+    //и её длину. Длину мы получаем как отдельное число записываем int переменную.
+    if (len == 0) 
+    {
+        MessageBox(NULL, L"Не введена фамилия!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    len = GetWindowText(GetDlgItem(hWnd, IDM_FIRST_NAME), data, SIZE);
+    if (len == 0) 
+    {
+        MessageBox(NULL, L"Не введено имя!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    sqlite3_close(db);
+}
+int InsertEntry(HWND hWnd)
 {
     WCHAR lastName[USERSIZE];
     WCHAR firstName[USERSIZE];
@@ -376,18 +408,22 @@ int InsertEntry(HWND hwnd)
     CONST INT SIZECOMMAND = 12000;
     CHAR command[SIZECOMMAND];
     CHAR buffer[USERSIZE];
-    INT num = 0;
+    INT number = 0;
     INT status = 0;
     UINT codePage = 1251;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
-    GetWindowText(GetDlgItem(hwnd, IDM_LAST_NAME), lastName, USERSIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_LAST_NAME), lastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
     //с размером который мы указываем в поле buffer, последний параметр
-    GetWindowText(GetDlgItem(hwnd, IDM_FIRST_NAME), firstName, USERSIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_MIDDLE_NAME), middleName, USERSIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_PHONE), numbrerPhone, USERSIZE);
-    GetWindowText(GetDlgItem(hwnd, IDM_EMAIL), eMail, USERSIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_FIRST_NAME), firstName, USERSIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_MIDDLE_NAME), middleName, USERSIZE);
+    if (checkingUserInfo(hWnd) == 1) 
+    {
+        return 1;
+    }
+    GetWindowText(GetDlgItem(hWnd, IDM_PHONE), numbrerPhone, USERSIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_EMAIL), eMail, USERSIZE);
     //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
     //MessageBox(NULL, firstName, L"INFO", MB_OK | MB_ICONERROR);
     const char lsUsrId[] = "SELECT MAX(USER_ID) FROM users";
@@ -395,7 +431,7 @@ int InsertEntry(HWND hwnd)
     int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
     {
-        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Информация", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
         return 1;
     }
@@ -405,13 +441,13 @@ int InsertEntry(HWND hwnd)
         INT curRow = sqlite3_step(table);
         if (curRow == SQLITE_ROW)
         {
-            num = sqlite3_column_int(table, 0) + 1;
+            number = sqlite3_column_int(table, 0) + 1;
             //+1 - получаем следующий id;
         }
     }
     sqlite3_finalize(table);
     strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
-    wsprintf(userId, L"%d\0", num);
+    wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение тип формата в который будет приобразована строка, 
     //в данный момент из Unicode в формат: 1251;
@@ -643,7 +679,7 @@ int checkTables()
     int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
     //похожий вариант прочтения:
-    //if(res !=0 ) 
+    //if(res != 0) 
     {
         MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
