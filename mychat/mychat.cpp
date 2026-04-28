@@ -516,35 +516,63 @@ int deleteUser(int idx)
         sqlite3_close(db);
         return 1;
     }
-    const char* selectIdUser = "SELECT user_id FROM user LIMIT 1 OFFSET ";
+    const char* selectIdUser = "SELECT user_id FROM users LIMIT 1 OFFSET ";
     //прочитать про reinterpret_cast
     CONST INT SIZE = 2000;
     CHAR command[SIZE];
     strcpy_s(command, selectIdUser);
-    WCHAR wchBuffer[SIZE];
-    CHAR buffer[SIZE];
+    CONST INT BUFSIZE = 200;
+    WCHAR wchBuffer[BUFSIZE];
+    CHAR buffer[BUFSIZE];
     wsprintf(wchBuffer, L"%d\0", idx);
-    WideCharToMultiByte(codePage, 0, wchBuffer, SIZE, buffer, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wchBuffer, BUFSIZE + 1, buffer, BUFSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, ";");
-    char* errorMsg = NULL;
-    try 
+    sqlite3_stmt* st;
+    if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK) 
     {
-        result = sqlite3_exec(db, command, NULL, NULL, &errorMsg);
-        if (result == SQLITE_OK)
+        int nextRow = sqlite3_step(st);
+        if (nextRow == SQLITE_ROW) 
         {
+            int id = sqlite3_column_int(st,0);
+            //Второй аргумент номер колонки из которой берём значение;
+            const char* delReq = "DELETE FROM users WHERE user_id = ";
+            strcpy_s(command, delReq);
+            wsprintf(wchBuffer, L"%d\0", id);
+            WideCharToMultiByte(codePage, 0, wchBuffer, BUFSIZE + 1, buffer, BUFSIZE, NULL, NULL);
+            strcat_s(command, buffer);
+            strcat_s(command, ";");
+            char* errorMsg = NULL;
+            try {
+                if (sqlite3_exec(db, command, NULL, NULL, &errorMsg) == SQLITE_OK)
+                {
+                    MessageBox(NULL, L"Пользователь удалён", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                }
+                else
+                {
+                    MessageBox(NULL, L"Ошибка при удалении пользователя!", L"Ошибка", MB_OK | MB_ICONERROR);
+                    throw "SQL-ERROR";
+                }
+            }
+            catch (...)
+            {
+                CONST INT SIZE = 2000;
+                WCHAR errorMes[SIZE];
+                size_t szType;
+                mbstowcs_s(&szType, errorMes, errorMsg, SIZE);
+                errorMsg = cleaningMemory(errorMsg);
+                writtingDownLog(errorMes);
+                return 1;
+            }
         }
     }
-    catch (...) 
+    else 
     {
-        CONST INT SIZE = 2000;
-        WCHAR errorMes[SIZE];
-        size_t szType;
-        mbstowcs_s(&szType, errorMes, errorMsg, SIZE);
-        errorMsg = cleaningMemory(errorMsg);
-        writtingDownLog(errorMes);
+        MessageBox(NULL, L"ID пользователя не найден!", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
+    sqlite3_finalize(st);
+    sqlite3_close(db);
     return 0;
 }
 void addUser() 
