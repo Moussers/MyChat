@@ -40,6 +40,7 @@ CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
 CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
+CONST UINT codePage = 1251;
 
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
@@ -207,7 +208,6 @@ INT checkingEMail(CHAR* eMail)
 }
 INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer) 
 {
-    INT codePage = 1251;
     INT numberCharacters = 0;
     CONST INT SIZE = 2000;
     WCHAR str[SIZE]{};
@@ -328,7 +328,6 @@ char* cleaningMemory(char* arr)
 }
 int UpdateList(HWND userList) 
 {
-    INT codePage = 1251;
     SendMessage(userList, LB_RESETCONTENT, 0, 0);
     //LB_RESETCONTENT - очищает данные дексиптора, который является listBox.
     sqlite3* db;
@@ -344,10 +343,10 @@ int UpdateList(HWND userList)
     const char* getUserList = "SELECT * FROM users";
     if (sqlite3_prepare_v2(db, getUserList, -1, &userTb, NULL) == SQLITE_OK) 
     {
-        int nextRow;
+        INT nextRow;
         while ((nextRow = sqlite3_step(userTb)) == SQLITE_ROW) 
         {
-            int id = sqlite3_column_int(userTb, 0);
+            INT id = sqlite3_column_int(userTb, 0);
             //sqlite3_column_int - достает int значение из массива stmt по указанной ячейке
             CONST INT SIZE = 2000;
             WCHAR firstName[SIZE];
@@ -401,10 +400,51 @@ int checkingUserInfo(HWND hWnd)
     }
     sqlite3_close(db);
 }
-int checkingExistingEntry(HWND hWnd) 
+int checkExistsEMail(HWND hWnd) 
 {
     sqlite3* db;
-    int res = sqlite3_open("DatabaseMessanger.db", &db );
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    CONST INT SIZE = 1500;
+    CONST INT COMMANDSIZE = 2000;
+    WCHAR wcMail[SIZE];
+    CHAR cMail[SIZE];
+    GetWindowText(GetDlgItem(hWnd, IDM_EMAIL), wcMail, SIZE);
+    WideCharToMultiByte(codePage, 0, wcMail, SIZE, cMail, SIZE, NULL, NULL);
+    CHAR getMail[COMMANDSIZE];
+    strcpy_s(getMail, "SELECT COUNT(*) FROM users WHERE email='");
+    strcat_s(getMail, cMail);
+    strcat_s(getMail, "'");
+    strcat_s(getMail, ";");
+    INT counter = 0;
+    sqlite3_stmt* st;
+    if (sqlite3_prepare_v2(db, getMail, -1, &st, NULL) == SQLITE_OK) 
+    {
+        INT nextRow = sqlite3_step(st);
+        if (nextRow == SQLITE_ROW) 
+        {
+            counter = sqlite3_column_int(st, 0);
+            if (counter) 
+            {
+                MessageBox(NULL, L"Запись пользователя с указанной почтой\nуже существует!", L"Ошибка", MB_OK | MB_ICONERROR);
+                sqlite3_close(db);
+                return 1;
+            }
+        }
+    }
+    sqlite3_finalize(st);
+    sqlite3_close(db);
+    return 0;
+}
+int checkExistsPhone(HWND hWnd) 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db );
     if (res) 
     {
         MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -415,10 +455,9 @@ int checkingExistingEntry(HWND hWnd)
     CONST INT COMMANDSIZE = 2000;
     WCHAR wcPhone[SIZE];
     CHAR cPhone[SIZE];
-    INT codePage = 1251;
     GetWindowText(GetDlgItem(hWnd, IDM_PHONE), wcPhone, SIZE);
-    CHAR getPhone[COMMANDSIZE];
     WideCharToMultiByte(codePage, 0, wcPhone, SIZE + 1, cPhone, SIZE, NULL, NULL);
+    CHAR getPhone[COMMANDSIZE];
     strcpy_s(getPhone, "SELECT COUNT(*) FROM users WHERE phone='");
     strcat_s(getPhone, cPhone);
     strcat_s(getPhone, "'");
@@ -426,10 +465,10 @@ int checkingExistingEntry(HWND hWnd)
     int counter = 0;
     sqlite3_stmt* st;
     if (sqlite3_prepare_v2(db, getPhone, -1, &st, NULL) == SQLITE_OK)
-        //const char *zSql - этот параметр отвечает за размер формирующейся строки, мы ставим -1,
-        //чтобы фунция сама определила размер строки
-        //const char **pzTail - указатель по индексу на адрес строке комманды которую мы передаём вторым
-        //аргументом, та часть строки которая не будет являться частью выполняемой комманды
+        //int nByte - этот параметр отвечает за размер формирующейся строки, мы ставим -1, чтобы фунция
+        //сама определила размер строки
+        //const char **pzTail - указатель по индексу на адрес в строке команды которую мы передаём вторым
+        //аргументом, та часть строки которая не будет являться частью выполняемой команды
     {
         INT curRow = sqlite3_step(st);
         if (curRow == SQLITE_ROW)
@@ -440,7 +479,7 @@ int checkingExistingEntry(HWND hWnd)
             //объекта, так и данных хранящихся в этой структуре
             if (counter) 
             {
-                MessageBox(NULL, L"Запись пользователя с таким номером телефона существует", L"Ошибка", MB_OK | MB_ICONERROR);
+                MessageBox(NULL, L"Запись пользователя с таким номером телефона\nуже существует", L"Ошибка", MB_OK | MB_ICONERROR);
                 sqlite3_close(db);
                 return 1;
             }
@@ -461,7 +500,6 @@ int insertEntry(HWND hWnd)
     CHAR buffer[USERSIZE];
     INT number = 0;
     INT status = 0;
-    UINT codePage = 1251;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
     GetWindowText(GetDlgItem(hWnd, IDM_LAST_NAME), lastName, USERSIZE);
@@ -497,7 +535,7 @@ int insertEntry(HWND hWnd)
     strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
-    //CodePage (кодовая страница) - отвечает за хранение тип формата в который будет приобразована строка, 
+    //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
     //в данный момент из Unicode в формат: 1251;
     //dwFlags - флаг правила преобразования формата кодировки;
     //LpWideChar - указатель на строку для преобразования;
@@ -537,7 +575,7 @@ int insertEntry(HWND hWnd)
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    if (checkingExistingEntry(hWnd) == 1) 
+    if (checkExistsPhone(hWnd) == 1) 
     {
         return 1;
     }
@@ -549,6 +587,10 @@ int insertEntry(HWND hWnd)
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
+    if (checkExistsEMail(hWnd) == 1) 
+    {
+        return 1;
+    }
     wsprintfA(buffer, "%d", status);
     //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
     strcat_s(command, buffer);
@@ -595,7 +637,6 @@ int deleteUser(int idx)
     {
         return 1;
     }
-    INT codePage = 1251;
     sqlite3* db;
     INT result = sqlite3_open("DatabaseMessanger.db", &db);
     if (result)
@@ -619,10 +660,10 @@ int deleteUser(int idx)
     sqlite3_stmt* st;
     if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK) 
     {
-        int nextRow = sqlite3_step(st);
+        INT nextRow = sqlite3_step(st);
         if (nextRow == SQLITE_ROW) 
         {
-            int id = sqlite3_column_int(st, 0);
+            INT id = sqlite3_column_int(st, 0);
             //Второй аргумент номер колонки из которой берём значение;
             const char* delReq = "DELETE FROM users WHERE user_id = ";
             strcpy_s(command, delReq);
@@ -650,6 +691,7 @@ int deleteUser(int idx)
                 mbstowcs_s(&szType, errorMes, errorMsg, SIZE);
                 errorMsg = cleaningMemory(errorMsg);
                 writtingDownLog(errorMes);
+                sqlite3_close(db);
                 return 1;
             }
         }
@@ -780,6 +822,7 @@ int checkTables()
                     mbstowcs_s(&szType, errorMes, msg, SIZE);
                     msg = cleaningMemory(msg);
                     writtingDownLog(errorMes);
+                    sqlite3_close(db);
                     return 1;
                 }
             }
@@ -802,7 +845,7 @@ int checkTables()
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
                     "phone TEXT NOT NULL,"
-                    "email TEXT NOT NULL,"
+                    "email TEXT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
                     "status INT NOT NULL);";
@@ -828,6 +871,7 @@ int checkTables()
                     mbstowcs_s(&szType, errorMes, msg, SIZE);
                     msg = cleaningMemory(msg);
                     writtingDownLog(errorMes);
+                    sqlite3_close(db);
                     return 1;
                 }
                 free(msg);
@@ -879,6 +923,7 @@ int checkTables()
                     mbstowcs_s(&szType, errorMes, msg, SIZE);
                     msg = cleaningMemory(msg);
                     writtingDownLog(errorMes);
+                    sqlite3_close(db);
                     return 1;
                 }
                 free(msg);
@@ -922,7 +967,7 @@ int SendPost(char* msg)
     }
     for (ptr = result; ptr != NULL; ptr = ptr->ai_next)
     {
-        //ptr->ai_next -идём по адерсу ptr пока она не станет null
+        //ptr->ai_next - идём по адерсу ptr пока она не станет null
         listen = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
         if (listen == INVALID_SOCKET)
         {
@@ -1099,6 +1144,7 @@ int CreateDatabase(HWND hWnd)
         mbstowcs_s(&szType, errorMes, msg, SIZE);
         msg = cleaningMemory(msg);
         writtingDownLog(errorMes);
+        sqlite3_close(db);
         return 1;
     }
     sqlite3_close(db);
