@@ -94,6 +94,8 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 {
     //LRESULT CALLBACK - это структура меню для созданного окна. Команды внутри окна
     //выполняются через switch(message)
+    //LRESULT CALLBACK - своего рода тоже цикл наподобие while, ведь он отвечает за 
+    //логику работы окна которое выводится юзеру и с которым юзер может работать
     switch (message)
     {
     case WM_COMMAND:
@@ -180,6 +182,10 @@ INT checkingEMail(CHAR* eMail)
 {
     int numAt = 0;
     INT len = strlen(eMail);
+    if (len == 0) 
+    {
+        return 0;
+    }
     for (int i = 0; i < len; ++i) 
     {
         if (eMail[i] == '@') 
