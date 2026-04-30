@@ -2,7 +2,7 @@
 
 #include "framework.h"
 #include "mychat.h"
-#include "winsock2.h"               //Бибилиотека для работы с сетью
+#include "winsock2.h"               //Библиотека для работы с сетью
 #define MAX_LOADSTRING 100
 #define MAIN_WINDOW_POSITION_X 820
 #define MAIN_WINDOW_POSITION_Y 580
@@ -51,7 +51,7 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-int InsertEntry(HWND hwnd);
+int insertEntry(HWND hwnd);
 int checkTables();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -88,6 +88,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     return (int) msg.wParam;
 }
+int checkingUserInfo(HWND hWnd);
 LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     //LRESULT CALLBACK - это структура меню для созданного окна. Команды внутри окна
@@ -102,8 +103,11 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             break;
         case IDB_DEALIGN_USER_ADDITION: 
         {
-            InsertEntry(hWnd);
-            SendMessage(hWnd, WM_CLOSE, 0, NULL);
+            if (checkingUserInfo(hWnd) != 1)
+            {
+                insertEntry(hWnd);
+                SendMessage(hWnd, WM_CLOSE, 0, NULL);
+            }
             break;
         }
         default:
@@ -397,7 +401,54 @@ int checkingUserInfo(HWND hWnd)
     }
     sqlite3_close(db);
 }
-int InsertEntry(HWND hWnd)
+int checkingExistingEntry(HWND hWnd) 
+{
+    sqlite3* db;
+    int res = sqlite3_open("DatabaseMessanger.db", &db );
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    CONST INT SIZE = 1000;
+    CONST INT COMMANDSIZE = 2000;
+    WCHAR wcPhone[SIZE];
+    CHAR cPhone[SIZE];
+    INT codePage = 1251;
+    GetWindowText(GetDlgItem(hWnd, IDM_PHONE), wcPhone, SIZE);
+    CHAR getPhone[COMMANDSIZE];
+    WideCharToMultiByte(codePage, 0, wcPhone, SIZE + 1, cPhone, SIZE, NULL, NULL);
+    strcpy_s(getPhone, "SELECT COUNT(*) FROM users WHERE phone='");
+    strcat_s(getPhone, cPhone);
+    strcat_s(getPhone, "'");
+    strcat_s(getPhone, ";");
+    int counter = 0;
+    sqlite3_stmt* st;
+    if (sqlite3_prepare_v2(db, getPhone, -1, &st, NULL) == SQLITE_OK)
+        //const char *zSql - этот параметр отвечает за размер формирующейся строки, мы ставим -1,
+        //чтобы фунция сама определила размер строки
+        //const char **pzTail - указатель по индексу на адрес строке комманды которую мы передаём вторым
+        //аргументом, та часть строки которая не будет являться частью выполняемой комманды
+    {
+        INT curRow = sqlite3_step(st);
+        if (curRow == SQLITE_ROW)
+        {
+            counter = sqlite3_column_int(st, 0);
+            sqlite3_finalize(st);
+            //sqlite3_finalize - уничтожает объект структуры stmtm, тем самым очищая память как от самого 
+            //объекта, так и данных хранящихся в этой структуре
+            if (counter) 
+            {
+                MessageBox(NULL, L"Запись пользователя с таким номером телефона существует", L"Ошибка", MB_OK | MB_ICONERROR);
+                sqlite3_close(db);
+                return 1;
+            }
+        }
+    }
+    sqlite3_close(db);
+}
+int insertEntry(HWND hWnd)
 {
     WCHAR lastName[USERSIZE];
     WCHAR firstName[USERSIZE];
@@ -418,10 +469,6 @@ int InsertEntry(HWND hWnd)
     //с размером который мы указываем в поле buffer, последний параметр
     GetWindowText(GetDlgItem(hWnd, IDM_FIRST_NAME), firstName, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_MIDDLE_NAME), middleName, USERSIZE);
-    if (checkingUserInfo(hWnd) == 1) 
-    {
-        return 1;
-    }
     GetWindowText(GetDlgItem(hWnd, IDM_PHONE), numbrerPhone, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_EMAIL), eMail, USERSIZE);
     //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
@@ -443,6 +490,7 @@ int InsertEntry(HWND hWnd)
         {
             number = sqlite3_column_int(table, 0) + 1;
             //+1 - получаем следующий id;
+            //Второй аргумент номер колонки из которой берём значение;
         }
     }
     sqlite3_finalize(table);
@@ -489,6 +537,10 @@ int InsertEntry(HWND hWnd)
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
+    if (checkingExistingEntry(hWnd) == 1) 
+    {
+        return 1;
+    }
     WideCharToMultiByte(codePage, 0, eMail, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     if (checkingEMail(buffer) == 1) 
     {
@@ -570,7 +622,7 @@ int deleteUser(int idx)
         int nextRow = sqlite3_step(st);
         if (nextRow == SQLITE_ROW) 
         {
-            int id = sqlite3_column_int(st,0);
+            int id = sqlite3_column_int(st, 0);
             //Второй аргумент номер колонки из которой берём значение;
             const char* delReq = "DELETE FROM users WHERE user_id = ";
             strcpy_s(command, delReq);
