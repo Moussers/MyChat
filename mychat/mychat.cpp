@@ -53,7 +53,7 @@ CONST WCHAR INFO_MODIFICATION_CLASS[] = L"ModifingUserInfo";
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
 CONST UINT codePage = 1251;
-
+INT userId = 0;
 // Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
@@ -108,7 +108,11 @@ LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     case WM_COMMAND:
         switch (LOWORD(wParam)) 
         {
-
+        case IDB_GIVE_CONSENT_USER_MOD:
+            break;
+        case IDB_CANCELING_USER_MOD:
+            SendMessage(hWnd, WM_CLOSE, 0, NULL);
+            break;
         }
         break;
     default:
@@ -163,7 +167,7 @@ void writtingDownLog(const WCHAR* record)
     //dwFlagsAndAttributes - предоставляает права программе для взаимодействия с файлом, обычно 
     //используется флаг FILE_ATTRIBUTE_NORMAL, дающий стандартные права для чтения и записи программе 
     //и ничего дополнительного.
-    //hTemplateFile - работа с шифрованным файлом: чтение и запись, при созддании временног файла.
+    //hTemplateFile - работа с шифрованным файлом: чтение и запись, при создании временного файла.
     if (logFile == INVALID_HANDLE_VALUE)
     {
         if (GetLastError() == ERROR_FILE_EXISTS)
@@ -507,7 +511,7 @@ int checkExistsPhone(HWND hWnd)
         {
             counter = sqlite3_column_int(st, 0);
             sqlite3_finalize(st);
-            //sqlite3_finalize - уничтожает объект структуры stmtm, тем самым очищая память как от самого 
+            //sqlite3_finalize - уничтожает объект структуры stmt, тем самым очищая память как от самого 
             //объекта, так и данных хранящихся в этой структуре
             if (counter) 
             {
@@ -663,6 +667,10 @@ int insertEntry(HWND hWnd)
     sqlite3_close(db);
     return 0;
 }
+void modifyUserInfo()
+{
+
+}
 int deleteUser(int idx) 
 {
     if (idx == -1) 
@@ -737,45 +745,127 @@ int deleteUser(int idx)
     sqlite3_close(db);
     return 0;
 }
-void modifyUserInfo() 
+int classModUserInfo(HWND hWnd, int idx) 
 {
-    WNDCLASSEX userWnd;
-    ZeroMemory(&userWnd, sizeof(userWnd));
-    userWnd.cbSize = sizeof(WNDCLASSEX);
-    userWnd.style = CS_HREDRAW | CS_VREDRAW;
-    userWnd.lpfnWndProc = ModifyUserWndProc;
-    userWnd.cbClsExtra = 0;
-    userWnd.cbWndExtra = 0;
-    userWnd.hInstance = GetModuleHandle(NULL);
-    userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));
-    userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
-    userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
-    userWnd.lpszMenuName = NULL;
-    userWnd.lpszClassName = INFO_MODIFICATION_CLASS;
-    ATOM reg = RegisterClassEx(&userWnd);
-    HWND userClass = CreateWindow(INFO_MODIFICATION_CLASS, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-    HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, 100, 20, userClass, (HMENU)IDM_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 50, 100, 20, userClass, (HMENU)IDM_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 80, 100, 20, userClass, (HMENU)IDM_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 110, 100, 20, userClass, (HMENU)IDM_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 140, 100, 20, userClass, (HMENU)IDM_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, 80, 200, 60, 20, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, 150, 200, 60, 20, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
-    ShowWindow(userClass, SW_SHOWDEFAULT);
-    MSG msg;
-    while (IsWindow(userClass)) 
+    if (idx == -1) 
     {
-        if (GetMessage(&msg, userClass, 0, 0)) 
+        return 1;
+    }
+    sqlite3* db;
+    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+
+    const char* selId = "SELECT user_id FROM users LIMIT 1 OFFSET ";
+    //SELECT user_id FROM users LIMIT 1 OFFSET - сдвиг на какое количество
+    //записей и получение id записи, которая будет единственной благодаря
+    //ключу LIMIT 
+    CONST INT SIZE = 2000;
+    CHAR command[SIZE];
+    strcpy_s(command, selId);
+    CONST INT IDXSIZE = 256;
+    WCHAR wNum[IDXSIZE];
+    CHAR chNum[IDXSIZE];
+    wsprintf(wNum, L"%d\0", idx);
+    WideCharToMultiByte(codePage, 0, wNum, wcslen(wNum) + 1, chNum, IDXSIZE, NULL, NULL);
+    strcat_s(command, chNum);
+    strcat_s(command, ";");
+    sqlite3_stmt* st;
+    if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(st);
+        if (curRow == SQLITE_ROW)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            INT changeUserId = sqlite3_column_int(st, 0);
+            //sqlite3_column_int - берет строку из stmt и преобразует строку в
+            //integer значение,записывая в выделенную int переменную;
+            //Второй аргумент номер колонки из которой берём значение;
+            INT userId = changeUserId;
+            const char* dataUser = "SELECT first_name, last_name, middle_name, phone, email FROM users WHERE user_id = ";
+            //!SQLITE все работает через запросы которые мы собираем в переменной формата const char*
+            WCHAR wId[IDXSIZE]{};
+            CHAR chId[IDXSIZE]{};
+            wsprintf(wId, L"%d\0", userId);
+            WideCharToMultiByte(codePage, 0, wId, wcslen(wId), chId, IDXSIZE, NULL, NULL);
+            strcpy_s(command, dataUser);
+            strcat_s(command, chId);
+            strcat_s(command, ";");
+            if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK)
+            {
+                INT curRow = sqlite3_step(st);
+                //sqlite3_step - 
+                if (curRow == SQLITE_ROW) 
+                {
+                    char* errMes = NULL;
+                    try
+                    {
+                        INT status = sqlite3_exec(db, command, NULL, NULL, &errMes);
+                        if (status == SQLITE_OK)
+                        {
+                            WNDCLASSEX userWnd;
+                            ZeroMemory(&userWnd, sizeof(userWnd));
+                            userWnd.cbSize = sizeof(WNDCLASSEX);
+                            userWnd.style = CS_HREDRAW | CS_VREDRAW;
+                            userWnd.lpfnWndProc = ModifyUserWndProc;
+                            userWnd.cbClsExtra = 0;
+                            userWnd.cbWndExtra = 0;
+                            userWnd.hInstance = GetModuleHandle(NULL);
+                            userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));
+                            userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
+                            userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+                            userWnd.lpszMenuName = NULL;
+                            userWnd.lpszClassName = INFO_MODIFICATION_CLASS;
+                            ATOM reg = RegisterClassEx(&userWnd);
+                            HWND userClass = CreateWindow(INFO_MODIFICATION_CLASS, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 50, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 80, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 110, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 140, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, 80, 200, 60, 20, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
+                            CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, 150, 200, 60, 20, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
+                            ShowWindow(userClass, SW_SHOWDEFAULT);
+                            MSG msg;
+                            while (IsWindow(userClass))
+                            {
+                                if (GetMessage(&msg, userClass, 0, 0))
+                                {
+                                    TranslateMessage(&msg);
+                                    DispatchMessage(&msg);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            MessageBox(NULL, L"Данные пользователя не получены!", L"Ошибка", MB_OK | MB_ICONERROR);
+                            throw "SQL-ERROR";
+                        }
+                    }
+                    catch (...)
+                    {
+                        CONST INT SIZE = 2000;
+                        WCHAR errorMes[SIZE];
+                        size_t szType;
+                        mbstowcs_s(&szType, errorMes, errMes, SIZE);
+                        errMes = cleaningMemory(errMes);
+                        writtingDownLog(errorMes);
+                        sqlite3_close(db);
+                        return 1;
+                    }
+                }
+            }
         }
     }
+    return 0;
 }
 void addUser() 
 {
@@ -1125,10 +1215,14 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             }
             break;
         case IDB_MODIFY_USER:
-            modifyUserInfo();
+            classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0));
             break;
         case IDB_DELETE_USER:
             deleteUser(SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0));
+            //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
+            //чтобы получить id/индекс выбранного пользователя
+            //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
+            //выполняется через SendMessage работающий с системой Windows
             if (UpdateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1)
             {
                 return 1;
