@@ -52,8 +52,11 @@
 #define MOD_DEAL_BUTTON_POS_X 80
 #define MOD_DEAL_BUTTON_WIDTH 60
 #define ADD_BUTTON_POS_X 20
+#define ADD_BUTTON_POS_Y 295
 #define MODIFY_BUTTON_POS_X 110
-#define DELETE_BUTTON_POS_X 200
+#define MODIFY_BUTTON_POS_Y 295
+#define DELETE_BUTTON_POS_X 20
+#define MAIN_CANCEL_BUTTON_POS_X 110
 #define SELECTION_MENU_FIELD_POS_X 360
 #define SELECTION_MENU_FIELD_POS_Y 400
 #define BUTTON_POS_Y 320
@@ -1321,6 +1324,13 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 return 1;
             }
             break;
+        case IDB_CANCEL:
+            SendMessage(hWnd, WM_CLOSE, 0, NULL);
+            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
+            {
+                return 1;
+            }
+            break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
@@ -1369,9 +1379,10 @@ int CreateDatabase(HWND hWnd)
     ATOM reg = RegisterClassEx(&userWnd);
     HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, SELECTION_MENU_FIELD_POS_X, SELECTION_MENU_FIELD_POS_Y, hWnd, 0, GetModuleHandle(NULL), NULL);
     //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
-    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, ADD_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Изменить", WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_MODIFY_USER, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, ADD_BUTTON_POS_X, ADD_BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Изменить", WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_POS_X, MODIFY_BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_MODIFY_USER, GetModuleHandle(NULL), NULL);
     CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | WS_BORDER, DELETE_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_DELETE_USER, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_CANCEL_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_CANCEL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, LIST_ADDED_USERS_POS_X, LIST_ADDED_USERS_POS_Y, LIST_ADDED_USERS_WIDTH, LIST_ADDED_USERS_HEIGHT, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
     //WS_BORDER - ключ благодаря которму задаются границы окна.
     //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
