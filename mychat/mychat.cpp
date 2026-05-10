@@ -8,12 +8,20 @@
 #define MAIN_WINDOW_POSITION_Y 580
 #define MES_FIELD_X 10
 #define MES_FIELD_Y 460
-#define MES_FIELD_WIDTH 760
+#define MES_FIELD_WIDTH 780
 #define MES_FIELD_HEIGHT 20
-#define INFO_FIELD_WIDTH 790
-#define INFO_FIELD_HEIGT 440
-#define INFO_FIELD_POS_X 5
+#define INFO_FIELD_POS_X 250
 #define INFO_FIELD_POS_Y 10
+#define INFO_FIELD_WIDTH 540
+#define INFO_FIELD_HEIGT 440
+#define MAIN_LIST_USERS_POS_X 10
+#define MAIN_LIST_USERS_POS_Y 12
+#define MAIN_LIST_USERS_WIDTH 235
+#define MAIN_LIST_USERS_HEIGHT 440
+#define LIST_ADDED_USERS_POS_X 10
+#define LIST_ADDED_USERS_POS_Y 10
+#define LIST_ADDED_USERS_WIDTH 270
+#define LIST_ADDED_USERS_HEIGHT 280
 #define SEND_MES_WINDOW_X 20
 #define SEND_MES_WINDOW_Y 490
 #define SEND_MES_WINDOW_WIDTH 100
@@ -46,12 +54,15 @@
 #define ADD_BUTTON_POS_X 20
 #define MODIFY_BUTTON_POS_X 110
 #define DELETE_BUTTON_POS_X 200
+#define SELECTION_MENU_FIELD_POS_X 360
+#define SELECTION_MENU_FIELD_POS_Y 400
 #define BUTTON_POS_Y 320
 #define BUTTON_WIDTH 80
 #define BUTTON_HEIGHT 20
 #define MODIFY_CLASS_WIDTH 260
 #define MODIFY_CLASS_HEIGHT 300
 #define MODIFY_BUTTON_EDIT_POS_X 100
+#define MODIFY_BUTTON_EDIT_POS_Y(x) x+30
 CONST WCHAR USER_LIST_CLASS_NAME[] = L"UserListWindow";
 CONST WCHAR USER_ACCOUNT_CLASS_NAME[] = L"AddingUserAccount";
 CONST WCHAR INFO_MODIFICATION_CLASS[] = L"ModifingUserInfo";
@@ -370,7 +381,7 @@ char* cleaningMemory(char* arr)
     }
     return arr;
 }
-int UpdateList(HWND userList) 
+int updateList(HWND userList) 
 {
     SendMessage(userList, LB_RESETCONTENT, 0, 0);
     //LB_RESETCONTENT - очищает данные дексиптора, который является listBox.
@@ -920,10 +931,10 @@ int classModUserInfo(HWND hWnd, int idx)
                     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"EDIT", wLastName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wFirstName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 50, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 80, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 110, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 140, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wFirstName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDM_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_DEAL_BUTTON_POS_X, DEAL_BUTTON_POS_Y, MOD_DEAL_BUTTON_WIDTH, DEAL_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, CANCEL_BUTTON_HEIGH, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
@@ -1291,7 +1302,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         switch (wmId) {
         case IDB_ADD_USER:
             addUser();
-            if (UpdateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1) 
+            if (updateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1) 
             {
                 return 1;
             }
@@ -1305,7 +1316,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             //чтобы получить id/индекс выбранного пользователя
             //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
             //выполняется через SendMessage работающий с системой Windows
-            if (UpdateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1)
+            if (updateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1)
             {
                 return 1;
             }
@@ -1356,17 +1367,17 @@ int CreateDatabase(HWND hWnd)
     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     userWnd.lpszClassName = USER_LIST_CLASS_NAME;
     ATOM reg = RegisterClassEx(&userWnd);
-    HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 360, 400, hWnd, 0, GetModuleHandle(NULL), NULL);
+    HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, SELECTION_MENU_FIELD_POS_X, SELECTION_MENU_FIELD_POS_Y, hWnd, 0, GetModuleHandle(NULL), NULL);
     //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
     CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, ADD_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
     CreateWindow(L"BUTTON", L"Изменить", WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_MODIFY_USER, GetModuleHandle(NULL), NULL);
     CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | WS_BORDER, DELETE_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_DELETE_USER, GetModuleHandle(NULL), NULL);
-    HWND userList = CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, 10, 10, 270, 280, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, LIST_ADDED_USERS_POS_X, LIST_ADDED_USERS_POS_Y, LIST_ADDED_USERS_WIDTH, LIST_ADDED_USERS_HEIGHT, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
     //WS_BORDER - ключ благодаря которму задаются границы окна.
     //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
     //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
     //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
-    if (UpdateList(GetDlgItem(winUser, IDM_USER_LIST)) == 1) 
+    if (updateList(GetDlgItem(winUser, IDM_USER_LIST)) == 1) 
     {
         return 1;
     }
@@ -1407,20 +1418,23 @@ int CreateDatabase(HWND hWnd)
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, MAIN_WINDOW_POSITION_X, MAIN_WINDOW_POSITION_Y, NULL, NULL, hInstance, NULL);
-
+   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0,
+       MAIN_WINDOW_POSITION_X, MAIN_WINDOW_POSITION_Y, NULL, NULL, hInstance, NULL);
    if (!hWnd)
    {
       return FALSE;
    }
-   HWND storyField = CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
-   HWND mesFiled = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
-   HWND mesButton = CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInstance, NULL);
+   if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+   {
+       return 1;
+   }
+   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-
    return TRUE;
 }
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1441,7 +1455,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDB_CREATE_DB:
                 CreateDatabase(hWnd);
-                break;
+                break; 
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
