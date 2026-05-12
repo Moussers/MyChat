@@ -1326,10 +1326,6 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
             break;
         case IDB_CANCEL:
             SendMessage(hWnd, WM_CLOSE, 0, NULL);
-            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
-            {
-                return 1;
-            }
             break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
@@ -1466,6 +1462,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDB_CREATE_DB:
                 CreateDatabase(hWnd);
+                if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                {
+                    return 1;
+                }
                 break; 
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
