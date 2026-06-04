@@ -30,6 +30,12 @@
     <ClInclude Include="..\..\..\..\Downloads\sqlite-amalgamation-3510300\sqlite-amalgamation-3510300\sqlite3.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="NamesOfWndowClasses.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="PositionsButtonsAndWindows.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mychat.cpp">
