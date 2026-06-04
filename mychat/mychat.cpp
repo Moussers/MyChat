@@ -2,7 +2,7 @@
 
 #include "framework.h"
 #include "mychat.h"
-#include "winsock2.h"               //Библиотека для работы с сетью
+#include <winsock2.h>               //Библиотека для работы с сетью
 #define MAX_LOADSTRING 100
 #define MAIN_WINDOW_POSITION_X 820
 #define MAIN_WINDOW_POSITION_Y 580
@@ -1199,7 +1199,7 @@ int SendPost(char* msg)
     WSADATA wsd;
     SOCKET listen = INVALID_SOCKET;
     //INVALID_SOCKET -1
-    struct addrinfo* result, * ptr, hints;
+    struct addrinfo* result, *ptr, hints;
     //addrinfo - хранит информацию об адресе в сети
     //WSAStartup - инициализирует SOCKET
     int res = WSAStartup(MAKEWORD(2, 2), &wsd);
@@ -1215,7 +1215,7 @@ int SendPost(char* msg)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;        //Инициализация типа протокола продключения
     res = getaddrinfo("127.0.0.1", "4321", &hints, &result);
-    //если произйодет ошибка, переменная res получит код ошибки
+    //если произойдет ошибка, переменная res получит код ошибки
     if (res != 0) 
     {
         MessageBox(NULL, L"getaddrinfo not working!", L"Error", MB_OK | MB_ICONERROR);

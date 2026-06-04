@@ -2,6 +2,14 @@
 // Microsoft Visual C++ generated include file.
 // Used by chat_server.rc
 
+//IDB
+#define IDB_MAIN_BUTTON_DELETE 1000
+#define IDB_MAIN_BUTTON_CLEAR_LOG 1001
+
+//EDIT
+#define IDM_MAIN_MENU_USER_LISTS 5000
+#define IDM_MAIN_MENU_LOG_FIELD 5001
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
