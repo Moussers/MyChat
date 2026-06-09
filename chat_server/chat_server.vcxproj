@@ -104,13 +104,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\libs</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\ILua\source\repos\mychat\includes</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\Debug;$(SolutionDir)\x64\Debug;$(SolutionDir)\includes</AdditionalLibraryDirectories>
+      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;CleaningMemory.h;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\mychat\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -121,13 +121,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\libs</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\ILua\source\repos\mychat\includes</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\Debug;$(SolutionDir)\x64\Debug;$(SolutionDir)\includes</AdditionalLibraryDirectories>
+      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;CleaningMemory.h;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\mychat\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

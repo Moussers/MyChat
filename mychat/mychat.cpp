@@ -1,5 +1,12 @@
 ﻿// mychat.cpp : Определяет точку входа для приложения.
 
+//Linker\Input\Additional Dependencies - поле куда записываем названия файлов динамических 
+//или статических библиотек, они имеют расширение: .lib . Пример: sqlite.lib 
+//C/C++\General\Additional Include Directions - поле куда записываем путь и далее директории
+//где файл заголовок (header file) имеющий расширение: .h .
+//Файл заголовок (Header file) - файл который содержит прототип фукции. А реализация находится
+//в файле .cpp .
+
 #include "framework.h"
 #include "mychat.h"
 #include <winsock2.h>               //Библиотека для работы с сетью
