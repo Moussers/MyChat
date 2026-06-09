@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "resource.h"
 #include <WrittingDownLog.h>
+#include <CleaningMemory.h>
 
 #pragma comment(lib, "wsock32.lib")
 
