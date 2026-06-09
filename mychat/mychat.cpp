@@ -5,6 +5,7 @@
 #include <winsock2.h>               //Библиотека для работы с сетью
 #include "NamesOfWndowClasses.h"
 #include "PositionsButtonsAndWindows.h"
+#include <WrittingDownLog.h>
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
 CONST UINT codePage = 1251;
@@ -20,6 +21,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 int insertEntry(HWND hwnd);
+void writtingDownLog(const WCHAR* record);
 int checkTables();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -112,35 +114,35 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     }
     return 0;
 }
-void writtingDownLog(const WCHAR* record) 
-{
-    HANDLE logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-    //dwDesiredAccess - предоставляет атрибуты, иначе говоря права доступа на чтение и запись файлу.
-    //dwShareMode - запрещает повторно открывать файл.
-    //lpSecurityAttributes - отвечает за настройки безопасности файла, если поставить NULL, тогда 
-    //применяются стандартные настройки безопасности к файлу при его создании.
-    //dwCreationDisposition - флаг за тип взаимодействия с файлом: создания или открытия:
-    //CREATE_NEW - создание нового файла;
-    //OPEN_EXISTS - открыть существующий файл.
-    //dwFlagsAndAttributes - предоставляает права программе для взаимодействия с файлом, обычно 
-    //используется флаг FILE_ATTRIBUTE_NORMAL, дающий стандартные права для чтения и записи программе 
-    //и ничего дополнительного.
-    //hTemplateFile - работа с шифрованным файлом: чтение и запись, при создании временного файла.
-    if (logFile == INVALID_HANDLE_VALUE)
-    {
-        if (GetLastError() == ERROR_FILE_EXISTS)
-        {
-            logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        }
-    }
-    if (logFile != INVALID_HANDLE_VALUE)
-    {
-        SetFilePointer(logFile, 0, NULL, FILE_END);
-        WriteFile(logFile, record, wcslen(record)*2, NULL, NULL);
-        WriteFile(logFile, L"\n", 2, NULL, NULL);
-        CloseHandle(logFile);
-    }
-}
+//void writtingDownLog(const WCHAR* record) 
+//{
+//    HANDLE logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+//    //dwDesiredAccess - предоставляет атрибуты, иначе говоря права доступа на чтение и запись файлу.
+//    //dwShareMode - запрещает повторно открывать файл.
+//    //lpSecurityAttributes - отвечает за настройки безопасности файла, если поставить NULL, тогда 
+//    //применяются стандартные настройки безопасности к файлу при его создании.
+//    //dwCreationDisposition - флаг за тип взаимодействия с файлом: создания или открытия:
+//    //CREATE_NEW - создание нового файла;
+//    //OPEN_EXISTS - открыть существующий файл.
+//    //dwFlagsAndAttributes - предоставляает права программе для взаимодействия с файлом, обычно 
+//    //используется флаг FILE_ATTRIBUTE_NORMAL, дающий стандартные права для чтения и записи программе 
+//    //и ничего дополнительного.
+//    //hTemplateFile - работа с шифрованным файлом: чтение и запись, при создании временного файла.
+//    if (logFile == INVALID_HANDLE_VALUE)
+//    {
+//        if (GetLastError() == ERROR_FILE_EXISTS)
+//        {
+//            logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+//        }
+//    }
+//    if (logFile != INVALID_HANDLE_VALUE)
+//    {
+//        SetFilePointer(logFile, 0, NULL, FILE_END);
+//        WriteFile(logFile, record, wcslen(record)*2, NULL, NULL);
+//        WriteFile(logFile, L"\n", 2, NULL, NULL);
+//        CloseHandle(logFile);
+//    }
+//}
 void setDash(INT &startPos, INT endPos, CHAR* sendArr, CHAR* recArr, INT &shiftIn)
 {
     CONST INT SIZE = 2000;
@@ -231,6 +233,7 @@ INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer)
             WCHAR tmp[SIZE];
             MultiByteToWideChar(codePage, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
             wcscat_s(str, tmp);
+            //wcscat_s - для whcar_t (wide char), то есть широкосмивольных строк
             startPosition++;
         }
         else
@@ -415,6 +418,7 @@ int checkExistsEMail(HWND hWnd)
     strcat_s(getMail, cMail);
     strcat_s(getMail, "'");
     strcat_s(getMail, ";");
+    //strcat - для char \ANSI, то есть для латиницы
     INT counter = 0;
     sqlite3_stmt* st;
     if (sqlite3_prepare_v2(db, getMail, -1, &st, NULL) == SQLITE_OK) 
@@ -1143,6 +1147,7 @@ int SendPost(char* msg)
     if (res != 0) 
     {
         MessageBox(NULL, L"WSocket not initializired", L"Error", MB_OK | MB_ICONERROR);
+        return 1;
     }
     ZeroMemory(&hints, sizeof(hints));
     //ZeroMemory - обнулить память

@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\..\..\Downloads\sqlite-amalgamation-3510300\sqlite-amalgamation-3510300\sqlite3.lib" />
+    <Library Include="..\x64\Debug\WrittingDownLog.lib" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\Downloads\sqlite-dll-win-x64-3510300\sqlite3.dll" />
