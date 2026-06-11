@@ -109,8 +109,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;CleaningMemory.h;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\mychat\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.lib;CleaningMemory.lib;sqLite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -126,8 +126,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.h;CleaningMemory.h;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\mychat\x64\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>WS2_32.lib;WrittingDownLog.lib;CleaningMemory.lib;sqLite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\ILua\source\repos\mychat\x64\Debug</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

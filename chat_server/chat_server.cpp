@@ -1,4 +1,4 @@
-#include "framework.h"
+Ôªø#include "framework.h"
 #include "resource.h"
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
@@ -24,33 +24,43 @@
 #define MAIN_BUTTON_DELETE_WIDTH 70
 #define MAIN_BUTTON_CLEAR_LOG_WIDTH 100
 #define BUTTON_HEIGHT 25
-
 #define PORT "4000"
+#define MAX_CONNECTIONS 100
 
 VOID startServer(HWND log);
+VOID appendToLog(HWND log, CONST WCHAR* message);
+VOID listenClient();
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
-//œÓÚÓÚËÔ ÙÛÌÍˆËË - ‚ÌËÁÛ ÔË¯ÂÏ Â„Ó ‡Ò¯ËÂÌÌÛ˛ ‚ÂÒË˛
-//LRESULT CALLBACK - ÙÛÌÍˆËˇ Ò‡ÏÓ‚˚ÁÓ‚‡;
+//–ü—Ä–æ—Ç–æ—Ç–∏–ø —Ñ—É–Ω–∫—Ü–∏–∏ - –≤–Ω–∏–∑—É –ø–∏—à–µ–º –µ–≥–æ —Ä–∞—Å—à–∏—Ä–µ–Ω–Ω—É—é –≤–µ—Ä—Å–∏—é
+//LRESULT CALLBACK - —Ñ—É–Ω–∫—Ü–∏—è —Å–∞–º–æ–≤—ã–∑–æ–≤–∞;
 HINSTANCE hInst;
-//hInst - ‰Îˇ ÓÍÓÌ
+//hInst - –¥–ª—è –æ–∫–æ–Ω
 CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
-//œÓÒÚ‡ÌÒÚ‚Ó (ÛÍ‡Á‡ÚÂÎ¸) „‰Â ·Û‰ÛÚ Á‡ÔËÒ˚‚‡Ú¸Òˇ Ì‡¯Ë ÓÍÌ‡, 
-//ı‡ÌËÚ ËÌÙÓÏ‡ˆË˛ Ó·Ó ‚ÒÂı Ì‡¯Ëı ÓÍÌ‡;
-//HINSTANCE hInstance ñ ‰ÂÒÍËÔÚÓ ˝ÍÁÂÏÔÎˇ‡ ÔËÎÓÊÂÌËˇ. ›ÚÓÚ ‰ÂÒÍËÔÚÓ 
-//ÒÓ‰ÂÊËÚ ‡‰ÂÒ Ì‡˜‡Î‡ ÍÓ‰‡ ÔÓ„‡ÏÏ˚ ‚ ÂÂ ‡‰ÂÒÌÓÏ ÔÓÒÚ‡ÌÒÚ‚Â. ƒÂÒÍËÔÚÓ 
-//hInstance ˜‡˘Â ‚ÒÂ„Ó ÚÂ·ÛÂÚÒˇ ÙÛÌÍˆËˇÏ, ‡·ÓÚ‡˛˘ËÏ Ò ÂÒÛÒ‡ÏË ÔÓ„‡ÏÏ˚;
-WSADATA wsData;
+//–ü—Ä–æ—Å—Ç—Ä–∞–Ω—Å—Ç–≤–æ (—É–∫–∞–∑–∞—Ç–µ–ª—å) –≥–¥–µ –±—É–¥—É—Ç –∑–∞–ø–∏—Å—ã–≤–∞—Ç—å—Å—è –Ω–∞—à–∏ –æ–∫–Ω–∞, 
+//—Ö—Ä–∞–Ω–∏—Ç –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏—é –æ–±–æ –≤—Å–µ—Ö –Ω–∞—à–∏—Ö –æ–∫–Ω–∞;
+//HINSTANCE hInstance ‚Äì –¥–µ—Å–∫—Ä–∏–ø—Ç–æ—Ä —ç–∫–∑–µ–º–ø–ª—è—Ä–∞ –ø—Ä–∏–ª–æ–∂–µ–Ω–∏—è. –≠—Ç–æ—Ç –¥–µ—Å–∫—Ä–∏–ø—Ç–æ—Ä 
+//—Å–æ–¥–µ—Ä–∂–∏—Ç –∞–¥—Ä–µ—Å –Ω–∞—á–∞–ª–∞ –∫–æ–¥–∞ –ø—Ä–æ–≥—Ä–∞–º–º—ã –≤ –µ–µ –∞–¥—Ä–µ—Å–Ω–æ–º –ø—Ä–æ—Å—Ç—Ä–∞–Ω—Å—Ç–≤–µ. –î–µ—Å–∫—Ä–∏–ø—Ç–æ—Ä 
+//hInstance —á–∞—â–µ –≤—Å–µ–≥–æ —Ç—Ä–µ–±—É–µ—Ç—Å—è —Ñ—É–Ω–∫—Ü–∏—è–º, —Ä–∞–±–æ—Ç–∞—é—â–∏–º —Å —Ä–µ—Å—É—Ä—Å–∞–º–∏ –ø—Ä–æ–≥—Ä–∞–º–º—ã;
+SOCKET listenSocket = INVALID_SOCKET;
+SOCKET listenNewClient;
+WSADATA wsaData;
+//–°—Ç—Ä—É–∫—Ç—É—Ä–∞ WSADATA —Å–æ–¥–µ—Ä–∂–∏—Ç –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏—é –æ —Ä–µ–∞–ª–∏–∑–∞—Ü–∏–∏ Windows Sockets.
 struct addrinfo* result, * ptr, hints;
-//hints - ‰Îˇ ÒÂÚË
-HWND LogHWND;
+//–ò–Ω–∏—Ü–∏–∞–ª–∏–∑–∏—Ü–∏—è WinSOCK —á–µ—Ä–µ–∑ —Ñ—É–Ω–∫—Ü–∏—é WSAStartup
+//hints - –¥–ª—è —Å–µ—Ç–∏
+
+HWND logHWND;
+
+VOID startServer(HWND log);
+int checkTables();
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmd)
-//_In_ - ‰Îˇ ÔÂÂ‰‡˜Ë ‚ıÓ‰ˇ˘Ëı Ô‡‡ÏÂÚÓ‚ ‚ ÙÛÌÍˆË˛;
-//_In_opt_ - ‰Îˇ ÔÂÂ‰‡˜Ë ‚ıÓ‰ˇ˘Ëı Ô‡‡ÏÂÚÓ‚ ‚ ÙÛÌÍˆË˛;
-//APIENTRY - ˝ÚÓ __stdcal ÙÛÌÍˆËË ÒÚ‡Ì‰‡ÚÌÓ„Ó ‚˚ÁÓ‚‡
+//_In_ - –¥–ª—è –ø–µ—Ä–µ–¥–∞—á–∏ –≤—Ö–æ–¥—è—â–∏—Ö –ø–∞—Ä–∞–º–µ—Ç—Ä–æ–≤ –≤ —Ñ—É–Ω–∫—Ü–∏—é;
+//_In_opt_ - –¥–ª—è –ø–µ—Ä–µ–¥–∞—á–∏ –≤—Ö–æ–¥—è—â–∏—Ö –ø–∞—Ä–∞–º–µ—Ç—Ä–æ–≤ –≤ —Ñ—É–Ω–∫—Ü–∏—é;
+//APIENTRY - —ç—Ç–æ __stdcal —Ñ—É–Ω–∫—Ü–∏–∏ —Å—Ç–∞–Ω–¥–∞—Ä—Ç–Ω–æ–≥–æ –≤—ã–∑–æ–≤–∞
 { 
 	WNDCLASSEX wcex;
 	ZeroMemory(&wcex, sizeof(WNDCLASSEX));
-	//ZeroMemory - Ó˜Ë˘‡ÂÚ Ô‡ÏˇÚ¸ WNDCLASSEX Á‡ÔÓÎÌˇˇ Ï‡ÒÒË‚ ÌÛÎˇÏË.
+	//ZeroMemory - –æ—á–∏—â–∞–µ—Ç –ø–∞–º—è—Ç—å WNDCLASSEX –∑–∞–ø–æ–ª–Ω—è—è –º–∞—Å—Å–∏–≤ –Ω—É–ª—è–º–∏.
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WndProc;
@@ -58,24 +68,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
 	wcex.hIcon = NULL;
-	//œÓÎÂ Ó·ÓÁÌ‡˜ÂÌËˇ ÔË Á‡ÔÛÒÍÂ ÔÓ„‡ÏÏ˚ ‰Îˇ ËÍÓÌÍË ‚ ‚‚ÂıÛ ÔÓ„‡ÏÏ˚
+	//–ü–æ–ª–µ –æ–±–æ–∑–Ω–∞—á–µ–Ω–∏—è –ø—Ä–∏ –∑–∞–ø—É—Å–∫–µ –ø—Ä–æ–≥—Ä–∞–º–º—ã –¥–ª—è –∏–∫–æ–Ω–∫–∏ –≤ –≤–≤–µ—Ä—Ö—É –ø—Ä–æ–≥—Ä–∞–º–º—ã
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
 	wcex.lpszClassName = MAIN_CLASS_NAME;
 	wcex.hIconSm = NULL;
-	//hIconSm - œÓÎÂ Ó·ÓÁÌ‡˜ÂÌËˇ ÔË Á‡ÔÛÒÍÂ ÔÓ„‡ÏÏ˚ ‰Îˇ ËÍÓÌÍË ‚ÌËÁÛ, ÚÓ ÂÒÚ¸ 
-	//‚ ÒËÒÚÂÏÌÓÏ ÚÂÂ.
+	//hIconSm - –ü–æ–ª–µ –æ–±–æ–∑–Ω–∞—á–µ–Ω–∏—è –ø—Ä–∏ –∑–∞–ø—É—Å–∫–µ –ø—Ä–æ–≥—Ä–∞–º–º—ã –¥–ª—è –∏–∫–æ–Ω–∫–∏ –≤–Ω–∏–∑—É, —Ç–æ –µ—Å—Ç—å 
+	//–≤ —Å–∏—Å—Ç–µ–º–Ω–æ–º —Ç—Ä–µ–µ.
 	ATOM atomClass = RegisterClassExW(&wcex);
 	hInst = hInstance;
-	HWND hMainWnd = CreateWindow(MAIN_CLASS_NAME, L"—Â‚Â", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_CLASS_HEIGHT, MAIN_CLASS_HEIGHT, NULL, NULL, hInstance, NULL);
-	//lpParam - ÙÎ‡„ ˜ÂÂÁ ÍÓÚÓ˚È Ï˚ ÛÍ‡Á˚‚‡ÂÏ ÓÒÓ·˚Â Ô‡‡ÏÂÚ˚, ÛÍ‡Á˚‚‡ÂÏ NULL ÔÓÚÓÏÛ ˜ÚÓ ÓÒÓ·˚Â Ô‡ÏÂÚ˚ ÔÓÍ‡ ÌÂ ÌÛÊÌ˚
-	CreateWindow(L"STATIC", L"œÓÎ¸ÁÓ‚‡ÚÂÎË:", WS_VISIBLE | WS_CHILD, USER_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_HEIGHT, INFO_FIELD_WIDTH, hMainWnd, NULL, hInstance, NULL);
-	CreateWindow(L"STATIC", L"ÀÓ„ ÒÂ‚Â‡:", WS_VISIBLE | WS_CHILD, LOG_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_HEIGHT, INFO_FIELD_WIDTH, hMainWnd, NULL, hInstance, NULL);
+	HWND hMainWnd = CreateWindow(MAIN_CLASS_NAME, L"–°–µ—Ä–≤–µ—Ä", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_CLASS_HEIGHT, MAIN_CLASS_HEIGHT, NULL, NULL, hInstance, NULL);
+	//lpParam - —Ñ–ª–∞–≥ —á–µ—Ä–µ–∑ –∫–æ—Ç–æ—Ä—ã–π –º—ã —É–∫–∞–∑—ã–≤–∞–µ–º –æ—Å–æ–±—ã–µ –ø–∞—Ä–∞–º–µ—Ç—Ä—ã, —É–∫–∞–∑—ã–≤–∞–µ–º NULL –ø–æ—Ç–æ–º—É —á—Ç–æ –æ—Å–æ–±—ã–µ –ø–∞—Ä–º–µ—Ç—Ä—ã –ø–æ–∫–∞ –Ω–µ –Ω—É–∂–Ω—ã
+	CreateWindow(L"STATIC", L"–ü–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª–∏:", WS_VISIBLE | WS_CHILD, USER_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_HEIGHT, INFO_FIELD_WIDTH, hMainWnd, NULL, hInstance, NULL);
+	CreateWindow(L"STATIC", L"–õ–æ–≥ —Å–µ—Ä–≤–µ—Ä–∞:", WS_VISIBLE | WS_CHILD, LOG_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_HEIGHT, INFO_FIELD_WIDTH, hMainWnd, NULL, hInstance, NULL);
 	CreateWindow(L"LISTBOX", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER, LISTBOX_FIELD_POS_X, OUTPUT_FIELD_POS_Y, LISTBOX_FIELD_WIDTH, OUTPUT_FIELD_HEIGHT, hMainWnd, (HMENU)IDM_MAIN_MENU_USER_LISTS, hInstance, NULL);
-	HWND logPage = CreateWindow(L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER, INFO_DISPLAY_FIELD_POS_Y, OUTPUT_FIELD_POS_Y, INFO_DISPLAY_FIELD_WIDTH, OUTPUT_FIELD_HEIGHT, hMainWnd, (HMENU)IDM_MAIN_MENU_LOG_FIELD, hInstance, NULL);
-	CreateWindow(L"Button", L"”‰‡ÎËÚ¸", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_BUTTON_DELETE_POS_X, BUTTON_POS_Y, MAIN_BUTTON_DELETE_WIDTH, BUTTON_HEIGHT, hMainWnd, (HMENU)IDB_MAIN_BUTTON_DELETE, hInstance, NULL);
-	CreateWindow(L"Button", L"Œ˜ËÒÚËÚ¸ ÎÓ„", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_BUTTON_CLEAR_LOG_POS_X, BUTTON_POS_Y, MAIN_BUTTON_CLEAR_LOG_WIDTH, BUTTON_HEIGHT, hMainWnd, (HMENU)IDB_MAIN_BUTTON_CLEAR_LOG, hInstance, NULL);
-	startServer(logPage);
+	logHWND = CreateWindow(L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER, INFO_DISPLAY_FIELD_POS_Y, OUTPUT_FIELD_POS_Y, INFO_DISPLAY_FIELD_WIDTH, OUTPUT_FIELD_HEIGHT, hMainWnd, (HMENU)IDM_MAIN_MENU_LOG_FIELD, hInstance, NULL);
+	CreateWindow(L"Button", L"–£–¥–∞–ª–∏—Ç—å", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_BUTTON_DELETE_POS_X, BUTTON_POS_Y, MAIN_BUTTON_DELETE_WIDTH, BUTTON_HEIGHT, hMainWnd, (HMENU)IDB_MAIN_BUTTON_DELETE, hInstance, NULL);
+	CreateWindow(L"Button", L"–û—á–∏—Å—Ç–∏—Ç—å –ª–æ–≥", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_BUTTON_CLEAR_LOG_POS_X, BUTTON_POS_Y, MAIN_BUTTON_CLEAR_LOG_WIDTH, BUTTON_HEIGHT, hMainWnd, (HMENU)IDB_MAIN_BUTTON_CLEAR_LOG, hInstance, NULL);
+	startServer(logHWND);
 	ShowWindow(hMainWnd, SW_SHOWDEFAULT);
 	MSG msg;
 	while (IsWindow(hMainWnd)) 
@@ -85,10 +95,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		DispatchMessage(&msg);
 	}
 }
-VOID startServer(HWND log);
-//VOID checkTable(int);
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    if (!listenNewClient) 
+    {
+        listenNewClient = true;
+        CreateThread(NULL, 2048, (LPTHREAD_START_ROUTINE)listenClient, NULL, 0, NULL);
+    }
 	switch (message) 
 	{
 	case WM_COMMAND:
@@ -114,45 +128,45 @@ int checkTables()
     //char* mesError[SIZE];
     int res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res)
-    //ÔÓıÓÊËÈ ‚‡Ë‡ÌÚ ÔÓ˜ÚÂÌËˇ:
+    //–ø–æ—Ö–æ–∂–∏–π –≤–∞—Ä–∏–∞–Ω—Ç –ø—Ä–æ—á—Ç–µ–Ω–∏—è:
     //if(res != 0) 
     {
-        MessageBox(NULL, L"¡‡Á‡ ‰‡ÌÌ˚ı ÌÂ ÔÓ‰ÍÎ˛˜ÂÌ‡!", L"Œ¯Ë·Í‡!", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"–ë–∞–∑–∞ –¥–∞–Ω–Ω—ã—Ö –Ω–µ –ø–æ–¥–∫–ª—é—á–µ–Ω–∞!", L"–û—à–∏–±–∫–∞!", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
-        //sqlite3_close - ÔÂ˚‚‡ÂÚ Ò‚ˇÁ¸ Ò ·‡ÁÓÈ ‰‡ÌÌ˚ı
+        //sqlite3_close - –ø—Ä–µ—Ä—ã–≤–∞–µ—Ç —Å–≤—è–∑—å —Å –±–∞–∑–æ–π –¥–∞–Ω–Ω—ã—Ö
         return 1;
     }
     const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
-    //sqlite_master - ı‡ÌËÚ ÍÓÎË˜ÂÒÚ‚Ó Ú‡·ÎËˆ
+    //sqlite_master - —Ö—Ä–∞–Ω–∏—Ç –∫–æ–ª–∏—á–µ—Å—Ç–≤–æ —Ç–∞–±–ª–∏—Ü
     sqlite3_stmt* table;
-    //sqlite3_stmt - ÒÚÛÍÚÛ‡ „‰Â ı‡ÌËÚÒˇ ËÌÙÓÏ‡ˆËˇ Ú‡·ÎËˆÂ ÍÓÚÓ‡ˇ ·˚Î‡ ÒÓÁ‰‡Ì‡ Ò ÔÓÏÓ˘¸˛ sql-Á‡ÔÓÒ‡, 
-    //ÍÓÚÓ˚È Ì‡ıÓ‰ËÚÒˇ ‚ const char* ÔÂÂÏÂÌÌÓÈ
+    //sqlite3_stmt - —Å—Ç—Ä—É–∫—Ç—É—Ä–∞ –≥–¥–µ —Ö—Ä–∞–Ω–∏—Ç—Å—è –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏—è —Ç–∞–±–ª–∏—Ü–µ –∫–æ—Ç–æ—Ä–∞—è –±—ã–ª–∞ —Å–æ–∑–¥–∞–Ω–∞ —Å –ø–æ–º–æ—â—å—é sql-–∑–∞–ø—Ä–æ—Å–∞, 
+    //–∫–æ—Ç–æ—Ä—ã–π –Ω–∞—Ö–æ–¥–∏—Ç—Å—è –≤ const char* –ø–µ—Ä–µ–º–µ–Ω–Ω–æ–π
     if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
-    //sqlite3_prepare_v2 - ÒÓÁ‰‡ÂÚ ÒÚÛÍÚÛ ÓÚÍÛ‰‡ Ï˚ ·Û‰ÂÏ ·‡Ú¸ Ì‡¯Ë ÂÁÛÎ¸Ú‡Ú˚
+    //sqlite3_prepare_v2 - —Å–æ–∑–¥–∞–µ—Ç —Å—Ç—Ä—É–∫—Ç—É—Ä –æ—Ç–∫—É–¥–∞ –º—ã –±—É–¥–µ–º –±—Ä–∞—Ç—å –Ω–∞—à–∏ —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã
     {
         INT curRow = sqlite3_step(table);
-        //sqlite3_step - ‰‚Ë„‡ÂÏÒˇ ÔÓ Á‡ÔËÒˇÏ ËÁ Ú‡·ÎËˆ˚ ‚˚ÌËÏ‡ˇ, Í‡Ê‰Û˛ Á‡ÔËÒ¸
+        //sqlite3_step - –¥–≤–∏–≥–∞–µ–º—Å—è –ø–æ –∑–∞–ø–∏—Å—è–º –∏–∑ —Ç–∞–±–ª–∏—Ü—ã –≤—ã–Ω–∏–º–∞—è, –∫–∞–∂–¥—É—é –∑–∞–ø–∏—Å—å
         if (curRow == SQLITE_ROW)
-        //SQLITE_ROW - Ë‰ÂÌÚËÙËÍ‡ÚÓ ÒÚÓÍË
-        //≈ÒÎË int ÔÂÏÂÌÌ‡ˇ ÔÓÎÛ˜‡ÂÚ ÁÌ‡˜ÂÌËÂ sqlite_row, ÚÓ ˝ÚÓ ÁÌ‡˜ËÚ ÒÚÓÍ‡ Ì‡È‰ÂÌÌ‡
+        //SQLITE_ROW - –∏–¥–µ–Ω—Ç–∏—Ñ–∏–∫–∞—Ç–æ—Ä —Å—Ç—Ä–æ–∫–∏
+        //–ï—Å–ª–∏ int –ø–µ—Ä–º–µ–Ω–Ω–∞—è –ø–æ–ª—É—á–∞–µ—Ç –∑–Ω–∞—á–µ–Ω–∏–µ sqlite_row, —Ç–æ —ç—Ç–æ –∑–Ω–∞—á–∏—Ç —Å—Ç—Ä–æ–∫–∞ –Ω–∞–π–¥–µ–Ω–Ω–∞
         {
             INT countRows = sqlite3_column_int(table, 0);
-            //sqlite3_column_int - ‚˚‚Ó‰ËÚ ÚÂÍÛ˘ËÈ ËÌ‰ÂÍÒ ÍÓÎÓÌÍË
+            //sqlite3_column_int - –≤—ã–≤–æ–¥–∏—Ç —Ç–µ–∫—É—â–∏–π –∏–Ω–¥–µ–∫—Å –∫–æ–ª–æ–Ω–∫–∏
             if (countRows == 0)
             {
-                MessageBox(NULL, L"ÕË Ó‰ÌÓÈ „ÛÔÔ˚ ÌÂ Ì‡È‰ÂÌÓ!\n—ÓÁ‰‡∏Ï ÌÓ‚Û˛...", L"»ÌÙÓÏ‡ˆËˇ", MB_OK | MB_ICONERROR);
+                MessageBox(NULL, L"–ù–∏ –æ–¥–Ω–æ–π –≥—Ä—É–ø–ø—ã –Ω–µ –Ω–∞–π–¥–µ–Ω–æ!\n–°–æ–∑–¥–∞—ë–º –Ω–æ–≤—É—é...", L"–ò–Ω—Ñ–æ—Ä–º–∞—Ü–∏—è", MB_OK | MB_ICONERROR);
                 const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
-                //char** errorTgroup = mesError;        // ‡Í ‚‡Ë‡ÌÚ.
+                //char** errorTgroup = mesError;        //–ö–∞–∫ –≤–∞—Ä–∏–∞–Ω—Ç.
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                     if (status == SQLITE_OK)
                     {
-                        MessageBox(NULL, L"“‡·ÎËˆ‡ „ÛÔÔ‡ ÒÓÁ‰‡Ì‡", L"»ÌÙÓ", MB_OK | MB_ICONINFORMATION);
+                        MessageBox(NULL, L"–¢–∞–±–ª–∏—Ü–∞ –≥—Ä—É–ø–ø–∞ —Å–æ–∑–¥–∞–Ω–∞", L"–ò–Ω—Ñ–æ", MB_OK | MB_ICONINFORMATION);
                     }
                     else 
                     {
-                        MessageBox(NULL, L"Œ¯Ë·Í‡ ÔË ÒÓÁ‰‡ÌËË Ú‡·ÎËˆ˚ „ÛÔÔ˚", L"Œ¯Ë·Í‡", MB_OK | MB_ICONERROR);
+                        MessageBox(NULL, L"–û—à–∏–±–∫–∞ –ø—Ä–∏ —Å–æ–∑–¥–∞–Ω–∏–∏ —Ç–∞–±–ª–∏—Ü—ã –≥—Ä—É–ø–ø—ã", L"–û—à–∏–±–∫–∞", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
                     }
                 }
@@ -170,7 +184,7 @@ int checkTables()
             }
         }
         sqlite3_finalize(table);
-        //sqlite3_finalize - Ó˜Ë˘‡ÂÚ Ô‡ÏˇÚ¸ ÓÚ ÔÂÂÏÂÌÌÓÈ.
+        //sqlite3_finalize - –æ—á–∏—â–∞–µ—Ç –ø–∞–º—è—Ç—å –æ—Ç –ø–µ—Ä–µ–º–µ–Ω–Ω–æ–π.
     }
     const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
     if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
@@ -197,11 +211,11 @@ int checkTables()
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                     if (status == SQLITE_OK)
                     {
-                        MessageBox(NULL, L"“‡·ÎËˆ‡ ÔÓÎ¸ÁÓ‚‡ÚÂÎ¸ ÒÓÁ‰‡Ì‡", L"»ÌÙÓ", MB_OK | MB_ICONINFORMATION);
+                        MessageBox(NULL, L"–¢–∞–±–ª–∏—Ü–∞ –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å —Å–æ–∑–¥–∞–Ω–∞", L"–ò–Ω—Ñ–æ", MB_OK | MB_ICONINFORMATION);
                     }
                     else
                     {
-                        MessageBox(NULL, L"Œ¯Ë·Í‡ ÔË ÒÓÁ‰‡ÌËË Ú‡·ÎËˆ˚ ÔÓÎ¸ÁÓ‚‡ÚÂÎ¸", L"Œ¯Ë·Í‡", MB_OK | MB_ICONERROR);
+                        MessageBox(NULL, L"–û—à–∏–±–∫–∞ –ø—Ä–∏ —Å–æ–∑–¥–∞–Ω–∏–∏ —Ç–∞–±–ª–∏—Ü—ã –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å", L"–û—à–∏–±–∫–∞", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
                     }
                 }
@@ -231,7 +245,7 @@ int checkTables()
             int countRows = sqlite3_column_int(table, 0);
             if (countRows == 0) 
             {
-                MessageBox(NULL, L"“‡·ÎËˆ‡ ÒÓÓ·˘ÂÌËÈ ÌÂ ÒÓÁ‰‡Ì‡! —ÓÁ‰‡∏Ï ÌÓ‚Û˛", L"»ÌÙÓÏ‡ˆËˇ", MB_OK | MB_ICONINFORMATION);
+                MessageBox(NULL, L"–¢–∞–±–ª–∏—Ü–∞ —Å–æ–æ–±—â–µ–Ω–∏–π –Ω–µ —Å–æ–∑–¥–∞–Ω–∞! –°–æ–∑–¥–∞—ë–º –Ω–æ–≤—É—é", L"–ò–Ω—Ñ–æ—Ä–º–∞—Ü–∏—è", MB_OK | MB_ICONINFORMATION);
                 const char* createTable = "CREATE TABLE messages"
                     "(message_id PRIMARY KEY NOT NULL,"
                     "text_field TEXT NOT NULL,"
@@ -246,14 +260,14 @@ int checkTables()
                 char* msg = NULL;
                 try {
                     int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    //œˇÚ˚È ‡„ÛÏÂÌÚ ‚ sqlite3_exec - Á‡ÔËÒ˚‚‡ÂÚ Ó¯Ë·ÍÛ ‚ ÔÂÏÂÌÌÛ˛ ÍÓÚÓÛ˛ Ï˚ ÔÂÂ‰‡ÎË.
+                    //–ü—è—Ç—ã–π –∞—Ä–≥—É–º–µ–Ω—Ç –≤ sqlite3_exec - –∑–∞–ø–∏—Å—ã–≤–∞–µ—Ç –æ—à–∏–±–∫—É –≤ –ø–µ—Ä–º–µ–Ω–Ω—É—é –∫–æ—Ç–æ—Ä—É—é –º—ã –ø–µ—Ä–µ–¥–∞–ª–∏.
                     if (result == SQLITE_OK)
                     {
-                        MessageBox(NULL, L"“‡·ÎËˆ‡ ÒÓÓ·˘ÂÌËÂ ÒÓÁ‰‡Ì‡", L"»ÌÙÓ", MB_OK | MB_ICONINFORMATION);
+                        MessageBox(NULL, L"–¢–∞–±–ª–∏—Ü–∞ —Å–æ–æ–±—â–µ–Ω–∏–µ —Å–æ–∑–¥–∞–Ω–∞", L"–ò–Ω—Ñ–æ", MB_OK | MB_ICONINFORMATION);
                     }
                     else
                     {
-                        MessageBox(NULL, L"Œ¯Ë·Í‡ ÔË ÒÓÁ‰‡ÌËË Ú‡·ÎËˆ˚ ÒÓÓ·˘ÂÌËÂ", L"»ÌÙÓ", MB_OK | MB_ICONERROR);
+                        MessageBox(NULL, L"–û—à–∏–±–∫–∞ –ø—Ä–∏ —Å–æ–∑–¥–∞–Ω–∏–∏ —Ç–∞–±–ª–∏—Ü—ã —Å–æ–æ–±—â–µ–Ω–∏–µ", L"–ò–Ω—Ñ–æ", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
                     }
                 }
@@ -275,41 +289,125 @@ int checkTables()
         sqlite3_finalize(table);
     }
     sqlite3_close(db);
+    return 0;
 }
 VOID startServer(HWND log) 
 {
-	WSADATA wsaData;
-	//—ÚÛÍÚÛ‡ WSADATA ÒÓ‰ÂÊËÚ ËÌÙÓÏ‡ˆË˛ Ó Â‡ÎËÁ‡ˆËË Windows Sockets.
-	SOCKET listen = INVALID_SOCKET;
-	struct addrinfo* result = NULL, *ptr = NULL, hints;
-	//»ÌËˆË‡ÎËÁËˆËˇ WinSOCK ˜ÂÂÁ ÙÛÌÍˆË˛ WSAStartup
-	int res = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (res != 0) 
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0)
 	{
-		MessageBox(NULL, L"Error initialization WSAStartup", L"Error", MB_OK | MB_ICONERROR);
+        WCHAR err[1024];
+		wsprintf(err, L"–û—à–∏–±–∫–∞ –∏–Ω–∏—Ü–∏–∞–ª–∏–∑–∞—Ü–∏–∏ –¥–∞–Ω–Ω—ã—Ö —Å–æ–∫–µ—Ç–∞ %d", iResult);
+        appendToLog(log, err);
+        //log - —É–∫–∞–∑–∞—Ç–µ–ª—å –Ω–∞ —Ä–µ—Å—É—Ä—Å –æ–∫–Ω–∞, —Ç–æ –µ—Å—Ç—å –¥–µ—Å–∫—Ä–∏–ø—Ç–æ—Ä –æ–∫–Ω–∞
+        //err - –º–∞—Å—Å–∏–≤ –∫–æ—Ç–æ—Ä—ã–π —Å–æ–¥–µ—Ä–∂–∏—Ç —Ç–µ–∫—Å—Ç –æ—à–∏–±–∫–∏
 		return;
 	}
 	ZeroMemory(&hints, sizeof(hints));
 	hints.ai_family = AF_INET;
-	//ai_family ÛÍ‡Á˚‚‡ÂÚ Ì‡ ÚÓ, ˜ÚÓ ‚˚Á˚‚‡˛˘‡ˇ ÒÚÓÓÌ‡ ·Û‰ÂÚ ÔËÌËÏ‡Ú¸ ÚÓÎ¸ÍÓ ÒÂÏÂÈÒÚ‚‡
-	//‡‰ÂÒÓ‚ AF_INET Ë AF_INET6. 
+	//ai_family —É–∫–∞–∑—ã–≤–∞–µ—Ç –Ω–∞ —Ç–æ, —á—Ç–æ –≤—ã–∑—ã–≤–∞—é—â–∞—è —Å—Ç–æ—Ä–æ–Ω–∞ –±—É–¥–µ—Ç –ø—Ä–∏–Ω–∏–º–∞—Ç—å —Ç–æ–ª—å–∫–æ —Å–µ–º–µ–π—Å—Ç–≤–∞
+	//–∞–¥—Ä–µ—Å–æ–≤ AF_INET –∏ AF_INET6. 
 	hints.ai_socktype = SOCK_STREAM;
-	//ai_socktype ÛÍ‡Á˚‚‡ÂÚ Ì‡ ÚÓ, ˜ÚÓ ‚˚Á˚‚‡˛˘‡ˇ ÒÚÓÓÌ‡ ·Û‰ÂÚ ÔËÌËÏ‡Ú¸ Î˛·ÓÈ ÚËÔ ÒÓÍÂÚ‡.
+	//ai_socktype —É–∫–∞–∑—ã–≤–∞–µ—Ç –Ω–∞ —Ç–æ, —á—Ç–æ –≤—ã–∑—ã–≤–∞—é—â–∞—è —Å—Ç–æ—Ä–æ–Ω–∞ –±—É–¥–µ—Ç –ø—Ä–∏–Ω–∏–º–∞—Ç—å –ª—é–±–æ–π —Ç–∏–ø —Å–æ–∫–µ—Ç–∞.
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_PASSIVE;
-	res = getaddrinfo( "129.168.1.32", PORT, &hints, &result);
-	if (res != 0) 
+    iResult = getaddrinfo( "129.168.1.32", PORT, &hints, &result);
+    //getaddrinfo ‚Äî —ç—Ç–æ –≤–µ—Ä—Å–∏—è —Ñ—É–Ω–∫—Ü–∏–∏ –≤ —Å—Ç–∞–Ω–¥–∞—Ä—Ç–µ ANSI, –∫–æ—Ç–æ—Ä–∞—è –æ–±–µ—Å–ø–µ—á–∏–≤–∞–µ—Ç –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã–π –æ—Ç 
+    //–ø—Ä–æ—Ç–æ–∫–æ–ª–∞ –ø–µ—Ä–µ–≤–æ–¥ –∏–º–µ–Ω–∏ —Ö–æ—Å—Ç–∞ –≤ –∞–¥—Ä–µ—Å. 
+	if (iResult != 0)
 	{
-		MessageBox(NULL, L"getaddrinfo failure", L"Error", MB_OK | MB_ICONERROR);
+        WCHAR err[1024];
+		wsprintf(err, L"–û—à–∏–±–∫–∞ –ø–æ–ª—É—á–µ–Ω–∏—è –∞–¥—Ä–µ—Å–∞ %d", iResult);
+        appendToLog(log, err);
 		WSACleanup();
 		return;
 	}
-	listen = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-	if (listen == INVALID_SOCKET) 
+    else 
+    {
+        appendToLog(log, L"–ê–¥—Ä–µ—Å —É—Å–ø–µ—à–Ω–æ –ø–æ–ª—É—á–µ–Ω");
+    }
+	listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    //socket - —Å–æ–∑–¥–∞–µ–º —Å–æ–∫–µ—Ç –∏ –æ—Ç–∫—Ä—ã–≤–∞–µ–º –ø–æ—Ä—Ç, —á—Ç–æ–±—ã –ø–æ–ª—É—á–∞—Ç—å –∏ –æ—Ç–ø—Ä–∞–≤–ª—è—Ç—å –¥–∞–Ω–Ω—ã–µ –ø–æ –Ω–µ–º—É
+	if (listenSocket == INVALID_SOCKET) 
 	{
-		MessageBox(NULL, L"Socket creation error", L"Error", MB_OK | MB_ICONERROR);
+        WCHAR err[1024];
+		wsprintf(err, L"–û—à–∏–±–∫–∞ —Å–æ–∑–¥–∞–Ω–∏—è —Å–æ–∫–µ—Ç–∞ %d", WSAGetLastError());
 		WSACleanup;
 		freeaddrinfo(result);
 		return;
 	}
+    else 
+    {
+        appendToLog(log, L"–°–æ–∫–µ—Ç —É—Å–ø–µ—à–Ω–æ —Å–æ–∑–¥–∞–Ω");
+    }
+    iResult = bind(listenSocket, result->ai_addr, result->ai_addrlen);
+    if (iResult == SOCKET_ERROR) 
+    {
+        WCHAR err[1024];
+        wsprintf(err, L"–û—à–∏–±–∫–∞ –ø—Ä–∏ –ø—Ä–∏–≤—è–∑–∫–µ —Å–æ–µ–∫–µ—Ç–∞: %d", WSAGetLastError());
+        appendToLog(log, err);
+        freeaddrinfo(result);
+        closesocket(listenSocket);
+        listenSocket = INVALID_SOCKET;
+        //–ü—Ä–∏—Å–≤–∞–∏–≤–∞–µ–º —Å–æ–∫–µ—Ç—É –∑–Ω–∞—á–µ–Ω–∏–µ INVALID_SOCKET, –∫–∞–∫ –æ–±—ã—á–Ω–æ–º—É –º–∞—Å—Å–∏–≤—É null\nullprt,
+        //—á—Ç–æ–±—ã —Å–æ–∫–µ—Ç –Ω–µ –±—ã–ª –æ—Ç–∫—Ä—ã—Ç.
+        return;
+    }
+    else 
+    {
+        appendToLog(log, L"–°–æ–∫–µ—Ç —É—Å–ø–µ—à–Ω–æ –ø—Ä–∏–≤—è–∑–∞–Ω");
+    }
+    freeaddrinfo(result);
+    if (listen(listenSocket, MAX_CONNECTIONS) == SOCKET_ERROR)
+    //listen –Ω–æ–º–µ—Ä 1: -  —Ñ—É–Ω–∫—Ü–∏—è –ø—Ä–µ–∫–ª—é—á–∞–µ—Ç –≤ —Å–æ—Å—Ç–æ—è–Ω–∏–µ –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏—è —Å–æ–∫–µ—Ç –∫–æ—Ç–æ—Ä—ã–π –º—ã —É–∫–∞–∑—ã–≤–µ–º
+    //–ø–µ—Ä–≤—ã–º –∞—Ä–≥—É–º–µ–Ω—Ç–æ–º.
+    //listen –Ω–æ–º–µ—Ä 2: - –§—É–Ω–∫—Ü–∏—è listen –ø–µ—Ä–µ–≤–æ–¥–∏—Ç —Å–æ–∫–µ—Ç –≤ —Å–æ—Å—Ç–æ—è–Ω–∏–µ –æ–∂–∏–¥–∞–Ω–∏—è –≤—Ö–æ–¥—è—â–µ–≥–æ —Å–æ–µ–¥–∏–Ω–µ–Ω–∏—è.
+    //–í—Ç–æ—Ä–æ–π –∞—Ä—à—É–º–µ–Ω—Ç - –∫–æ–ª–ª–∏—á–µ—Å—Ç–≤–æ –≤–æ–∑–º–æ–∂–Ω—ã—Ö –ø–æ–¥–∫–ª—é—á–µ–Ω–Ω–∏–π.
+    {
+        WCHAR err[1024];
+        wsprintf(err, L"–û—à–∏–±–∫–∞ —Ä–µ–∂–∏–º–∞ –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏—è: %d", WSAGetLastError());
+        appendToLog(log, err);
+        freeaddrinfo(result);
+        closesocket(listenSocket);
+        listenSocket = INVALID_SOCKET;
+        return;
+    }
+    else 
+    {
+        appendToLog(log, L"–°–æ–∫–µ—Ç –≥–æ—Ç–æ–≤ –∫ –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏—é");
+    }
+}
+VOID appendToLog(HWND log, CONST WCHAR* message) 
+{
+    INT length = GetWindowTextLength(log);
+    //GetWindowTextLength - —Ñ—É–Ω–∫—Ü–∏—è –ø–æ–ª—É—á–∞–µ—Ç –¥–ª–∏–Ω—É —Å—Ç—Ä–æ–∫–∏
+    SendMessage(log, EM_SETSEL, (WPARAM)length, (LPARAM)length);
+    //–°—Ç–∞–≤–∏–º —É–∫–∞–∑–∞—Ç–µ–ª—å –≤ –∫–æ–Ω–µ—Ü —Å—Ç—Ä–æ–∫–∏
+    //EM_SETSEL - —É—Å—Ç–Ω–∞–≤–ª–∏–≤–∞–µ—Ç —É–∫–∞–∑–∞—Ç–µ–ª—å –Ω–∞ –∫–æ–Ω–µ—Ü —Å—Ç—Ä–æ–∫–∏ –∫—É–¥–∞ –∏ –±—É–¥–µ–º –ø–∏—Å–∞—Ç—å
+    SendMessage(log, EM_REPLACESEL, FALSE, (LPARAM)message);
+    //–ó–∞–ø–∏—Å—ã–≤–∞–µ–º —Ç–µ–∫—Å—Ç –≤ –∫–æ–Ω—Ü–µ —Å—Ç—Ä–æ–∫–∏
+    //EM_REPLACEDSEL - –¥–æ–±–∞–≤–¥—è–µ—Ç –¥–æ–ø–æ–ª–Ω–∏–µ—Ç–ª—å–Ω—ã–π —Ç–µ–∫—Å—Ç –≤ —ç–ª–µ–º–µ–Ω—Ç —É–ø—Ä–∞–≤–ª–µ–Ω–∏—è
+    //–¢—Ä–µ—Ç—å–∏–º –ø–ø–∞—Ä–∞–º–µ—Ç—Ä–æ–º –∑–∞–¥–∞—ë–º FALSE, –¥–ª—è —Ñ–ª–∞–≥–∞ EM_REPLACESEL –Ω–µ–ª—å–∑—è –æ—Ç–º–µ–Ω–∏—Ç—å 
+    //–æ–ø–µ—Ä–∞—Ü–∏—é –∑–∞–º–µ–Ω—ã —Ç–µ–∫—Å—Ç–∞
+    //WM_SETTEXT - –∏—Å–ø–æ–ª—å–∑—â—É–µ—Ç—Å—è –¥–ª—è —Ç–æ–≥–æ —á—Ç–æ–±—ã –ø–æ–ª–Ω–æ—Å—Ç—å—é –∑–∞–º–µ–Ω–∏—Ç—å —Å—Ç–∞—Ä—ã–π —Ç–µ–∫—Å—Ç 
+    //–Ω–∞ –Ω–æ–≤—ã–π, —Ç–æ –µ—Å—Ç—å –ø–µ—Ä–µ–∑–∞–ø–∏—Å–∞—Ç—å —Ç–µ–∫—Å—Ç –Ω–∞ –Ω–æ–≤—ã–π
+    SendMessage(log, EM_REPLACESEL, FALSE, (LPARAM)"\n");
+    //–í –∫–æ–Ω—Ü–µ –¥–æ–±–∞–≤–ª—è–µ–º –Ω–æ–≤—É—é —Å—Ç—Ä–æ–∫—É –¥–ª—è —Å–ª–µ–¥—É—é—â–µ–≥–æ —Ç–µ–∫—Å—Ç–∞.
+}
+VOID listenClient() 
+{
+    if (listenSocket != INVALID_SOCKET) 
+    {
+        SOCKET clientSocket = INVALID_SOCKET;
+        appendToLog(logHWND, L"–°–æ–∫–µ—Ç –≥–æ—Ç–æ–≤ –∫ –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏—é");
+        clientSocket = accept(listenSocket, NULL, NULL);
+        //accept - —Ñ—É–Ω–∫—Ü–∏—è –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–µ—Ç —Å–∞–º —Å–æ–∫–µ—Ç –∂–¥–µ—Ç –ø–æ–∫–∞ –∫—Ç–æ-—Ç–æ –¥—Ä—É–≥–æ–π –ø–æ–¥–∫–ª—é—á–∏—Ç—Å—è –∫ –Ω–µ–º—É.
+        //–≤—Ç–æ—Ä–æ–π –ø–∞—Ä–∞–º–µ—Ç—Ä - –∞–ª—å—Ç–µ—Ä–Ω–∞—Ç–∏–≤–Ω—ã–π –∞–¥—Ä–µ—Å.
+        ///–≤—Ç–æ—Ä–æ–π –ø–∞—Ä–∞–º–µ—Ç—Ä - –Ω–µ–æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–π —É–∫–∞–∑–∞—Ç–µ–ª—å –Ω–∞ –±—É—Ñ–µ—Ä, –≤ –∫–æ—Ç–æ—Ä—ã–π –∑–∞–ø–∏—Å—ã–≤–∞–µ—Ç—Å—è –∞–¥—Ä–µ—Å 
+        //–ø–æ–¥–∫–ª—é—á–∞–µ–º–æ–≥–æ –æ–±—ä–µ–∫—Ç–∞, –∏–∑–≤–µ—Å—Ç–Ω—ã–π –∫–æ–º–º—É–Ω–∏–∫–∞—Ü–∏–æ–Ω–Ω–æ–º—É —É—Ä–æ–≤–Ω—é.
+        if (clientSocket == INVALID_SOCKET)
+        {
+            appendToLog(logHWND, L"–ù–µ —É–¥–∞–ª–æ—Å—å ");
+        }
+    }
 }

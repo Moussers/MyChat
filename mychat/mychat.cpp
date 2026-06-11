@@ -1112,7 +1112,7 @@ int SendPost(char* msg)
     //addrinfo - хранит информацию об адресе в сети
     //WSAStartup - инициализирует SOCKET
     int res = WSAStartup(MAKEWORD(2, 2), &wsd);
-    //Инициализирует данные о сокете.
+    //WSAStartup - инициализирует данные о сокете.
     if (res != 0) 
     {
         MessageBox(NULL, L"WSocket not initializired", L"Error", MB_OK | MB_ICONERROR);
