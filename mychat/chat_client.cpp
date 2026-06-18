@@ -323,8 +323,8 @@ int updateList(HWND userList)
             MultiByteToWideChar(codePage, 0, (char*)charLastName, strlen((char*)charLastName) + 1, lastName, SIZE);
             WCHAR toList[SIZE];
             wcscpy_s(toList, lastName);
-            //wcscpy - перезаписывает данные из одного массива в другой, 
-            //в последнем стирая прежние данные замещая новыми
+            //wcscpy - перезаписывает данные из одного массива в другой, в последнем
+            //стирая прежние данные замещая новыми
             wcscat_s(toList, L" ");
             wcscat_s(toList, firstName);
             SendMessage(userList, LB_ADDSTRING, 0, (LPARAM)toList);
@@ -349,7 +349,7 @@ int checkingUserInfo(HWND hWnd)
     int len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), data, SIZE);
     //Первый аргумент - это дескрптор дескриптор, из этого дескриптора мы получаем строку, и размер 
     //строки который сохраняется в отдельной int переменной.
-    //GetWindowText нужен чтобы получить саму строку которую мы записываем в перменную вторым аргументом 
+    //GetWindowText нужен чтобы получить саму строку которую мы записываем в переменную вторым аргументом 
     //и её длину. Длину мы получаем как отдельное число записываем int переменную.
     if (len == 0) 
     {
@@ -1367,10 +1367,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SendPost(NULL);
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
                 break;
-            case IDM_EXIT:
+            case IDB_EXIT:
                 DestroyWindow(hWnd);
                 break;
-            case IDB_CREATE_DB:
+            case IDB_CONNECT_TO_SERVER:
                 CreateDatabase(hWnd);
                 if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
                 {

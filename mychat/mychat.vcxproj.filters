@@ -38,7 +38,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="mychat.cpp">
+    <ClCompile Include="chat_client.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
