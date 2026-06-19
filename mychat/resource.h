@@ -4,13 +4,10 @@
 //
 
 //IDC
-#define IDC_STATIC						1
-#define IDC_MYICON                      2
 #define IDR_USER_LIST                   100
 #define IDD_MYCHAT_DIALOG               102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
-#define IDM_ABOUT                       104
 #define IDM_EXIT                        105
 #define IDI_MYCHAT                      107
 #define IDI_SMALL                       108
@@ -18,6 +15,7 @@
 #define IDR_MAINFRAME                   128
 
 //IDB
+#define IDB_ABOUT_PROGRAM               1000
 #define IDB_ADD_USER                    1001
 #define IDB_MODIFY_USER                 1002
 #define IDB_DELETE_USER                 1003

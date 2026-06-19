@@ -322,7 +322,7 @@ VOID startServer(HWND log)
 	if (iResult != 0)
 	{
         WCHAR err[1024] = {};
-		wsprintf(err, L"Ошибка получения адреса %d", iResult);
+		wsprintf(err, L"Ошибка получения серверного адреса %d", iResult);
         appendToLog(log, err);
 		WSACleanup();
 		return;

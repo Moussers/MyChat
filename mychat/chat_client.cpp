@@ -27,7 +27,8 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса глав�
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
 int checkTables();
@@ -295,7 +296,7 @@ INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer)
 int updateList(HWND userList) 
 {
     SendMessage(userList, LB_RESETCONTENT, 0, 0);
-    //LB_RESETCONTENT - очищает данные дексиптора, который является listBox.
+    //LB_RESETCONTENT - очищает данные дескриптора, который является listBox.
     sqlite3* db;
     int result = sqlite3_open("DatabaseMessanger.db", &db);
     if (result) 
@@ -885,9 +886,8 @@ void addUser()
     //Выделение дополнительных байт для класса после его регистрации, память 
     //будет привязана к самому классу, а не к конкретному окну.
     userWnd.cbWndExtra = 0;
-    //Выделение дополнительных байт для каждого окна, так как каждое окно будет 
-    //уникальным, выделена память будет сохранена для окна пока оно будет 
-    //существовать.
+    //Выделение дополнительных байт для каждого окна, так как каждое окно будет уникальным,
+    //выделена память будет сохранена для окна пока оно будет существовать.
     userWnd.hInstance = GetModuleHandle(NULL);
     userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));;
     userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
@@ -924,7 +924,8 @@ void addUser()
     //msg - хранит сообщение которое получает окно
     while (IsWindow(userClass))
     {
-        if (GetMessage(&msg, userClass, 0, 0)) {
+        if (GetMessage(&msg, userClass, 0, 0)) 
+        {
             //GetMessage - извлекает и обрабатывает сообщение от окна
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -1115,7 +1116,7 @@ int SendPost(char* msg)
     //WSAStartup - инициализирует данные о сокете.
     if (res != 0) 
     {
-        MessageBox(NULL, L"WSocket not initializired", L"Error", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка инициализации сокета", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
     ZeroMemory(&hints, sizeof(hints));
@@ -1128,7 +1129,7 @@ int SendPost(char* msg)
     //если произойдет ошибка, переменная res получит код ошибки
     if (res != 0) 
     {
-        MessageBox(NULL, L"getaddrinfo not working!", L"Error", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка получения клиентского адреса!", L"Ошибка", MB_OK | MB_ICONERROR);
         WSACleanup();
         //Очищает данные о сокете.
         return 1;
@@ -1139,13 +1140,14 @@ int SendPost(char* msg)
         listen = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
         if (listen == INVALID_SOCKET)
         {
-            MessageBox(NULL, L"socket don't created!", L"ERROR", MB_OK | MB_ICONERROR);
+            MessageBox(NULL, L"Сокет не создан!", L"Ошибка", MB_OK | MB_ICONERROR);
         }
         res = connect(listen, ptr->ai_addr, (int)ptr->ai_addrlen);
         //ai_addr - ссылка на адерс;
         //ai_addrlen - размер адреса
         if (res == SOCKET_ERROR)
         {
+            MessageBox(NULL, L"Ошибка подключения к серверу", L"Ошибка!", MB_OK | MB_ICONERROR);
             closesocket(listen);
             listen = INVALID_SOCKET;
             continue;
@@ -1164,7 +1166,7 @@ int SendPost(char* msg)
     //shutdown - функция завершения работы отключает отправку или получение в сокете.
     if (res == SOCKET_ERROR)
     {
-        MessageBox(NULL, L"Failed shutdown socket!", L"Error", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка закрытия сокета!", L"Ошибка", MB_OK | MB_ICONERROR);
         closesocket(listen);
         WSACleanup();
         return res;
@@ -1176,7 +1178,7 @@ int SendPost(char* msg)
         //recv - recieve;
         if (res < 0)
         {
-            MessageBox(NULL, L"Recv filed", L"Error", MB_OK | MB_ICONERROR);
+            MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
     } while (res > 0);
     closesocket(listen);
@@ -1332,7 +1334,38 @@ int CreateDatabase(HWND hWnd)
     msg = NULL;
     return 0;
 }
-
+int CreatingAthorWindow(HWND hWnd) 
+{
+    WNDCLASSEX authorWnd;
+    ZeroMemory(&authorWnd, sizeof(authorWnd));
+    authorWnd.cbSize = sizeof(WNDCLASSEX);
+    authorWnd.style = CS_HREDRAW | CS_VREDRAW;
+    authorWnd.lpfnWndProc = AboutProgram;
+    authorWnd.cbClsExtra = 0;
+    authorWnd.cbWndExtra = 0;
+    authorWnd.hInstance = GetModuleHandle(NULL);
+    authorWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDC_ICON));
+    authorWnd.hCursor = LoadCursor(hInst, MAKEINTRESOURCE(IDC_ARROW));
+    authorWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    authorWnd.lpszMenuName = NULL;
+    authorWnd.lpszClassName = INFO_ABOUT_PROGRAM;
+    ATOM reg = RegisterClassEx(&authorWnd);
+    HWND userClass = CreateWindow(INFO_ABOUT_PROGRAM, L"О Программе", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, INFO_ABOUT_PROGRAM_WIDTH, INFO_ABOUT_PROGRAM_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"STATIC", L"Авторы:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, AUTHOR_FIELD_POS_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, AUTHOR_LIST_POS_X, AUTHOR_FIELD_POS_Y, AUTHOR_LIST_POS_WIDTH, AUTHOR_LIST_POS_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"STATIC", L"Версия:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, ABOUT_VERSION_FIELD_POX_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    ShowWindow(userClass, SW_SHOWDEFAULT);
+    MSG msg;
+    while (IsWindow(userClass))
+    {
+        if (GetMessage(&msg, userClass, 0, 0))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    return 0;
+}
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0,
@@ -1354,6 +1387,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
    return TRUE;
 }
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -1363,9 +1397,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             int wmId = LOWORD(wParam);
             switch (wmId)
             {
-            case IDM_ABOUT:
+            case IDB_ABOUT_PROGRAM:
                 SendPost(NULL);
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+                CreatingAthorWindow(hWnd);
                 break;
             case IDB_EXIT:
                 DestroyWindow(hWnd);
@@ -1392,21 +1426,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 // Обработчик сообщений для окна "О программе".
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
+    switch (message) 
     {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+        case WM_COMMAND:
+            switch (LOWORD(message)) 
+            {
 
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+            }
+        default: 
         {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
+            return DefWindowProc(hWnd, message, wParam, lParam);
         }
-        break;
     }
-    return (INT_PTR)FALSE;
 }
+
