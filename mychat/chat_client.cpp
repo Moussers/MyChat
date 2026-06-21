@@ -14,6 +14,7 @@
 #include "PositionsButtonsAndWindows.h"
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
+#define PORT "4000"
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
 CONST UINT codePage = 1251;
@@ -31,8 +32,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
-int checkTables();
-
+int Recieve(SOCKET clientSocket);
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -51,7 +51,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         return FALSE;
     }
-    checkTables();
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYCHAT));
     MSG msg;
 
@@ -89,6 +88,7 @@ LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     }
     
 }
+//CALLBACK обработчик вызовов внутри нашего окна
 LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     //LRESULT CALLBACK - это структура меню для созданного окна. Команды внутри окна
@@ -760,7 +760,7 @@ int classModUserInfo(HWND hWnd, int idx)
         return 1;
     }
     sqlite3* db;
-    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    int res = sqlite3_open("DatabaseMessanger.db", &db);        //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res) 
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -933,199 +933,39 @@ void addUser()
         //структура для обработки соообщения окна
     }
 }
-int checkTables() 
+
+int InitClinet()
 {
-    sqlite3* db;
-    CONST INT SIZE = 256;
-    //char* mesError[SIZE];
-    int res = sqlite3_open("DatabaseMessanger.db", &db);
-    if (res)
-    //похожий вариант прочтения:
-    //if(res != 0) 
-    {
-        MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
-        sqlite3_close(db);
-        //sqlite3_close - прерывает связь с базой данных
-        return 1;
-    }
-    const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
-    //sqlite_master - хранит количество таблиц
-    sqlite3_stmt* table;
-    //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
-    //который находится в const char* переменной
-    if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
-    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
-    {
-        INT curRow = sqlite3_step(table);
-        //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
-        if (curRow == SQLITE_ROW)
-        //SQLITE_ROW - идентификатор строки
-        //Если int перменная получает значение sqlite_row, то это значит строка найденна
-        {
-            INT countRows = sqlite3_column_int(table, 0);
-            //sqlite3_column_int - выводит текущий индекс колонки
-            if (countRows == 0)
-            {
-                MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
-                const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
-                //char** errorTgroup = mesError;        //Как вариант.
-                char* msg = NULL;
-                try {
-                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else 
-                    {
-                        MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
-                        throw "SQL-ERROR";
-                    }
-                }
-                catch (...) 
-                {
-                    CONST INT SIZE = 2000;
-                    WCHAR errorMes[SIZE];
-                    size_t szType;
-                    mbstowcs_s(&szType, errorMes, msg, SIZE);
-                    msg = cleaningMemory(msg);
-                    writtingDownLog(errorMes);
-                    sqlite3_close(db);
-                    return 1;
-                }
-            }
-        }
-        sqlite3_finalize(table);
-        //sqlite3_finalize - очищает память от переменной.
-    }
-    const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
-    if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
-    {
-        INT curRow = sqlite3_step(table);
-        if (curRow == SQLITE_ROW) 
-        {
-            INT countRows = sqlite3_column_int(table, 0);
-            if (countRows == 0) 
-            {
-                const char* createTable = 
-                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
-                    "first_name TEXT NOT NULL,"
-                    "last_name TEXT NOT NULL,"
-                    "middle_name TEXT,"
-                    "phone TEXT NOT NULL,"
-                    "email TEXT NULL,"
-                    "path_icon TEXT,"
-                    "icon BLOB,"
-                    "status INT NOT NULL);";
-                //char** errorTUser = mesError;
-                char* msg = NULL;
-                try {
-                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else
-                    {
-                        MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
-                        throw "SQL-ERROR";
-                    }
-                }
-                catch (...) 
-                {
-                    CONST INT SIZE = 2000;
-                    WCHAR errorMes[SIZE];
-                    size_t szType;
-                    mbstowcs_s(&szType, errorMes, msg, SIZE);
-                    msg = cleaningMemory(msg);
-                    writtingDownLog(errorMes);
-                    sqlite3_close(db);
-                    return 1;
-                }
-                free(msg);
-                msg = NULL;
-            }
-        }
-        sqlite3_finalize(table);
-    }
-    const char* messageTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
-    if (sqlite3_prepare_v2(db, messageTable, -1, &table, NULL) == SQLITE_OK) 
-    {
-        INT curRow = sqlite3_step(table);
-        if (curRow == SQLITE_ROW) 
-        {
-            int countRows = sqlite3_column_int(table, 0);
-            if (countRows == 0) 
-            {
-                MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
-                const char* createTable = "CREATE TABLE messages"
-                    "(message_id PRIMARY KEY NOT NULL,"
-                    "text_field TEXT NOT NULL,"
-                    "file_field BLOB,"
-                    "sender INT,"
-                    "group_id INT,"
-                    "recipent INT,"
-                    "FOREIGN KEY (sender) REFERENCES users(user_id),"
-                    "FOREIGN KEY (recipent) REFERENCES users(user_id),"
-                    "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
-                //char** errorTMes = mesError;
-                char* msg = NULL;
-                try {
-                    int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    //Пятый аргумент в sqlite3_exec - записывает ошибку в перменную которую мы передали.
-                    if (result == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else
-                    {
-                        MessageBox(NULL, L"Ошибка при создании таблицы сообщение", L"Инфо", MB_OK | MB_ICONERROR);
-                        throw "SQL-ERROR";
-                    }
-                }
-                catch (...) 
-                {
-                    CONST INT SIZE = 2000;
-                    WCHAR errorMes[SIZE];
-                    size_t szType;
-                    mbstowcs_s(&szType, errorMes, msg, SIZE);
-                    msg = cleaningMemory(msg);
-                    writtingDownLog(errorMes);
-                    sqlite3_close(db);
-                    return 1;
-                }
-                free(msg);
-                msg = NULL;
-            }
-        }
-        sqlite3_finalize(table);
-    }
-    sqlite3_close(db);
-}
-int SendPost(char* msg) 
-{
-    //SOCKET - сетевой интферфейс для передачи данных на компьютер к примеру сервер
-    //WSADATA — структура в C++ для работы с сокетами (WinSock), которая содержит сведения о реализации сокетов Windows.
     WSADATA wsd;
-    SOCKET listen = INVALID_SOCKET;
-    //INVALID_SOCKET -1
-    struct addrinfo* result, *ptr, hints;
-    //addrinfo - хранит информацию об адресе в сети
-    //WSAStartup - инициализирует SOCKET
-    int res = WSAStartup(MAKEWORD(2, 2), &wsd);
-    //WSAStartup - инициализирует данные о сокете.
+    CONST INT SIZE = 256;
+    WCHAR mesErr[SIZE] = {};
+    //WSADATA — структура в C++ для работы с сокетами (WinSock), которая содержит сведения о реализации сокетов Windows.
+    DWORD dwErr = 0;
+    //DWORD - 32-bit unsigend integer
+    INT res = WSAStartup(MAKEWORD(2, 2), &wsd);
+    //Функция WSAStartup должна быть первой функцией Windows Sockets, вызванной приложением или библиотекой DLL.
+    dwErr = WSAGetLastError();
     if (res != 0) 
     {
-        MessageBox(NULL, L"Ошибка инициализации сокета", L"Ошибка", MB_OK | MB_ICONERROR);
+        wsprintf(mesErr, L"%s: %d", L"Ошибка иницализации данных сокета", WSAGetLastError());
+        MessageBox(NULL, mesErr, L"Ошибка", MB_OK | MB_ICONERROR);
+        WSACleanup();
         return 1;
     }
+    SOCKET listen = INVALID_SOCKET;
+    //SOCKET - сетевой интферфейс для передачи данных на компьютер к примеру сервер
+    //INVALID_SOCKET -1
+    struct addrinfo* result = NULL, hints;
+    //addrinfo - хранит информацию об адресе в сети
     ZeroMemory(&hints, sizeof(hints));
-    //ZeroMemory - обнулить память
+    //ZeroMemory - обнуляе память у объекта hints структуры adddrinfo*
+
+    //* Инициализация типа протокола продключения
     hints.ai_family = AF_UNSPEC;
     //AF_UNSPEC - обычное подключение
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;        //Инициализация типа протокола продключения
-    res = getaddrinfo("127.0.0.1", "4321", &hints, &result);
+    hints.ai_protocol = IPPROTO_TCP;
+    res = getaddrinfo("127.0.0.1", PORT, &hints, &result);        //IP адрес клиента
     //если произойдет ошибка, переменная res получит код ошибки
     if (res != 0) 
     {
@@ -1134,25 +974,20 @@ int SendPost(char* msg)
         //Очищает данные о сокете.
         return 1;
     }
-    for (ptr = result; ptr != NULL; ptr = ptr->ai_next)
+    listen = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (listen == INVALID_SOCKET)
     {
-        //ptr->ai_next - идём по адерсу ptr пока она не станет null
-        listen = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-        if (listen == INVALID_SOCKET)
-        {
-            MessageBox(NULL, L"Сокет не создан!", L"Ошибка", MB_OK | MB_ICONERROR);
-        }
-        res = connect(listen, ptr->ai_addr, (int)ptr->ai_addrlen);
-        //ai_addr - ссылка на адерс;
-        //ai_addrlen - размер адреса
-        if (res == SOCKET_ERROR)
-        {
-            MessageBox(NULL, L"Ошибка подключения к серверу", L"Ошибка!", MB_OK | MB_ICONERROR);
-            closesocket(listen);
-            listen = INVALID_SOCKET;
-            continue;
-        }
-        break;
+        MessageBox(NULL, L"Сокет не создан!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    res = connect(listen, result->ai_addr, (int)result->ai_addrlen);
+    //ai_addr - ссылка на адерс;
+    //ai_addrlen - размер адреса
+    if (res == SOCKET_ERROR)
+    {
+        MessageBox(NULL, L"Ошибка подключения к серверу", L"Ошибка!", MB_OK | MB_ICONERROR);
+        closesocket(listen);
+        listen = INVALID_SOCKET;
     }
     freeaddrinfo(result);
     //очищаем память сокета от лишней информации.
@@ -1162,6 +997,7 @@ int SendPost(char* msg)
         WSACleanup();
         return res;
     }
+    Recieve(listen);
     res = shutdown(listen, SD_SEND);
     //shutdown - функция завершения работы отключает отправку или получение в сокете.
     if (res == SOCKET_ERROR)
@@ -1171,16 +1007,6 @@ int SendPost(char* msg)
         WSACleanup();
         return res;
     }
-    char recvbuf[512];
-    do 
-    {
-        res = recv(listen, recvbuf, 512, 0);
-        //recv - recieve;
-        if (res < 0)
-        {
-            MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
-        }
-    } while (res > 0);
     closesocket(listen);
     WSACleanup();
     return 0;
@@ -1251,108 +1077,52 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     }
     return 0;
 }
-//CALLBACK обработчик вызовов внутри нашего окна
-int CreateDatabase(HWND hWnd) 
+
+int Recieve(SOCKET clientSocket)
 {
-    sqlite3* db;
-    CONST INT SIZE = 256;
-    //char* errorMsg[SIZE];
-    int result = sqlite3_open("DatabaseMessanger.db", &db);     //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
-    if (result) 
+    INT res = 0;
+    CHAR recvbuf[512];
+    do
     {
-        MessageBox(NULL, L"База данных не подключена", L"Ошибка!", MB_OK | MB_ICONERROR);
-        sqlite3_close(db);
-        return 1;
-    }
-    else 
-    {
-        MessageBox(NULL, L"Успешное подключение к базе дынных!", L"Инфо", MB_OK | MB_ICONINFORMATION);
-    }
-    WNDCLASSEX userWnd;
-    ZeroMemory(&userWnd, sizeof(WNDCLASSEX));
-    //WNDCLASSEX - в нем можно задать настройки отдельного окна: размер, высоту, расположение и так далее.
-    userWnd.cbSize = sizeof(WNDCLASSEX);
-    userWnd.style = CS_VREDRAW;
-    userWnd.lpfnWndProc = UserWndProc;
-    userWnd.cbClsExtra = 0;
-    //задаёт количество дополнительных байтов памяти, выделяемых для каждого класса окон после структуры класса 
-    userWnd.cbWndExtra = 0;
-    //задаёт количество дополнительных байтов памяти, выделяемых для каждого экземпляра окна 
-    userWnd.hInstance = GetModuleHandleA(NULL);
-    userWnd.hCursor = LoadCursor(NULL, IDC_ARROW);
-    //адрес на функцию где будет обрабатываться наше событие. Ссылка на сам userWnd.
-    //IDC_ARROW - указатель на курсор мышки.
-    userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    userWnd.lpszClassName = USER_LIST_CLASS_NAME;
-    ATOM reg = RegisterClassEx(&userWnd);
-    HWND winUser = CreateWindow(USER_LIST_CLASS_NAME, L"Пользователи", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, SELECTION_MENU_FIELD_POS_X, SELECTION_MENU_FIELD_POS_Y, hWnd, 0, GetModuleHandle(NULL), NULL);
-    //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
-    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | WS_BORDER, ADD_BUTTON_POS_X, ADD_BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_ADD_USER, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Изменить", WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_POS_X, MODIFY_BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_MODIFY_USER, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | WS_BORDER, DELETE_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_DELETE_USER, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_CANCEL_BUTTON_POS_X, BUTTON_POS_Y, BUTTON_WIDTH, BUTTON_HEIGHT, winUser, (HMENU)IDB_CANCEL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, LIST_ADDED_USERS_POS_X, LIST_ADDED_USERS_POS_Y, LIST_ADDED_USERS_WIDTH, LIST_ADDED_USERS_HEIGHT, winUser, (HMENU)IDM_USER_LIST, GetModuleHandle(NULL), NULL);
-    //WS_BORDER - ключ благодаря которму задаются границы окна.
-    //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
-    //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
-    //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
-    if (updateList(GetDlgItem(winUser, IDM_USER_LIST)) == 1) 
-    {
-        return 1;
-    }
-    ShowWindow(winUser, SW_SHOWDEFAULT);
-    MSG message;
-    while (IsWindow(winUser))
-    {
-        if (GetMessage(&message, winUser, 0, 0))
+        res = recv(clientSocket, recvbuf, 512, 0);
+        //recv - recieve;
+        if (res < 0)
         {
-            TranslateMessage(&message);
-            DispatchMessage(&message);
+            MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
-    }
-    const char* findTableUs = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users'";
-    //char** errorCountT = errorMsg;
-    char* msg = NULL;
-    try 
-    {
-        sqlite3_exec(db, findTableUs, NULL, NULL, &msg);
-    }
-    catch (...) 
-    {
-        MessageBox(NULL, L"Произошла ошибка!", L"Ошибка!", MB_OK | MB_ICONERROR);
-        CONST INT SIZE = 2000;
-        WCHAR errorMes[SIZE];
-        size_t szType;
-        mbstowcs_s(&szType, errorMes, msg, SIZE);
-        msg = cleaningMemory(msg);
-        writtingDownLog(errorMes);
-        sqlite3_close(db);
-        return 1;
-    }
-    sqlite3_close(db);
-    free(msg);
-    msg = NULL;
+    } while (res > 0);
     return 0;
 }
+
 int CreatingAuthorWindow(HWND hWnd) 
 {
     WNDCLASSEX authorWnd;
     ZeroMemory(&authorWnd, sizeof(authorWnd));
+    //WNDCLASSEX - в нем можно задать настройки отдельного окна: размер, высоту, расположение и так далее.
     authorWnd.cbSize = sizeof(WNDCLASSEX);
     authorWnd.style = CS_HREDRAW | CS_VREDRAW;
     authorWnd.lpfnWndProc = AboutProgram;
     authorWnd.cbClsExtra = 0;
+    //задаёт количество дополнительных байтов памяти, выделяемых для каждого класса окон после структуры класса 
     authorWnd.cbWndExtra = 0;
+    //задаёт количество дополнительных байтов памяти, выделяемых для каждого экземпляра окна 
     authorWnd.hInstance = GetModuleHandle(NULL);
     authorWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDC_ICON));
     authorWnd.hCursor = LoadCursor(hInst, MAKEINTRESOURCE(IDC_ARROW));
+    //адрес на функцию где будет обрабатываться наше событие. Ссылка на сам userWnd.
+    //IDC_ARROW - указатель на курсор мышки.
     authorWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
     authorWnd.lpszMenuName = NULL;
     authorWnd.lpszClassName = INFO_ABOUT_PROGRAM;
     ATOM reg = RegisterClassEx(&authorWnd);
     HWND userClass = CreateWindow(INFO_ABOUT_PROGRAM, L"О Программе", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, INFO_ABOUT_PROGRAM_WIDTH, INFO_ABOUT_PROGRAM_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
     CreateWindow(L"STATIC", L"Авторы:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, AUTHOR_FIELD_POS_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, AUTHOR_LIST_POS_X, AUTHOR_FIELD_POS_Y, AUTHOR_LIST_POS_WIDTH, AUTHOR_LIST_POS_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    //WS_BORDER - ключ благодаря которму задаются границы окна.
+    //ES_AUTOVSCROLL - автоматическое пермещение по списку если какой-то добавлен или удалён.
+    //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
+    //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
     CreateWindow(L"STATIC", L"Версия:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, ABOUT_VERSION_FIELD_POX_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"BUTTON", L"Закрыть", WS_VISIBLE | WS_CHILD | WS_BORDER, 320, 150, 70, 20, userClass, (HMENU)IDB_ABOUT_PROG_BUTTON_CANCEL, GetModuleHandle(NULL), NULL);
     ShowWindow(userClass, SW_SHOWDEFAULT);
@@ -1382,7 +1152,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
        return 1;
    }
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hWnd, 0, hInstance, NULL);
    CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
+   //CreateWindow(L"BUTTON", L"Прикрепить файл", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 380, SEND_MES_WINDOW_Y, 140, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -1399,14 +1172,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
             case IDB_ABOUT_PROGRAM:
-                SendPost(NULL);
                 CreatingAuthorWindow(hWnd);
                 break;
             case IDB_EXIT:
                 DestroyWindow(hWnd);
                 break;
             case IDB_CONNECT_TO_SERVER:
-                CreateDatabase(hWnd);
+                InitClinet();
                 if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
                 {
                     return 1;
@@ -1439,7 +1211,7 @@ LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             {
             case IDB_ABOUT_PROG_BUTTON_CANCEL:
                 SendMessage(hWnd, WM_CLOSE, 0, NULL);
-                //Msg (второй параметр) - вписываем нужную команеду сообщение 
+                //Msg (второй параметр) - вписываем нужную команду сообщение 
                 //Список комманд - в Windows Notifications
                 break;
             }

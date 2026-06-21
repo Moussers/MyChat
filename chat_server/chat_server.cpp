@@ -101,13 +101,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	}
 }
 
+VOID clearLog(HWND log) 
+{
+    CONST INT SIZE = 100;
+    WCHAR str[SIZE] = {};
+    wsprintf(str, L"%s", L"");
+    HWND hClr = GetDlgItem(log, IDB_MAIN_BUTTON_CLEAR_LOG);
+    SetWindowText(log, str);
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    if (!listenNewClient) 
+    /*if (!listenNewClient) 
     {
         listenNewClient = true;
         CreateThread(NULL, 2048, (LPTHREAD_START_ROUTINE)listenClient, NULL, 0, NULL);
-    }
+    }*/
 	switch (message) 
 	{
 	case WM_COMMAND:
@@ -117,6 +126,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDB_MAIN_BUTTON_DELETE:
 			break;
 		case IDB_MAIN_BUTTON_CLEAR_LOG:
+            clearLog(hWnd);
 			break;
 		}
 	}
@@ -131,7 +141,7 @@ int checkTables()
     sqlite3* db;
     CONST INT SIZE = 256;
     //char* mesError[SIZE];
-    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    int res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res)
     //похожий вариант прочтения:
     //if(res != 0) 
@@ -299,6 +309,8 @@ int checkTables()
 VOID startServer(HWND log) 
 {
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    //WSAStartup - инициализирует SOCKET
+    //WSAStartup - инициализирует данные о сокете.
 	if (iResult != 0)
 	{
         WCHAR err[1024] = {};
@@ -316,7 +328,7 @@ VOID startServer(HWND log)
 	//ai_socktype указывает на то, что вызывающая сторона будет принимать любой тип сокета.
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_PASSIVE;
-    iResult = getaddrinfo( "129.168.1.32", PORT, &hints, &result);
+    iResult = getaddrinfo(NULL, PORT, &hints, &result);      //IP адрес сервера
     //getaddrinfo — это версия функции в стандарте ANSI, которая обеспечивает независимый от 
     //протокола перевод имени хоста в адрес. 
 	if (iResult != 0)
@@ -349,7 +361,7 @@ VOID startServer(HWND log)
     if (iResult == SOCKET_ERROR) 
     {
         WCHAR err[1024] = {};
-        wsprintf(err, L"Ошибка при привязке соекета: %d", WSAGetLastError());
+        wsprintf(err, L"Ошибка при привязке сокета: %d", WSAGetLastError());
         appendToLog(log, err);
         freeaddrinfo(result);
         closesocket(listenSocket);
@@ -389,7 +401,7 @@ VOID appendToLog(HWND log, CONST WCHAR* message)
     //записывает число в int переменную
     SendMessage(log, EM_SETSEL, (WPARAM)length, (LPARAM)length);
     //Ставим указатель в конец строки
-    //EM_SETSEL - устнавливает указатель на конец строки куда и будем писать
+    //EM_SETSEL - устанавливает указатель на конец строки куда и будем писать
     SendMessage(log, EM_REPLACESEL, FALSE, (LPARAM)message);
     //Записываем текст в конце строки
     //EM_REPLACEDSEL - добавдяет дополниетльный текст в элемент управления
