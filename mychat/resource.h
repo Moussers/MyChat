@@ -16,18 +16,19 @@
 
 //IDB
 #define IDB_ABOUT_PROGRAM               1000
-#define IDB_ADD_USER                    1001
-#define IDB_MODIFY_USER                 1002
-#define IDB_DELETE_USER                 1003
-#define IDB_CANCEL                      1004
-#define IDB_CANCELLING_USER_ADD         1005
-#define IDB_GIVE_CONSENT_USER_ADD       1006
-#define IDB_CANCELING_USER_MOD          1007
-#define IDB_GIVE_CONSENT_USER_MOD       1008
-#define IDB_CONNECT_TO_SERVER           1009
-#define IDB_CLOSE_CONNECT               1010
-#define IDB_EXIT                        1011
-#define IDB_CLIENT_LIST                 1012
+#define IDB_ABOUT_PROG_BUTTON_CANCEL	1001
+#define IDB_ADD_USER                    1002
+#define IDB_MODIFY_USER                 1003
+#define IDB_DELETE_USER                 1004
+#define IDB_CANCEL                      1005
+#define IDB_CANCELLING_USER_ADD         1006
+#define IDB_GIVE_CONSENT_USER_ADD       1007
+#define IDB_CANCELING_USER_MOD          1008
+#define IDB_GIVE_CONSENT_USER_MOD       1009
+#define IDB_CONNECT_TO_SERVER           1010
+#define IDB_CLOSE_CONNECT               1011
+#define IDB_EXIT                        1012
+#define IDB_CLIENT_LIST                 1013
 //Меню бар (in Resource View) конструктора окна клавиш 
 
 //IDM

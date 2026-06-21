@@ -1334,7 +1334,7 @@ int CreateDatabase(HWND hWnd)
     msg = NULL;
     return 0;
 }
-int CreatingAthorWindow(HWND hWnd) 
+int CreatingAuthorWindow(HWND hWnd) 
 {
     WNDCLASSEX authorWnd;
     ZeroMemory(&authorWnd, sizeof(authorWnd));
@@ -1354,6 +1354,7 @@ int CreatingAthorWindow(HWND hWnd)
     CreateWindow(L"STATIC", L"Авторы:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, AUTHOR_FIELD_POS_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, AUTHOR_LIST_POS_X, AUTHOR_FIELD_POS_Y, AUTHOR_LIST_POS_WIDTH, AUTHOR_LIST_POS_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"STATIC", L"Версия:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, ABOUT_VERSION_FIELD_POX_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Закрыть", WS_VISIBLE | WS_CHILD | WS_BORDER, 320, 150, 70, 20, userClass, (HMENU)IDB_ABOUT_PROG_BUTTON_CANCEL, GetModuleHandle(NULL), NULL);
     ShowWindow(userClass, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(userClass))
@@ -1399,7 +1400,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
             case IDB_ABOUT_PROGRAM:
                 SendPost(NULL);
-                CreatingAthorWindow(hWnd);
+                CreatingAuthorWindow(hWnd);
                 break;
             case IDB_EXIT:
                 DestroyWindow(hWnd);
@@ -1427,14 +1428,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 // Обработчик сообщений для окна "О программе".
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
+//LRESULT — это целочисленное значение, которое программа возвращает в Windows. Он содержит 
+//ответ вашей программы на определенное сообщение. Значение этого значения зависит от кода 
+//сообщения. 
 {
     switch (message) 
     {
         case WM_COMMAND:
-            switch (LOWORD(message)) 
+            switch (LOWORD(wParam)) 
             {
-
+            case IDB_ABOUT_PROG_BUTTON_CANCEL:
+                SendMessage(hWnd, WM_CLOSE, 0, NULL);
+                //Msg (второй параметр) - вписываем нужную команеду сообщение 
+                //Список комманд - в Windows Notifications
+                break;
             }
+        break;
         default: 
         {
             return DefWindowProc(hWnd, message, wParam, lParam);
