@@ -45,7 +45,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_MYCHAT, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
-
+    int checkTables();
     // Выполнить инициализацию приложения:
     if (!InitInstance (hInstance, nCmdShow))
     {
@@ -65,6 +65,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
     return (int) msg.wParam;
 }
+int checkTables();
 int checkingUserInfo(HWND hWnd);
 int modifyUserInfo(HWND hWnd);
 LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
@@ -85,8 +86,7 @@ LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    
+    }  
 }
 //CALLBACK обработчик вызовов внутри нашего окна
 LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1043,21 +1043,21 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         switch (wmId) {
         case IDB_ADD_USER:
             addUser();
-            if (updateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1) 
+            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
             {
                 return 1;
             }
             break;
         case IDB_MODIFY_USER:
-            classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0));
+            classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
             break;
         case IDB_DELETE_USER:
-            deleteUser(SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0));
+            deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
             //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
             //чтобы получить id/индекс выбранного пользователя
             //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
             //выполняется через SendMessage работающий с системой Windows
-            if (updateList(GetDlgItem(hWnd, IDM_USER_LIST)) == 1)
+            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
             {
                 return 1;
             }
@@ -1075,6 +1075,177 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
+    return 0;
+}
+
+int checkTables()
+{
+    sqlite3* db;
+    CONST INT SIZE = 256;
+    //char* mesError[SIZE];
+    int res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
+    if (res)
+        //похожий вариант прочтения:
+        //if(res != 0) 
+    {
+        MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        //sqlite3_close - прерывает связь с базой данных
+        return 1;
+    }
+    const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
+    //sqlite_master - хранит количество таблиц
+    sqlite3_stmt* table;
+    //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
+    //который находится в const char* переменной
+    if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
+        //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
+    {
+        INT curRow = sqlite3_step(table);
+        //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
+        if (curRow == SQLITE_ROW)
+            //SQLITE_ROW - идентификатор строки
+            //Если int перменная получает значение sqlite_row, то это значит строка найденна
+        {
+            INT countRows = sqlite3_column_int(table, 0);
+            //sqlite3_column_int - выводит текущий индекс колонки
+            if (countRows == 0)
+            {
+                MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
+                const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
+                //char** errorTgroup = mesError;        //Как вариант.
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...)
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+            }
+        }
+        sqlite3_finalize(table);
+        //sqlite3_finalize - очищает память от переменной.
+    }
+    const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
+    if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(table);
+        if (curRow == SQLITE_ROW)
+        {
+            INT countRows = sqlite3_column_int(table, 0);
+            if (countRows == 0)
+            {
+                const char* createTable =
+                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
+                    "first_name TEXT NOT NULL,"
+                    "last_name TEXT NOT NULL,"
+                    "middle_name TEXT,"
+                    "phone TEXT NOT NULL,"
+                    "email TEXT NULL,"
+                    "path_icon TEXT,"
+                    "icon BLOB,"
+                    "status INT NOT NULL);";
+                //char** errorTUser = mesError;
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...)
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+                free(msg);
+                msg = NULL;
+            }
+        }
+        sqlite3_finalize(table);
+    }
+    const char* messageTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
+    if (sqlite3_prepare_v2(db, messageTable, -1, &table, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(table);
+        if (curRow == SQLITE_ROW)
+        {
+            int countRows = sqlite3_column_int(table, 0);
+            if (countRows == 0)
+            {
+                MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
+                const char* createTable = "CREATE TABLE messages"
+                    "(message_id PRIMARY KEY NOT NULL,"
+                    "text_field TEXT NOT NULL,"
+                    "file_field BLOB,"
+                    "sender INT,"
+                    "group_id INT,"
+                    "recipent INT,"
+                    "FOREIGN KEY (sender) REFERENCES users(user_id),"
+                    "FOREIGN KEY (recipent) REFERENCES users(user_id),"
+                    "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
+                //char** errorTMes = mesError;
+                char* msg = NULL;
+                try {
+                    int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    //Пятый аргумент в sqlite3_exec - записывает ошибку в переменную которую мы передали.
+                    if (result == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы сообщение", L"Инфо", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...)
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+                free(msg);
+                msg = NULL;
+            }
+        }
+        sqlite3_finalize(table);
+    }
+    sqlite3_close(db);
     return 0;
 }
 
@@ -1147,7 +1318,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
    CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInstance, NULL);
+   CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInstance, NULL);
    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
    {
        return 1;
@@ -1157,6 +1328,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    //CreateWindow(L"BUTTON", L"Прикрепить файл", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 380, SEND_MES_WINDOW_Y, 140, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //WS-CHILD - не родительское окно
+   CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_ADD_USER, hInstance, NULL);
+   //CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 170, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    return TRUE;
@@ -1177,13 +1350,60 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case IDB_EXIT:
                 DestroyWindow(hWnd);
                 break;
-            case IDB_CONNECT_TO_SERVER:
-                InitClinet();
+            case IDB_ADD_USER:
+                addUser();
+                //InitClinet();
                 if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
                 {
                     return 1;
                 }
                 break; 
+            case IDM_MAIN_USER_LIST:
+            {
+                int evn = HIWORD(wParam);
+                if (HIWORD(wParam) == LBN_SELCHANGE)
+                //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
+                {
+                    HMENU hMenu = CreatePopupMenu();
+                    AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
+                    //AppendMenu - добавляет список popup menu новые слова
+                    //hMENU - handle hmenu
+                    //uFlags - сюда пишем команду которая нужно выполнить
+                    //uIDNewItem - id объекта
+                    //lpNewItem - название объекта
+                    AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
+                    POINT pos;
+                    GetCursorPos(&pos);
+                    //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
+                    SetForegroundWindow(hWnd);
+                    //SetForegroundWindow - выводит окно POOPUP на передний план
+                    int num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
+                    //TrackPopupMenu - отображает контекстное POPUP меню 
+                    //TPM_RETURNCMD - вернуть выбранный номер
+                    switch (num) 
+                    {
+                    case IDB_MODIFY_USER:
+                        classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                        {
+                            return 1;
+                        }
+                        break;
+                    case IDB_DELETE_USER:
+                        deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                        //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
+                        //чтобы получить id/индекс выбранного пользователя
+                        //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
+                        //выполняется через SendMessage работающий с системой Windows
+                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                        {
+                            return 1;
+                        }
+                        break;
+                    }
+                }
+            }
+                break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }

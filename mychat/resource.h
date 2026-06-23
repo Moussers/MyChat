@@ -2,13 +2,10 @@
 // Microsoft Visual C++ generated include file.
 // Used by mychat.rc
 //
-
-//IDC
 #define IDR_USER_LIST                   100
 #define IDD_MYCHAT_DIALOG               102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
-#define IDM_EXIT                        105
 #define IDI_MYCHAT                      107
 #define IDI_SMALL                       108
 #define IDC_MYCHAT                      109
@@ -16,7 +13,7 @@
 
 //IDB
 #define IDB_ABOUT_PROGRAM               1000
-#define IDB_ABOUT_PROG_BUTTON_CANCEL	1001
+#define IDB_ABOUT_PROG_BUTTON_CANCEL    1001
 #define IDB_ADD_USER                    1002
 #define IDB_MODIFY_USER                 1003
 #define IDB_DELETE_USER                 1004
@@ -29,7 +26,6 @@
 #define IDB_CLOSE_CONNECT               1011
 #define IDB_EXIT                        1012
 #define IDB_CLIENT_LIST                 1013
-//Меню бар (in Resource View) конструктора окна клавиш 
 
 //IDM
 #define IDM_ADD_MENU_LAST_NAME          5000
@@ -38,12 +34,16 @@
 #define IDM_ADD_MENU_PHONE              5003
 #define IDM_ADD_MENU_EMAIL              5004
 #define IDM_MAIN_USER_LIST              5005
-#define IDM_USER_LIST                   5006
-#define IDM_MOD_MENU_LAST_NAME          5007
-#define IDM_MOD_MENU_FIRST_NAME         5008
-#define IDM_MOD_MENU_MIDDLE_NAME        5009
-#define IDM_MOD_MENU_PHONE              5010
-#define IDM_MOD_MENU_EMAIL              5011
+#define IDM_MOD_MENU_LAST_NAME          5006
+#define IDM_MOD_MENU_FIRST_NAME         5007
+#define IDM_MOD_MENU_MIDDLE_NAME        5008
+#define IDM_MOD_MENU_PHONE              5009
+#define IDM_MOD_MENU_EMAIL              5010
+
+//ID
+#define ID_32780                        32780
+#define ID_32781                        32781
+#define ID_34451                        32782
 
 // Next default values for new objects
 // 
@@ -51,7 +51,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         32780
+#define _APS_NEXT_COMMAND_VALUE         32784
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
