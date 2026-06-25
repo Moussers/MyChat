@@ -26,6 +26,7 @@
 #define IDB_CLOSE_CONNECT               1011
 #define IDB_EXIT                        1012
 #define IDB_CLIENT_LIST                 1013
+#define IDB_SEARCH						1014
 
 //IDM
 #define IDM_ADD_MENU_LAST_NAME          5000
@@ -40,7 +41,6 @@
 #define IDM_MOD_MENU_PHONE              5009
 #define IDM_MOD_MENU_EMAIL              5010
 
-//ID
 #define ID_32780                        32780
 #define ID_32781                        32781
 #define ID_34451                        32782

@@ -68,6 +68,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 int checkTables();
 int checkingUserInfo(HWND hWnd);
 int modifyUserInfo(HWND hWnd);
+void accoutSearch();
 LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -1248,7 +1249,10 @@ int checkTables()
     sqlite3_close(db);
     return 0;
 }
+void accoutSearch() 
+{
 
+}
 int Recieve(SOCKET clientSocket)
 {
     INT res = 0;
@@ -1326,7 +1330,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hWnd, 0, hInstance, NULL);
    CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    //CreateWindow(L"BUTTON", L"Прикрепить файл", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 380, SEND_MES_WINDOW_Y, 140, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_SEARCH, hInstance, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_ADD_USER, hInstance, NULL);
    //CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 170, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
@@ -1360,7 +1364,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break; 
             case IDM_MAIN_USER_LIST:
             {
-                int evn = HIWORD(wParam);
                 if (HIWORD(wParam) == LBN_SELCHANGE)
                 //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
                 {
@@ -1403,6 +1406,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
+                break;
+            case IDB_SEARCH:
+                accoutSearch();
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
