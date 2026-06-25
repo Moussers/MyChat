@@ -2,13 +2,16 @@
 // Microsoft Visual C++ generated include file.
 // Used by mychat.rc
 //
-#define IDR_USER_LIST                   100
+
 #define IDD_MYCHAT_DIALOG               102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDI_MYCHAT                      107
 #define IDI_SMALL                       108
 #define IDC_MYCHAT                      109
+
+//IDR
+#define IDR_SEARCH_FIELD				0
 #define IDR_MAINFRAME                   128
 
 //IDB

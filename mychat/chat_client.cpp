@@ -68,7 +68,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 int checkTables();
 int checkingUserInfo(HWND hWnd);
 int modifyUserInfo(HWND hWnd);
-void accoutSearch();
+int accoutSearch(HWND hField, HWND hList);
 LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -299,7 +299,7 @@ int updateList(HWND userList)
     SendMessage(userList, LB_RESETCONTENT, 0, 0);
     //LB_RESETCONTENT - очищает данные дескриптора, который является listBox.
     sqlite3* db;
-    int result = sqlite3_open("DatabaseMessanger.db", &db);
+    INT result = sqlite3_open("DatabaseMessanger.db", &db);
     if (result) 
     //if result > 0
     {
@@ -339,7 +339,7 @@ int updateList(HWND userList)
 int checkingUserInfo(HWND hWnd) 
 {
     sqlite3* db;
-    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res) 
     {
         MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -1249,9 +1249,64 @@ int checkTables()
     sqlite3_close(db);
     return 0;
 }
-void accoutSearch() 
+int accoutSearch(HWND hField, HWND hList) 
 {
-
+    SendMessage(hList, LB_RESETCONTENT, NULL, NULL);
+    sqlite3* db;
+    INT result = sqlite3_open("DatabaseMessanger.db", &db);
+    if (result) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return 1;
+    }
+    CONST INT SIZE = 256;
+    WCHAR wStr[SIZE] = {};
+    //Фигурные скобки после знака равно при объявлении WCHAR/CHAR массива служат для его 
+    //инициализации и присваивания нуль-терминатора (\0) в конец строки 
+    CHAR chStr[SIZE] = {};
+    CHAR chFirstName[SIZE] = {};
+    CHAR chLastName[SIZE] = {};
+    WCHAR wFirstName[SIZE] = {};
+    WCHAR wLastName[SIZE] = {};
+    GetWindowText(hField, wStr, SIZE);
+    if (wcscmp(wStr, L"") == 0) 
+    {
+        if (updateList(hList) == 1) 
+        {
+            return 1;
+        }
+        return 0;
+    }
+    WideCharToMultiByte(codePage, 0, wStr, SIZE + 1, chStr, SIZE, NULL, NULL);
+    sqlite3_stmt* table;
+    char getUserFirstName[1024] = "SELECT first_name, last_name FROM users WHERE first_name LIKE '%";
+    strcat_s(getUserFirstName, chStr);
+    strcat_s(getUserFirstName, "%' OR last_name LIKE '%");
+    strcat_s(getUserFirstName, chStr);
+    strcat_s(getUserFirstName, "%'");
+    if (sqlite3_prepare_v2(db, getUserFirstName, -1, &table, NULL) == SQLITE_OK) 
+    {
+        INT curRow;
+        while ((curRow = sqlite3_step(table)) == SQLITE_ROW)
+        {
+            strcpy_s(chFirstName,reinterpret_cast<const char*>(sqlite3_column_text(table, 0)));
+            strcpy_s(chLastName, reinterpret_cast<const char*>(sqlite3_column_text(table, 1)));
+            //reinterpret_cast - делает преобразование без проверки в отличие от static_cast
+            MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, wcslen(wFirstName));
+            //strlen - расчет количества символов для ansi инча char строки
+            //wcslen - расчет количества символом для wide char строки
+            MultiByteToWideChar(codePage, 0, chLastName, strlen(chLastName) + 1, wLastName, wcslen(wLastName));
+            WCHAR toList[SIZE] = {};
+            wcscpy_s(toList, wFirstName);
+            wcscat_s(toList, L" ");
+            wcscat_s(toList, wLastName);
+            SendMessage(hField, LB_ADDSTRING, NULL, (LPARAM)chFirstName);
+        }
+    }
+    sqlite3_finalize(table);
+    sqlite3_close(db);
+    return 0;
 }
 int Recieve(SOCKET clientSocket)
 {
@@ -1321,7 +1376,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
    CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, (HMENU)IDR_SEARCH_FIELD, hInstance, NULL);
    CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInstance, NULL);
    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
    {
@@ -1345,6 +1400,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_COMMAND:
         {
+        WORD notificationCode = HIWORD(wParam);
+        //WORD - unsigned short
+        WORD controlID = LOWORD(wParam);
+        if (notificationCode == EN_CHANGE) 
+        {
+            switch (controlID) 
+            {
+            case IDR_SEARCH_FIELD:
+                accoutSearch(GetDlgItem(hWnd, IDR_SEARCH_FIELD), GetDlgItem(hWnd, IDM_MAIN_USER_LIST));
+                break;
+            }
+        }
             int wmId = LOWORD(wParam);
             switch (wmId)
             {
@@ -1406,9 +1473,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
-                break;
-            case IDB_SEARCH:
-                accoutSearch();
                 break;
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
