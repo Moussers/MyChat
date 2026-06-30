@@ -11,7 +11,7 @@
 #define IDC_MYCHAT                      109
 
 //IDR
-#define IDR_SEARCH_FIELD				0
+#define IDR_SEARCH_FIELD				100
 #define IDR_MAINFRAME                   128
 
 //IDB

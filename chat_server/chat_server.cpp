@@ -2,6 +2,7 @@
 #include "resource.h"
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
+#define SQL_SERVER_PASSWORD			cat3O4E& 
 
 #pragma comment(lib, "wsock32.lib")
 
@@ -54,6 +55,7 @@ HWND logHWND;
 
 VOID startServer(HWND log);
 int checkTables();
+int mysqlConnect();
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmd)
 //_In_ - для передачи входящих параметров в функцию;
 //_In_opt_ - для передачи входящих параметров в функцию;
@@ -91,6 +93,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	CreateWindow(L"Button", L"Очистить лог", WS_VISIBLE | WS_CHILD | WS_BORDER, MAIN_BUTTON_CLEAR_LOG_POS_X, BUTTON_POS_Y, MAIN_BUTTON_CLEAR_LOG_WIDTH, BUTTON_HEIGHT, hMainWnd, (HMENU)IDB_MAIN_BUTTON_CLEAR_LOG, hInstance, NULL);
 	ShowWindow(hMainWnd, SW_SHOWDEFAULT);
     UpdateWindow(hMainWnd);
+    mysqlConnect();
     startServer(logHWND);
 	MSG msg;
 	while (IsWindow(hMainWnd)) 
@@ -136,6 +139,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
+ 
+int mysqlConnect() 
+{
+    try {
+        sql::mysql::MySQL_Driver* driver;
+        sql::Connection* connect;
+        driver = sql::mysql::get_mysql_driver_instance();
+        connect = driver->connect("tcp://localhost:3306", "root", SQL_SERVER_PASSWORD);
+        connect->setSchema("serv_db");
+    }
+    catch (sql::SQLException& ex) 
+    {
+        //Выводим сообщение об ошибке
+        CONST INT SIZE = 1024;
+        WCHAR str[SIZE];
+        MultiByteToWideChar(1251, 0, ex.what(), strlen(ex.what()) + 1, str, SIZE);
+        //ex.what() - возвращает строку с ошибкой.
+        std::wstring n_str = str;
+        std::wstring wstr = L"JDBC Error: " + n_str;
+        MessageBox(NULL, wstr.c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+        //c_str - получить указатель на строку.
+        //c_str - Получить массив символов (char array).
+
+    }
+    return 0;
+}
+
 int checkTables() 
 {
     sqlite3* db;
