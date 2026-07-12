@@ -56,7 +56,6 @@ HWND logHWND;
 VOID startServer(HWND log);
 int checkTables();
 int mysqlConnect();
-sql::Connection* connect;
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmd)
 //_In_ - для передачи входящих параметров в функцию;
 //_In_opt_ - для передачи входящих параметров в функцию;
@@ -145,6 +144,7 @@ int mysqlConnect()
 {
     try {
         sql::mysql::MySQL_Driver* driver;
+        sql::Connection* connect;
         driver = sql::mysql::get_mysql_driver_instance();
         connect = driver->connect("tcp://127.0.0.1:3306", "root", SQL_SERVER_PASSWORD);
         sql::Statement* stmt = connect->createStatement();  /*sql::Statement - хранит таблицу*/
@@ -172,79 +172,174 @@ int mysqlConnect()
     return 0;
 }
 
-int checkTables(HWND log) 
+int checkTables() 
 {
-    try {
-        if (!connect)
-        {
-            appendToLog(log, L"База данных не подключена!");
-            return 1;
-        }
-        else
-        {
-            appendToLog(log, L"Подключение к базе данных успешно.");
-        }
-        sql::Statement* stmt;
-        const char* sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='group'";
-        sql::ResultSet* res = stmt->executeQuery(sql_ex);
-        int count = res->getInt(1); /*1 - выбрать из первой колонки количество таблиц*/
-        if (count == 0)
-        {
-            appendToLog(log, L"Таблица не была создана! Создаём новую.");
-            const char* createTable = "CREATE TABLE `groups` ("
-                "group_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,"
-                "group_name varchar NOT NULL, PRIMARY KEY (group_id));";
-            if (!stmt->execute(createTable));
-            //if(stmt->execute(createTable) == true)
-            {
-                appendToLog(log, L"Ошибка пр создании таблицы группы!");
-                return 1;
-            }
-            const char* createTable = "Create TABLE 'user'("
-                "user_id INT PRIMARY KEY,"
-                "first_name varchar(256) NULL,"
-                "last_name varchar(256) NULL,"
-                "middle_name varchar(256) NULL,"
-                "number_phone INT NOT NULL);";
-            if (!stmt->execute(createTable)) 
-            {
-                appendToLog(log, L"Ошибка пр создании таблицы юзер!");
-                return 1;
-            }
-            const char* createTable = "Create TABLE `messages`("
-                "message_id PRIMARY KEY NOT NULL,"
-                "text_field TEXT NOT NULL"
-                "file_field BINARY"
-                "sender INT FOREIGN KEY,"
-                "group INT FOREIGN KEY"
-                "recipent INT"
-                "FOREIGN KEY (sender) REFERENCES users(user_id),"
-                "FOREIGN KEY (recipent) REFERENCES users(user_id),"
-                "FOREIGN KEY (group_id) REFERENCES groups(groupd_id)";
-            if (!stmt->execute(createTable)) 
-            {
-                appendToLog(log, L"Ошибка при создание таблицы сообщение!");
-                return 1;
-            }
-        }
-    }
-    catch (sql::SQLException& ex) 
+    sqlite3* db;
+    CONST INT SIZE = 256;
+    //char* mesError[SIZE];
+    int res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
+    if (res)
+    //похожий вариант прочтения:
+    //if(res != 0) 
     {
-        //Выводим сообщение об ошибке
-        CONST INT SIZE = 1024;
-        WCHAR str[SIZE];
-        //const char* err = ex.what();
-        MultiByteToWideChar(1251, 0, ex.what(), strlen(ex.what()) + 1, str, SIZE);
-        //ex.what() - возвращает строку с ошибкой.
-        std::wstring n_str = str;
-        std::wstring wstr = L"JDBC Error: " + n_str;
-        appendToLog(log, wstr.c_str());
-        //MessageBox(NULL, wstr.c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
-        //c_str - получить указатель на строку.
-        //c_str - Получить массив символов (char array).
+        MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        //sqlite3_close - прерывает связь с базой данных
         return 1;
     }
-    connect->close();
+    const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
+    //sqlite_master - хранит количество таблиц
+    sqlite3_stmt* table;
+    //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
+    //который находится в const char* переменной
+    if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
+    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
+    {
+        INT curRow = sqlite3_step(table);
+        //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
+        if (curRow == SQLITE_ROW)
+        //SQLITE_ROW - идентификатор строки
+        //Если int перменная получает значение sqlite_row, то это значит строка найденна
+        {
+            INT countRows = sqlite3_column_int(table, 0);
+            //sqlite3_column_int - выводит текущий индекс колонки
+            if (countRows == 0)
+            {
+                MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
+                const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
+                //char** errorTgroup = mesError;        //Как вариант.
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else 
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...) 
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+            }
+        }
+        sqlite3_finalize(table);
+        //sqlite3_finalize - очищает память от переменной.
+    }
+    const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
+    if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
+    {
+        INT curRow = sqlite3_step(table);
+        if (curRow == SQLITE_ROW) 
+        {
+            INT countRows = sqlite3_column_int(table, 0);
+            if (countRows == 0) 
+            {
+                const char* createTable = 
+                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
+                    "first_name TEXT NOT NULL,"
+                    "last_name TEXT NOT NULL,"
+                    "middle_name TEXT,"
+                    "phone TEXT NOT NULL,"
+                    "email TEXT NULL,"
+                    "path_icon TEXT,"
+                    "icon BLOB,"
+                    "status INT NOT NULL);";
+                //char** errorTUser = mesError;
+                char* msg = NULL;
+                try {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...) 
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+                free(msg);
+                msg = NULL;
+            }
+        }
+        sqlite3_finalize(table);
+    }
+    const char* messageTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
+    if (sqlite3_prepare_v2(db, messageTable, -1, &table, NULL) == SQLITE_OK) 
+    {
+        INT curRow = sqlite3_step(table);
+        if (curRow == SQLITE_ROW) 
+        {
+            int countRows = sqlite3_column_int(table, 0);
+            if (countRows == 0) 
+            {
+                MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
+                const char* createTable = "CREATE TABLE messages"
+                    "(message_id PRIMARY KEY NOT NULL,"
+                    "text_field TEXT NOT NULL,"
+                    "file_field BLOB,"
+                    "sender INT,"
+                    "group_id INT,"
+                    "recipent INT,"
+                    "FOREIGN KEY (sender) REFERENCES users(user_id),"
+                    "FOREIGN KEY (recipent) REFERENCES users(user_id),"
+                    "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
+                //char** errorTMes = mesError;
+                char* msg = NULL;
+                try {
+                    int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    //Пятый аргумент в sqlite3_exec - записывает ошибку в переменную которую мы передали.
+                    if (result == SQLITE_OK)
+                    {
+                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы сообщение", L"Инфо", MB_OK | MB_ICONERROR);
+                        throw "SQL-ERROR";
+                    }
+                }
+                catch (...) 
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+                free(msg);
+                msg = NULL;
+            }
+        }
+        sqlite3_finalize(table);
+    }
+    sqlite3_close(db);
     return 0;
 }
 VOID startServer(HWND log) 
