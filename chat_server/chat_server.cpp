@@ -54,9 +54,9 @@ struct addrinfo* result, * ptr, hints;
 HWND logHWND;
 
 VOID startServer(HWND log);
-int checkTables();
+int checkTables(HWND log);
 int mysqlConnect();
-sql::Connection* connect;
+sql::Connection* connection;
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmd)
 //_In_ - для передачи входящих параметров в функцию;
 //_In_opt_ - для передачи входящих параметров в функцию;
@@ -95,6 +95,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	ShowWindow(hMainWnd, SW_SHOWDEFAULT);
     UpdateWindow(hMainWnd);
     mysqlConnect();
+    checkTables(GetDlgItem(hMainWnd, IDM_MAIN_MENU_LOG_FIELD));
     startServer(logHWND);
 	MSG msg;
 	while (IsWindow(hMainWnd)) 
@@ -140,17 +141,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
- 
+
+//Подключение к серверу
 int mysqlConnect() 
 {
     try {
         sql::mysql::MySQL_Driver* driver;
         driver = sql::mysql::get_mysql_driver_instance();
-        connect = driver->connect("tcp://127.0.0.1:3306", "root", SQL_SERVER_PASSWORD);
-        sql::Statement* stmt = connect->createStatement();  /*sql::Statement - хранит таблицу*/
+        connection = driver->connect("tcp://127.0.0.1:3306", "root", SQL_SERVER_PASSWORD);
+        sql::Statement* stmt = connection->createStatement();  /*sql::Statement - хранит таблицу*/
         std::string crt = "CREATE DATABASE IF NOT EXISTS serv_db";
         stmt->execute(crt);
-        connect->setSchema("serv_db");      /*Подключаемся к базе*/
+        connection->setSchema("serv_db");      /*Подключаемся к базе*/
         delete stmt;
     }
     catch (sql::SQLException& ex) 
@@ -167,7 +169,6 @@ int mysqlConnect()
         //c_str - получить указатель на строку.
         //c_str - Получить массив символов (char array).
         return 1;
-
     }
     return 0;
 }
@@ -175,7 +176,7 @@ int mysqlConnect()
 int checkTables(HWND log) 
 {
     try {
-        if (!connect)
+        if (!connection)
         {
             appendToLog(log, L"База данных не подключена!");
             return 1;
@@ -184,44 +185,47 @@ int checkTables(HWND log)
         {
             appendToLog(log, L"Подключение к базе данных успешно.");
         }
-        sql::Statement* stmt;
-        const char* sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='group'";
+        sql::Statement* stmt = connection->createStatement();       /*CreateStatement - создание объекта Statement для дальнейших запросов*/
+        const char* sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='groups';";
         sql::ResultSet* res = stmt->executeQuery(sql_ex);
-        int count = res->getInt(1); /*1 - выбрать из первой колонки количество таблиц*/
+        res->next();    /*переход на следующую строку*/
+                        /*sql.ResultSet перемещает курсор на одну строку вперед от его текущего положения в объекте ResultSet. В основном*/
+                        /*он используется для перебора строк, возвращаемых SQL - запросом.*/
+        int count = res->getInt(1);     /*1 - выбрать из первой колонки количество таблиц*/
         if (count == 0)
         {
             appendToLog(log, L"Таблица не была создана! Создаём новую.");
-            const char* createTable = "CREATE TABLE `groups` ("
+            const char* createGroups = "CREATE TABLE `groups` ("
                 "group_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,"
-                "group_name varchar NOT NULL, PRIMARY KEY (group_id));";
-            if (!stmt->execute(createTable));
+                "group_name TEXT NOT NULL);";
+            if (stmt->execute(createGroups))
             //if(stmt->execute(createTable) == true)
             {
                 appendToLog(log, L"Ошибка пр создании таблицы группы!");
                 return 1;
             }
-            const char* createTable = "Create TABLE 'user'("
+            const char* createUsers = "Create TABLE `users`("
                 "user_id INT PRIMARY KEY,"
                 "first_name varchar(256) NULL,"
                 "last_name varchar(256) NULL,"
                 "middle_name varchar(256) NULL,"
                 "number_phone INT NOT NULL);";
-            if (!stmt->execute(createTable)) 
+            if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
                 return 1;
             }
-            const char* createTable = "Create TABLE `messages`("
-                "message_id PRIMARY KEY NOT NULL,"
-                "text_field TEXT NOT NULL"
-                "file_field BINARY"
-                "sender INT FOREIGN KEY,"
-                "group INT FOREIGN KEY"
-                "recipent INT"
-                "FOREIGN KEY (sender) REFERENCES users(user_id),"
+            const char* createMessages = "Create TABLE `messages`("
+                "message_id INT PRIMARY KEY NOT NULL,"
+                "text_field TEXT NOT NULL,"
+                "file_field BINARY,"
+                "sender INT,"
+                "`group` INT,"
+                "recipent INT,"
+                "FOREIGN KEY (sender) REFERENCES `users`(user_id),"
                 "FOREIGN KEY (recipent) REFERENCES users(user_id),"
-                "FOREIGN KEY (group_id) REFERENCES groups(groupd_id)";
-            if (!stmt->execute(createTable)) 
+                "FOREIGN KEY (`group`) REFERENCES `groups`(group_id))";
+            if (stmt->execute(createMessages))
             {
                 appendToLog(log, L"Ошибка при создание таблицы сообщение!");
                 return 1;
@@ -244,7 +248,8 @@ int checkTables(HWND log)
         //c_str - Получить массив символов (char array).
         return 1;
     }
-    connect->close();
+    connection->close();
+    //закрываем соединение
     return 0;
 }
 VOID startServer(HWND log) 
