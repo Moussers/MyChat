@@ -13,6 +13,15 @@
 //IDR
 #define IDR_SEARCH_FIELD				100
 #define IDR_MAINFRAME                   128
+#define IDR_ENTERING_PHONE				129
+#define IDR_ENTERING_MAIL				130
+#define IDR_MOD_MENU_LAST_NAME          131
+#define IDR_MOD_MENU_FIRST_NAME         132
+#define IDR_MOD_MENU_MIDDLE_NAME        133
+#define IDR_MOD_MENU_PHONE              134
+#define IDR_MOD_MENU_EMAIL              135
+#define IDR_REGISTRATION_PHONE			136
+#define IDR_REGISTRATION_MAIL			137
 
 //IDB
 #define IDB_ABOUT_PROGRAM               1000
@@ -30,6 +39,9 @@
 #define IDB_EXIT                        1012
 #define IDB_CLIENT_LIST                 1013
 #define IDB_SEARCH						1014
+#define IDB_REGISTER_TABCONTROL			1020
+#define IDB_REGISTER_ACCEPT				1021
+#define IDB_REGISTER_CANCEL				1022
 
 //IDM
 #define IDM_ADD_MENU_LAST_NAME          5000
@@ -38,11 +50,8 @@
 #define IDM_ADD_MENU_PHONE              5003
 #define IDM_ADD_MENU_EMAIL              5004
 #define IDM_MAIN_USER_LIST              5005
-#define IDM_MOD_MENU_LAST_NAME          5006
-#define IDM_MOD_MENU_FIRST_NAME         5007
-#define IDM_MOD_MENU_MIDDLE_NAME        5008
-#define IDM_MOD_MENU_PHONE              5009
-#define IDM_MOD_MENU_EMAIL              5010
+#define IDM_REGISTER_NUMBER_PHONE		5011
+#define IDM_REGISTER_MAIL				5012
 
 #define ID_32780                        32780
 #define ID_32781                        32781
