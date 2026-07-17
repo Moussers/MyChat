@@ -50,7 +50,7 @@
 #define IDM_ADD_MENU_PHONE              5003
 #define IDM_ADD_MENU_EMAIL              5004
 #define IDM_MAIN_USER_LIST              5005
-#define IDM_REGISTER_NUMBER_PHONE		5011
+#define IDM_REGISTER_PHONE				5011
 #define IDM_REGISTER_MAIL				5012
 
 #define ID_32780                        32780

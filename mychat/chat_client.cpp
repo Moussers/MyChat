@@ -854,8 +854,8 @@ int classModUserInfo(HWND hWnd, int idx)
                     CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_DEAL_BUTTON_POS_X, DEAL_BUTTON_POS_Y, MOD_DEAL_BUTTON_WIDTH, DEAL_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, CANCEL_BUTTON_HEIGH, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, MOD_ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, MOD_CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, MOD_CANCEL_BUTTON_HEIGHT, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
                     MSG msg;
                     sqlite3_finalize(st);
@@ -922,9 +922,9 @@ void addUser()
     CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
     CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(90), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
     CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(120), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_BUTTON_POS_X, CANCEL_BUTTON_POS_Y, CANCEL_BUTTON_WIDTH, CANCEL_BUTTON_HEIGH, userClass, (HMENU)IDB_CANCELLING_USER_ADD, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_ADDING_ENTRY_POS_X, CANCEL_ADDING_ENTRY_POS_Y, CANCEL_ADDING_ENTRY_WIDTH, CANCEL_ADDING_ENTRY_HEIGHT, userClass, (HMENU)IDB_CANCELLING_USER_ADD, GetModuleHandle(NULL), NULL);
     //Приравнивание ресурса к HMENU нужно для всех типов окон с которым юзер взаимодействует: нажатие клавиши, ввод в поле и так далее.
-    CreateWindow(L"BUTTON", L"Ок", WS_VISIBLE | WS_CHILD | WS_BORDER, DEAL_BUTTON_POS_X, DEAL_BUTTON_POS_Y, DEAL_BUTTON_WIDTH, DEAL_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_ADD, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Ок", WS_VISIBLE | WS_CHILD | WS_BORDER, ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_ADD, GetModuleHandle(NULL), NULL);
     ShowWindow(userClass, SW_SHOWDEFAULT);
     UpdateWindow(userClass);
     MSG msg;
@@ -1064,8 +1064,7 @@ ATOM AuthorizationClass(HINSTANCE hInstance)
 }
 int authorizationForm() 
 {
-    
-    HWND registrWin = CreateWindow(szAutorization, L"My Chat", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND registrWin = CreateWindow(szAutorization, L"My Chat", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, REGISTRATION_WINDOW_WIDTH, REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     RECT rc;
     GetClientRect(registrWin, &rc);
     //получаем длину окна
@@ -1077,21 +1076,23 @@ int authorizationForm()
     //str[2] - двухмерный массив
     tct.mask = TCIF_TEXT | TCIF_IMAGE;
     tct.iImage = -1;
+    //iImage - индекс в списке изображений элемента управления «вкладка» или -1, если для вкладки нет изображения.
     tct.pszText = (LPWSTR)str[0];
+    //pszText - указатель на строку с завершающим нулем, содержащую текст вкладки при установке информации об элементе. 
     TabCtrl_InsertItem(tabCrl, 0, &tct);
     tct.pszText = (LPWSTR)str[1];
     TabCtrl_InsertItem(tabCrl, 1, &tct);
-    HFONT hFont = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
-    HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, 10, 36, 160, 20, registrWin, (HMENU)IDM_REGISTER_NUMBER_PHONE, GetModuleHandle(NULL), NULL );
-    HWND mail = CreateWindow(L"STATIC", L"E-MAIL:", WS_CHILD | WS_VISIBLE, 12, 75, 80, 20, registrWin, (HMENU)IDM_REGISTER_MAIL, GetModuleHandle(NULL), NULL );
-    HWND enteringPhone = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 148, 36, 120, 32, registrWin, (HMENU)IDR_REGISTRATION_PHONE, GetModuleHandle(NULL), NULL);
-    HWND enteringMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 148, 72, 120, 32, registrWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
-    HWND accept = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE | WS_BORDER, 150, 120, 74, 22, registrWin, (HMENU)IDB_REGISTER_ACCEPT, GetModuleHandle(NULL), NULL);
-    HWND cancel = CreateWindow(L"BUTTON", L"Отмена", WS_CHILD | WS_VISIBLE | WS_BORDER, 230, 120, 70, 22, registrWin, (HMENU)IDB_REGISTER_CANCEL, GetModuleHandle(NULL), NULL);
+    HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL );
+    //HWND mail = CreateWindow(L"STATIC", L"E-MAIL:", WS_CHILD | WS_VISIBLE, 12, 75, 80, 20, registrWin, (HMENU)IDM_REGISTER_MAIL, GetModuleHandle(NULL), NULL );
+    HWND enteringPhone = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_PHONE, GetModuleHandle(NULL), NULL);
+    //HWND enteringMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 148, 72, 120, 32, registrWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
+    HWND accept = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE | WS_BORDER, ACCEPT_REGISTRATION_POX_X, ACCEPT_REGISTRATION_POX_Y, ACCEPT_REGISTRATION_POX_WIDTH, ACCEPT_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ACCEPT, GetModuleHandle(NULL), NULL);
+    HWND cancel = CreateWindow(L"BUTTON", L"Отмена", WS_CHILD | WS_VISIBLE | WS_BORDER, CANCEL_REGISTRATION_POX_X, CANCEL_REGISTRATION_POX_Y, CANCEL_REGISTRATION_POX_WIDTH, CANCEL_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_CANCEL, GetModuleHandle(NULL), NULL);
     SendMessage(numPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(mail, WM_SETFONT, (WPARAM)hFont, TRUE);
+    //SendMessage(mail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(enteringPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(enteringMail, WM_SETFONT, (WPARAM)hFont, TRUE);
+    //SendMessage(enteringMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accept, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
     ShowWindow(registrWin, SW_SHOWDEFAULT);
@@ -1484,76 +1485,96 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             }
         }
-            int wmId = LOWORD(wParam);
-            switch (wmId)
+        int wmId = LOWORD(wParam);
+        switch (wmId)
+        {
+        case IDB_ABOUT_PROGRAM:
+            CreatingAuthorWindow(hWnd);
+            break;
+        case IDB_EXIT:
+            DestroyWindow(hWnd);
+            break;
+        case IDB_ADD_USER:
+            addUser();
+            //InitClinet();
+            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
             {
-            case IDB_ABOUT_PROGRAM:
-                CreatingAuthorWindow(hWnd);
-                break;
-            case IDB_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            case IDB_ADD_USER:
-                addUser();
-                //InitClinet();
-                if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
-                {
-                    return 1;
-                }
-                break; 
-            case IDM_MAIN_USER_LIST:
-            {
-                if (HIWORD(wParam) == LBN_SELCHANGE)
-                //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
-                {
-                    HMENU hMenu = CreatePopupMenu();
-                    AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
-                    //AppendMenu - добавляет список popup menu новые слова
-                    //hMENU - handle hmenu
-                    //uFlags - сюда пишем команду которая нужно выполнить
-                    //uIDNewItem - id объекта
-                    //lpNewItem - название объекта
-                    AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
-                    POINT pos;
-                    GetCursorPos(&pos);
-                    //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
-                    SetForegroundWindow(hWnd);
-                    //SetForegroundWindow - выводит окно POOPUP на передний план
-                    int num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
-                    //TrackPopupMenu - отображает контекстное POPUP меню 
-                    //TPM_RETURNCMD - вернуть выбранный номер
-                    switch (num) 
-                    {
-                    case IDB_MODIFY_USER:
-                        classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
-                        {
-                            return 1;
-                        }
-                        break;
-                    case IDB_DELETE_USER:
-                        deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                        //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
-                        //чтобы получить id/индекс выбранного пользователя
-                        //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
-                        //выполняется через SendMessage работающий с системой Windows
-                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
-                        {
-                            return 1;
-                        }
-                        break;
-                    }
-                }
+                return 1;
             }
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
+            break; 
+        case IDM_MAIN_USER_LIST:
+        {
+            if (HIWORD(wParam) == LBN_SELCHANGE)
+            //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
+            {
+                HMENU hMenu = CreatePopupMenu();
+                AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
+                //AppendMenu - добавляет список popup menu новые слова
+                //hMENU - handle hmenu
+                //uFlags - сюда пишем команду которая нужно выполнить
+                //uIDNewItem - id объекта
+                //lpNewItem - название объекта
+                AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
+                POINT pos;
+                GetCursorPos(&pos);
+                //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
+                SetForegroundWindow(hWnd);
+                //SetForegroundWindow - выводит окно POOPUP на передний план
+                int num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
+                //TrackPopupMenu - отображает контекстное POPUP меню 
+                //TPM_RETURNCMD - вернуть выбранный номер
+                switch (num) 
+                {
+                case IDB_MODIFY_USER:
+                    classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                    {
+                        return 1;
+                    }
+                    break;
+                case IDB_DELETE_USER:
+                    deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                    //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
+                    //чтобы получить id/индекс выбранного пользователя
+                    //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
+                    //выполняется через SendMessage работающий с системой Windows
+                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                    {
+                        return 1;
+                    }
+                    break;
+                }
             }
         }
         break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    }
+    break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+    case WM_NOTIFY: 
+    {
+        HWND tabCtrl = GetDlgItem(hWnd, IDB_REGISTER_TABCONTROL);
+        int num = TabCtrl_GetCurSel(tabCtrl);
+        if (num == 0)
+        {
+            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_PHONE), SW_SHOW);
+            //ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_MAIL), SW_SHOW);
+            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_PHONE), SW_SHOW);
+            //ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_MAIL), SW_SHOW);
+        }
+        /*else 
+        {
+            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_MAIL), SW_SHOW);
+            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_MAIL), SW_SHOW);
+        }*/
+    }
+    break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
