@@ -24,15 +24,18 @@ HINSTANCE hInst;                                // текущий экземпл
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
 WCHAR szAutorization[MAX_LOADSTRING] = L"Autorization_window_class";
+WCHAR szAdditionalInfoClass[MAX_LOADSTRING] = L"Additional_extra_info_class";
 
-// Отправить объявления функций, включенных в этот модуль кода:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
+//ATOM Class
+ATOM MyRegisterClass(HINSTANCE hInstance);
 ATOM AuthorizationClass(HINSTANCE hInstance);
-int authorizationForm();
+ATOM AdditionalInfoClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK    WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+int authorizationForm();
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
 int Recieve(SOCKET clientSocket);
@@ -49,6 +52,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_MYCHAT, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
     AuthorizationClass(hInstance);
+    AdditionalInfoClass(hInstance);
     int checkTables();
     // Выполнить инициализацию приложения:
     /*if (!InitInstance(hInstance, nCmdShow))
@@ -588,14 +592,13 @@ int insertEntry(HWND hWnd)
         CONST INT SIZE = 2000;
         WCHAR mesError[SIZE];
         size_t n_size;
-        mbstowcs_s(&n_size,mesError, msg, SIZE);
+        mbstowcs_s(&n_size, mesError, msg, SIZE);
         //mbstowcs_s - преобразует многобайтовую символьную строку из массива, в расширенное 
         //символьное представление (WCHAR);
         //pReturnValue / retval - указатель на тип данных в котором будут храниться данные, 
         //то есть размер и тип буфера;
         //dst - указатель на переменную в которую будут записаны преобразованные данные;
-        //src - указатель на переменную источник с которой будут считаны данные для 
-        //преобразования;
+        //src - указатель на переменную источник с которой будут считаны данные для преобразования;
         //len - указатель на буффер (размер) строки источник.
         msg = cleaningMemory(msg);
         writtingDownLog(mesError);
@@ -1062,9 +1065,52 @@ ATOM AuthorizationClass(HINSTANCE hInstance)
 
     return RegisterClassExW(&wcex);
 }
+ATOM AdditionalInfoClass(HINSTANCE hInstance)
+{
+    WNDCLASSEX wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndExtraInfo;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MYCHAT));
+    wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    wcex.lpszMenuName = NULL;
+    wcex.lpszClassName = szAdditionalInfoClass;
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    return RegisterClassExW(&wcex);
+}
+int AddAdditionalInfo() 
+{
+    HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, 20, 30, 390, 50, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND fieldForMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE, 20, 90, 390, 20, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND skipInput = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, 160, 140, 140, 30, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
+    HWND accessInput = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, 310, 140, 100, 30, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
+    SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(fieldForMail, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(skipInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(accessInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    ShowWindow(mainWin, SW_SHOWDEFAULT);
+    MSG msg;
+    while (IsWindow(mainWin)) 
+    {
+        if (GetMessage(&msg, mainWin, 0, 0)) 
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    return 0;
+}
 int authorizationForm() 
 {
-    HWND registrWin = CreateWindow(szAutorization, L"My Chat", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, REGISTRATION_WINDOW_WIDTH, REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND registrWin = CreateWindow(szAutorization, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, REGISTRATION_WINDOW_WIDTH, REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    //WS_OVERLAPPEDWIDNOW - создаёт перекрывающее окно границы которого можно двигать влево/вправо или вверх/вниз.
+    //WS_CAPTION + WS_SYSMENU - позволяет отобразить кнопки окна такие как: закрыть, свернуть, расширить и тд.
     RECT rc;
     GetClientRect(registrWin, &rc);
     //получаем длину окна
@@ -1085,16 +1131,18 @@ int authorizationForm()
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL );
     //HWND mail = CreateWindow(L"STATIC", L"E-MAIL:", WS_CHILD | WS_VISIBLE, 12, 75, 80, 20, registrWin, (HMENU)IDM_REGISTER_MAIL, GetModuleHandle(NULL), NULL );
-    HWND enteringPhone = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_PHONE, GetModuleHandle(NULL), NULL);
+    HWND enteringPhoneByReg = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_REG_PHONE, GetModuleHandle(NULL), NULL);
+    HWND enteringPhoneByAccept = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_ACCEPT_PHONE, GetModuleHandle(NULL), NULL);
     //HWND enteringMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 148, 72, 120, 32, registrWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
-    HWND accept = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE | WS_BORDER, ACCEPT_REGISTRATION_POX_X, ACCEPT_REGISTRATION_POX_Y, ACCEPT_REGISTRATION_POX_WIDTH, ACCEPT_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ACCEPT, GetModuleHandle(NULL), NULL);
-    HWND cancel = CreateWindow(L"BUTTON", L"Отмена", WS_CHILD | WS_VISIBLE | WS_BORDER, CANCEL_REGISTRATION_POX_X, CANCEL_REGISTRATION_POX_Y, CANCEL_REGISTRATION_POX_WIDTH, CANCEL_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_CANCEL, GetModuleHandle(NULL), NULL);
+    HWND reg = CreateWindow(L"BUTTON", L"Зарегистрироваться", WS_CHILD | WS_VISIBLE | WS_BORDER, 160, 160, 210, 40, registrWin, (HMENU)IDB_REGISTER_REGIST, GetModuleHandle(NULL), NULL);
+    HWND accept = CreateWindow(L"BUTTON", L"Войти", WS_CHILD | WS_BORDER, LOG_IN_TO_REGISTER_POX_X, LOG_IN_TO_REGISTER_POX_Y, LOG_IN_TO_REGISTER_POX_WIDTH, LOG_IN_TO_REGISTER_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ACCEPT, GetModuleHandle(NULL), NULL);
+    //HWND cancel = CreateWindow(L"BUTTON", L"Отмена", WS_CHILD | WS_VISIBLE | WS_BORDER, CANCEL_REGISTRATION_POX_X, CANCEL_REGISTRATION_POX_Y, CANCEL_REGISTRATION_POX_WIDTH, CANCEL_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_CANCEL, GetModuleHandle(NULL), NULL);
     SendMessage(numPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
     //SendMessage(mail, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(enteringPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
-    //SendMessage(enteringMail, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(enteringPhoneByReg, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(enteringPhoneByAccept, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(reg, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accept, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(cancel, WM_SETFONT, (WPARAM)hFont, TRUE);
     ShowWindow(registrWin, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(registrWin))
@@ -1467,6 +1515,20 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
+{
+    switch (message) 
+    {
+    case WM_COMMAND: 
+    {
+
+    }
+    break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -1501,7 +1563,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 return 1;
             }
-            break; 
+            break;
+        case IDB_REGISTER_REGIST:
+        {
+            WCHAR wcPhone[USERSIZE];
+            CHAR buffer[USERSIZE];
+            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), wcPhone, USERSIZE);
+            WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, buffer, strlen(buffer), NULL, NULL);
+            CONST INT SIZE = 2000;
+            CHAR temp[SIZE] = {};
+            if (checkingNumberPhone(buffer, temp) == 1)
+            {
+                MessageBox(NULL, L"Пользователь ввёл неправелный номер", L"Ошибка", MB_OK | MB_ICONERROR);
+            }
+            AddAdditionalInfo();
+        }
+        break;
         case IDM_MAIN_USER_LIST:
         {
             if (HIWORD(wParam) == LBN_SELCHANGE)
@@ -1561,20 +1638,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         int num = TabCtrl_GetCurSel(tabCtrl);
         if (num == 0)
         {
-            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_PHONE), SW_SHOW);
-            //ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_MAIL), SW_SHOW);
-            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_PHONE), SW_SHOW);
-            //ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_MAIL), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ACCEPT), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_PHONE), SW_HIDE);
         }
-        /*else 
+        else
         {
-            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_PHONE), SW_SHOW);
-            ShowWindow(GetDlgItem(tabCtrl, IDM_REGISTER_MAIL), SW_SHOW);
-            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_PHONE), SW_SHOW);
-            ShowWindow(GetDlgItem(tabCtrl, IDR_REGISTRATION_MAIL), SW_SHOW);
-        }*/
+            ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ACCEPT), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_PHONE), SW_SHOW);
+        }
     }
     break;
+
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
