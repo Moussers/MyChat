@@ -133,30 +133,6 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     }
     return 0;
 }
-void setDash(INT &startPos, INT endPos, CHAR* sendArr, CHAR* recArr, INT &shiftIn)
-{
-    CONST INT SIZE = 2000;
-    while (startPos < endPos)
-    {
-        recArr[startPos + shiftIn] = sendArr[startPos];
-        startPos++;
-    }
-    if (recArr[startPos + shiftIn] != '\0') 
-    {
-        recArr[startPos + shiftIn] = '\0';
-    }
-    if (sendArr[startPos] == '-')
-    {
-        
-        recArr[startPos + shiftIn] = sendArr[startPos];
-        startPos++;
-    }
-    else
-    {
-        strcat_s(recArr, SIZE, "-");
-        shiftIn++;
-    }
-}
 
 INT checkingEMail(CHAR* eMail) 
 {
@@ -196,11 +172,11 @@ INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer)
 {
     INT numberCharacters = 0;
     CONST INT SIZE = 2000;
-    WCHAR str[SIZE]{};
     INT startPosition = 0;
+    INT posDash = 0;
     if (strPhone == NULL)
     {
-        MessageBox(NULL, L"Строка  являеться не определенной", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Строка являеться не определенной", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
     if (strcmp(strPhone, "") == 0) 
@@ -209,97 +185,77 @@ INT checkingNumberPhone(CHAR* strPhone, CHAR* buffer)
         return 1;
     }
     INT len = static_cast<INT>(strlen(strPhone));
-    if(len < 13)
+    int i = 0;
+    if (strPhone[0] == '+') 
     {
-        MessageBox(NULL, L"Размер номера не соотвествует стандартному номеру", L"Ошибка", MB_OK | MB_ICONERROR);
-        return 1;
+        for (int i = 0; i < len; i++) 
+        {
+            strPhone[i] = strPhone[i + 1];
+        }
     }
-    else 
+    INT posOpenParet = -1;
+    INT posCloseParet = -1;
+    bool hasDash = false;
+    len = static_cast<int>(strlen(strPhone));
+    for (int i = startPosition; i < len; ++i) 
     {
-        int i = 0;
-        if (strPhone[0] == '+') 
+    if ((strPhone[i] < L'0') || (strPhone[i] > '9'))
         {
-            
-            WCHAR tmp[SIZE];
-            MultiByteToWideChar(codePage, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
-            wcscat_s(str, tmp);
-            //wcscat_s - для whcar_t (wide char), то есть широкосмивольных строк
-            startPosition++;
-        }
-        else
-        {
-            if (iswdigit(strPhone[0]) != 0)
-            {
-                wsprintf(str, L"%s", L"");
-                wcscat_s(str, L"+");
-                WCHAR tmp[SIZE];
-                MultiByteToWideChar(1251, 0, strPhone, strlen(strPhone) + 1, tmp, SIZE);
-                wcscat_s(str, tmp);
-                startPosition++;
-            }
-        }
-        INT posOpenParet = -1;
-        INT posCloseParet = -1;
-        len = static_cast<int>(wcslen(str));
-        for (int i = startPosition; i < len; ++i) 
-        {
-        if ((str[i] < L'0') || (str[i] > '9'))
-        {
-            if (str[i] != L'-' && str[i] != L'(' && str[i] != L')')
+        if (strPhone[i] != L'-' && strPhone[i] != L'(' && strPhone[i] != L')')
             {
                 MessageBox(NULL, L"Неверный формат телефона", L"Ошибка", MB_OK | MB_ICONERROR);
                 return 1;
             }
         }
-        if (str[i] == L'(')
+    if (strPhone[i] == L'(')
+    {
+        posOpenParet = i;
+    }
+    if (strPhone[i] == L')')
+    {
+        posCloseParet = i;
+    }
+    }
+    if (posOpenParet != -1 && posOpenParet != len - 1) 
+    {
+        for (int i = posOpenParet; i < posCloseParet; ++i)
         {
-            posOpenParet = i;
+            strPhone[i] = strPhone[i + 1];
         }
-        if (str[i] == L')')
+    }
+    if (posCloseParet != -1 && posCloseParet != len - 1) 
+    {
+        for (int i = posCloseParet-1; i < len-1; ++i)
         {
-            posCloseParet = i;
+            strPhone[i] = strPhone[i + 2];
         }
-        }
-        if (posOpenParet == -1 || posOpenParet == len-1) 
+    }
+    do 
+    {
+        hasDash = false;
+        posDash = 0;
+        for (int i = 0; i < len; ++i)
         {
-            MessageBox(NULL, L"Не обнаружена открывающая скобка\nили она находится в конце строки", L"Ошибка", MB_OK | MB_ICONERROR);
-            return 1;
+            if (strPhone[i] == '-')
+            {
+                posDash = i;
+                hasDash = true;
+                    break;
+            }
         }
-        if (posCloseParet == -1 || posCloseParet == len-1) 
+        if (posDash != 0)
         {
-            MessageBox(NULL, L"Не обнаружена закрывающая скобка \nили она находится в конце строки!", L"Ошибка", MB_OK | MB_ICONERROR);
-            return 1;
+            for (i = posDash; i < len - 1; ++i)
+            {
+                strPhone[i] = strPhone[i + 1];
+            }
         }
-        if (posOpenParet > posCloseParet) 
-        {
-            MessageBox(NULL, L"Открывающая скобка находится\nпосле закрывающей скобки!", L"Ошибка", MB_OK | MB_ICONERROR);
-            return 1;
-        }
-        if (posOpenParet == 0) 
-        {
-            MessageBox(NULL, L"Код страны не ввидён!", L"Ошибка", MB_OK | MB_ICONERROR);
-            return 1;
-        }
-        INT d = 0;
-        INT c = 0;
-        while(d <= posCloseParet)
-        {
-            buffer[d] = strPhone[d];
-            d++;
-        }
-        INT shiftIn = 0;
-        setDash(d, d + 3, strPhone, buffer, shiftIn);
-        setDash(d, d + 2, strPhone, buffer, shiftIn);      
-        c = d + 2;
-        while (d < c)
-        {
-            buffer[d+shiftIn] = strPhone[d];
-            d++;
-        }
-        if (buffer[d + shiftIn] != '\0')
-        {
-            buffer[d + shiftIn] = '\0';
-        }
+    } while (hasDash);
+    len = static_cast<int>(strlen(strPhone));
+    if (len != 11) 
+    {
+        MessageBox(NULL, L"Неправельный размер номера телефона", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
     }
     return 0;
 }
@@ -1082,18 +1038,18 @@ ATOM AdditionalInfoClass(HINSTANCE hInstance)
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     return RegisterClassExW(&wcex);
 }
-int AddAdditionalInfo() 
+int AddAdditionalInfo(CHAR *numberPhone) 
 {
     HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
-    HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, 20, 30, 390, 50, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
-    HWND fieldForMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE, 20, 90, 390, 20, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
-    HWND skipInput = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, 160, 140, 140, 30, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
-    HWND accessInput = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, 310, 140, 100, 30, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
+    HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_X, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_Y, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_WIDTH, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_HEIGHT, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
+    HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(fieldForMail, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(skipInput, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(accessInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(skipButton, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(accessButton, WM_SETFONT, (WPARAM)hFont, TRUE);
     ShowWindow(mainWin, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(mainWin)) 
@@ -1279,7 +1235,7 @@ int checkTables()
                     "first_name TEXT NOT NULL,"
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
-                    "phone TEXT NOT NULL,"
+                    "phone NUMBER NOT NULL,"
                     "email TEXT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
@@ -1521,7 +1477,32 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     {
     case WM_COMMAND: 
     {
+        switch (LOWORD(wParam))
+        {
+        case IDB_ENTERING_MAIL_SKIP:
+        {
+            SendMessage(hWnd, WM_CLOSE, NULL, 0);
+        }
+        break;
+        case IDB_ENTERING_MAIL_ACCEPT:
+        {
+            HWND text = GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL);
+            CONST INT SIZE = 1024;
+            CHAR tmp[SIZE];
+            WCHAR wtmp[SIZE];
+            int len = GetWindowText(text, wtmp, 1024);
+            WideCharToMultiByte(codePage, 0, wtmp, wcslen(wtmp) + 1, tmp, strlen(tmp), NULL, NULL);
+            if (checkingEMail(tmp) == 1)
+            {
+                MessageBox(NULL, L"Неправильно введена почта", L"Ошибка", MB_OK | MB_ICONERROR);
+                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL), L"");
+            }
 
+        }
+        break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
     }
     break;
     default:
@@ -1575,8 +1556,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (checkingNumberPhone(buffer, temp) == 1)
             {
                 MessageBox(NULL, L"Пользователь ввёл неправелный номер", L"Ошибка", MB_OK | MB_ICONERROR);
+                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), L"");
             }
-            AddAdditionalInfo();
+            else 
+            {
+                AddAdditionalInfo(buffer);
+            }
         }
         break;
         case IDM_MAIN_USER_LIST:
