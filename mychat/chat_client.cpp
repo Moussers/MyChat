@@ -25,20 +25,75 @@ WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки за�
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
 WCHAR szAutorization[MAX_LOADSTRING] = L"Autorization_window_class";
 WCHAR szAdditionalInfoClass[MAX_LOADSTRING] = L"Additional_extra_info_class";
+WCHAR szNicknameClass[MAX_LOADSTRING] = L"Nickname_window_class";
 
 //ATOM Class
 ATOM MyRegisterClass(HINSTANCE hInstance);
 ATOM AuthorizationClass(HINSTANCE hInstance);
 ATOM AdditionalInfoClass(HINSTANCE hInstance);
+ATOM NicknameClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK    WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+CONST INT arraySize = 2000;
+
+class UserInfo
+{
+private:
+    CHAR m_numberPhone[arraySize];
+    CHAR m_email[arraySize];
+    CHAR m_nickname[arraySize];
+public:
+    UserInfo() : m_numberPhone(""), m_email(""), m_nickname("") {};
+public:
+    void setNumberPhone(CHAR* numberPhone);
+    CHAR* numberPhone();
+    void setEMail(CHAR* email);
+    CHAR* email();
+    void setNickname(CHAR* nickname);
+    CHAR* nickname();
+};
+
+void UserInfo::setNumberPhone(CHAR* userPhone) 
+{
+    strcpy_s(m_numberPhone, arraySize, userPhone);
+}
+
+CHAR* UserInfo::numberPhone() 
+{
+    return m_numberPhone;
+}
+
+void UserInfo::setEMail(CHAR* email) 
+{
+    strcpy_s(m_email, email);
+}
+
+CHAR* UserInfo::email() 
+{
+    return m_email;
+}
+
+void UserInfo::setNickname(CHAR* nickname) 
+{
+    strcpy_s(m_nickname, nickname);
+}
+
+CHAR* UserInfo::nickname() 
+{
+    return m_nickname;
+}
+UserInfo userInfo;
 int authorizationForm();
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
 int Recieve(SOCKET clientSocket);
+int classModUserInfo(HWND hWnd, int idx);
+//Точка входа APIENTRY
+//APIENTRY - это как и CALLBACK, фукнция обратного вызова
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -53,6 +108,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
     AuthorizationClass(hInstance);
     AdditionalInfoClass(hInstance);
+    NicknameClass(hInstance);
     int checkTables();
     // Выполнить инициализацию приложения:
     /*if (!InitInstance(hInstance, nCmdShow))
@@ -282,18 +338,22 @@ int updateList(HWND userList)
             INT id = sqlite3_column_int(userTb, 0);
             //sqlite3_column_int - достает int значение из массива stmt по указанной ячейке
             CONST INT SIZE = 2000;
-            WCHAR firstName[SIZE];
-            WCHAR lastName[SIZE];
-            const char* charFirstName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
-            const char* charLastName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 2));
-            MultiByteToWideChar(codePage, 0, (char*)charFirstName, strlen((char*)charFirstName)+1, firstName, SIZE);
-            MultiByteToWideChar(codePage, 0, (char*)charLastName, strlen((char*)charLastName) + 1, lastName, SIZE);
+            WCHAR wNickname[SIZE];
+            /*WCHAR firstName[SIZE];
+            WCHAR lastName[SIZE];*/ 
+            const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
+            /*const char* chFirstName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
+            const char* chLastName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 2));*/
+            MultiByteToWideChar(codePage, 0, (char*)chNickname, strlen((char*)chNickname)+1, wNickname, SIZE);
+            /*MultiByteToWideChar(codePage, 0, (char*)chFirstName, strlen((char*)chFirstName)+1, firstName, SIZE);
+            MultiByteToWideChar(codePage, 0, (char*)chLastName, strlen((char*)chLastName) + 1, lastName, SIZE);*/
             WCHAR toList[SIZE];
-            wcscpy_s(toList, lastName);
+            wcscpy_s(toList, wNickname);
+            //wcscpy_s(toList, lastName);
             //wcscpy - перезаписывает данные из одного массива в другой, в последнем
             //стирая прежние данные замещая новыми
-            wcscat_s(toList, L" ");
-            wcscat_s(toList, firstName);
+            /*wcscat_s(toList, L" ");
+            wcscat_s(toList, firstName);*/
             SendMessage(userList, LB_ADDSTRING, 0, (LPARAM)toList);
             //LB_ADDSTRING - добавить строку в lixtBox.
         }
@@ -385,7 +445,7 @@ int checkExistsPhone(HWND hWnd)
         sqlite3_close(db);
         return 1;
     }
-    CONST INT SIZE = 1000;
+    CONST INT SIZE = 1500;
     CONST INT COMMANDSIZE = 2000;
     WCHAR wcPhone[SIZE];
     CHAR cPhone[SIZE];
@@ -423,9 +483,10 @@ int checkExistsPhone(HWND hWnd)
 }
 int insertEntry(HWND hWnd)
 {
-    WCHAR lastName[USERSIZE];
+    WCHAR wNickname[USERSIZE];
+    /*WCHAR lastName[USERSIZE];
     WCHAR firstName[USERSIZE];
-    WCHAR middleName[USERSIZE];
+    WCHAR middleName[USERSIZE];*/
     WCHAR numbrerPhone[USERSIZE];
     WCHAR eMail[USERSIZE];
     WCHAR userId[IDSIZE];
@@ -436,11 +497,11 @@ int insertEntry(HWND hWnd)
     INT status = 0;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
-    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), lastName, USERSIZE);
+    //(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), lastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
     //с размером который мы указываем в поле buffer, последний параметр
-    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), firstName, USERSIZE);
-    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_MIDDLE_NAME), middleName, USERSIZE);
+    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), firstName, USERSIZE);
+    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_MIDDLE_NAME), middleName, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), numbrerPhone, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), eMail, USERSIZE);
     //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
@@ -466,7 +527,8 @@ int insertEntry(HWND hWnd)
         }
     }
     sqlite3_finalize(table);
-    strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
+    strcpy_s(command, "INSERT INTO users (user_id, nickname, phone, email, status) VALUES(");
+    //strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
@@ -483,7 +545,8 @@ int insertEntry(HWND hWnd)
     strcat_s(command, buffer);
     strcat_s(command, ",");
     strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, lastName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname)+1, buffer, USERSIZE, NULL, NULL);
+    /*WideCharToMultiByte(codePage, 0, lastName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
@@ -497,7 +560,7 @@ int insertEntry(HWND hWnd)
     strcat_s(command, buffer);
     strcat_s(command, "'");
     strcat_s(command, ",");
-    strcat_s(command, "'");
+    strcat_s(command, "'");*/
     WideCharToMultiByte(codePage, 0, numbrerPhone, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     CONST INT SIZE = 2000;
     CHAR temp[SIZE]{};
@@ -576,36 +639,42 @@ int modifyUserInfo(HWND hWnd)
     }
     CONST INT SIZE = 2000;
     CONST INT NUMSIZE = 256;
-    WCHAR wLastName[SIZE];
+    WCHAR wNickname[SIZE];
+    /*WCHAR wLastName[SIZE];
     WCHAR wFirstName[SIZE];
-    WCHAR wMiddleName[SIZE];
+    WCHAR wMiddleName[SIZE];*/
     WCHAR wPhone[SIZE];
     WCHAR wEMail[SIZE];
-    CHAR chLastName[SIZE];
+    CHAR chNickname[SIZE];
+    /*CHAR chLastName[SIZE];
     CHAR chFirstName[SIZE];
-    CHAR chMiddleName[SIZE];
+    CHAR chMiddleName[SIZE];*/
     CHAR chPhone[SIZE];
     CHAR chEMail[SIZE];
     CHAR command[SIZE];
     WCHAR wNum[NUMSIZE];
     CHAR chNum[NUMSIZE];
     const char* updateData = "UPDATE users SET last_name = '";
+    //const char* updateData = "UPDATE users SET last_name = '";
     strcpy_s(command, updateData);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_LAST_NAME), wLastName, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wNickname, SIZE);
+    /*GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_LAST_NAME), wLastName, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_FIRST_NAME), wFirstName, SIZE);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_MIDDLE_NAME), wMiddleName, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_MIDDLE_NAME), wMiddleName, SIZE);*/
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wPhone, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_EMAIL), wEMail, SIZE);
-    WideCharToMultiByte(codePage, 0, wLastName, wcslen(wLastName) + 1, chLastName, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname) + 1, chNickname, SIZE, NULL, NULL);
+    /*WideCharToMultiByte(codePage, 0, wLastName, wcslen(wLastName) + 1, chLastName, SIZE, NULL, NULL);
     WideCharToMultiByte(codePage, 0, wFirstName, wcslen(wFirstName) + 1, chFirstName, SIZE, NULL, NULL);
-    WideCharToMultiByte(codePage, 0, wMiddleName, wcslen(wMiddleName) + 1, chMiddleName, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wMiddleName, wcslen(wMiddleName) + 1, chMiddleName, SIZE, NULL, NULL);*/
     WideCharToMultiByte(codePage, 0, wPhone, wcslen(wPhone) + 1, chPhone, SIZE, NULL, NULL);
     WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, SIZE, NULL, NULL);
-    strcat_s(command, chLastName);
+    strcat_s(command, chNickname);
+    /*strcat_s(command, chLastName);
     strcat_s(command, "', first_name = '");
     strcat_s(command, chFirstName);
     strcat_s(command, "', middle_name = '");
-    strcat_s(command, chMiddleName);
+    strcat_s(command, chMiddleName);*/
     strcat_s(command, "', phone = '");
     strcat_s(command, chPhone);
     strcat_s(command, "', email = '");
@@ -758,7 +827,8 @@ int classModUserInfo(HWND hWnd, int idx)
             //integer значение,записывая в выделенную int переменную;
             //Второй аргумент номер колонки из которой берём значение;
             userId = changeUserId;
-            const char* dataUser = "SELECT first_name, last_name, middle_name, phone, email FROM users WHERE user_id = ";
+            const char* dataUser = "SELECT nickname phone, email FROM users WHERE user_id = ";
+            //const char* dataUser = "SELECT first_name, last_name, middle_name, phone, email FROM users WHERE user_id = ";
             //!SQLITE все работает через запросы которые мы собираем в переменной формата const char*
             WCHAR wId[IDXSIZE]{};
             CHAR chId[IDXSIZE]{};
@@ -773,21 +843,24 @@ int classModUserInfo(HWND hWnd, int idx)
                 //sqlite3_step возвращает значение в sqlite3_stmt, а sqlite3_exec просто выполняет запрос
                 if (curRow == SQLITE_ROW) 
                 {
-                    const char* chFirstName = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
+                    const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
+                    /*const char* chFirstName = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
                     const char* chLastName = reinterpret_cast<const char*>(sqlite3_column_text(st, 1));
-                    const char* chMiddleName = reinterpret_cast<const char*>(sqlite3_column_text(st, 2));
+                    const char* chMiddleName = reinterpret_cast<const char*>(sqlite3_column_text(st, 2));*/
                     const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(st, 3));
                     const char* chEMail = reinterpret_cast<const char*>(sqlite3_column_text(st, 4));
-                    WCHAR wLastName[SIZE];
+                    WCHAR wNickname[SIZE];
+                    /*WCHAR wLastName[SIZE];
                     WCHAR wFirstName[SIZE];
                     WCHAR wMiddleName[SIZE];
-                    WCHAR wPhone[SIZE];
-                    WCHAR wEMail[SIZE];
                     MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, SIZE);
                     MultiByteToWideChar(codePage, 0, chLastName, strlen(chLastName) + 1, wLastName, SIZE);
-                    MultiByteToWideChar(codePage, 0, chMiddleName, strlen(chMiddleName) + 1, wMiddleName, SIZE);
+                    MultiByteToWideChar(codePage, 0, chMiddleName, strlen(chMiddleName) + 1, wMiddleName, SIZE);*/
+                    WCHAR wPhone[SIZE];
+                    WCHAR wEMail[SIZE];
                     MultiByteToWideChar(codePage, 0, chPhone, strlen(chPhone) + 1, wPhone, SIZE);
                     MultiByteToWideChar(codePage, 0, chEMail, strlen(chEMail) + 1, wEMail, SIZE);
+                    MultiByteToWideChar(codePage, 0, chNickname, strlen(chNickname) + 1, wNickname, SIZE);
                     WNDCLASSEX userWnd;
                     ZeroMemory(&userWnd, sizeof(userWnd));
                     userWnd.cbSize = sizeof(WNDCLASSEX);
@@ -803,14 +876,16 @@ int classModUserInfo(HWND hWnd, int idx)
                     userWnd.lpszClassName = INFO_MODIFICATION_CLASS;
                     ATOM reg = RegisterClassEx(&userWnd);
                     HWND userClass = CreateWindow(INFO_MODIFICATION_CLASS, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hLastName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    /*HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);*/
                     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wLastName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
+                    /*CreateWindow(L"EDIT", wLastName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"EDIT", wFirstName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);*/
                     CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, MOD_ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
@@ -1002,7 +1077,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 ATOM AuthorizationClass(HINSTANCE hInstance)
 {
-    //ATOM - 2 байтовых WORD.
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -1038,11 +1112,11 @@ ATOM AdditionalInfoClass(HINSTANCE hInstance)
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     return RegisterClassExW(&wcex);
 }
-int AddAdditionalInfo(CHAR *numberPhone) 
+int AddAdditionalInfo() 
 {
     HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
-    HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_X, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_Y, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_WIDTH, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_HEIGHT, mainWin, (HMENU)IDM_EXTRA_INFO_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_X, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_Y, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_WIDTH, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_HEIGHT, mainWin, NULL, GetModuleHandle(NULL), NULL);
     HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_REG_MAIL, GetModuleHandle(NULL), NULL);
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
@@ -1085,16 +1159,12 @@ int authorizationForm()
     tct.pszText = (LPWSTR)str[1];
     TabCtrl_InsertItem(tabCrl, 1, &tct);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
-    HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL );
-    //HWND mail = CreateWindow(L"STATIC", L"E-MAIL:", WS_CHILD | WS_VISIBLE, 12, 75, 80, 20, registrWin, (HMENU)IDM_REGISTER_MAIL, GetModuleHandle(NULL), NULL );
+    HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL);
     HWND enteringPhoneByReg = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_REG_PHONE, GetModuleHandle(NULL), NULL);
     HWND enteringPhoneByAccept = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_ACCEPT_PHONE, GetModuleHandle(NULL), NULL);
-    //HWND enteringMail = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, 148, 72, 120, 32, registrWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
-    HWND reg = CreateWindow(L"BUTTON", L"Зарегистрироваться", WS_CHILD | WS_VISIBLE | WS_BORDER, 160, 160, 210, 40, registrWin, (HMENU)IDB_REGISTER_REGIST, GetModuleHandle(NULL), NULL);
+    HWND reg = CreateWindow(L"BUTTON", L"Зарегистрироваться", WS_CHILD | WS_VISIBLE | WS_BORDER, REGISTRATION_BY_PHONE_POS_X, REGISTRATION_BY_PHONE_POS_Y, REGISTRATION_BY_PHONE_POS_WIDTH, REGISTRATION_BY_PHONE_POS_HEIGHT, registrWin, (HMENU)IDB_REGISTER_REGIST, GetModuleHandle(NULL), NULL);
     HWND accept = CreateWindow(L"BUTTON", L"Войти", WS_CHILD | WS_BORDER, LOG_IN_TO_REGISTER_POX_X, LOG_IN_TO_REGISTER_POX_Y, LOG_IN_TO_REGISTER_POX_WIDTH, LOG_IN_TO_REGISTER_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ACCEPT, GetModuleHandle(NULL), NULL);
-    //HWND cancel = CreateWindow(L"BUTTON", L"Отмена", WS_CHILD | WS_VISIBLE | WS_BORDER, CANCEL_REGISTRATION_POX_X, CANCEL_REGISTRATION_POX_Y, CANCEL_REGISTRATION_POX_WIDTH, CANCEL_REGISTRATION_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_CANCEL, GetModuleHandle(NULL), NULL);
     SendMessage(numPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
-    //SendMessage(mail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(enteringPhoneByReg, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(enteringPhoneByAccept, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(reg, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1159,8 +1229,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 int checkTables()
 {
     sqlite3* db;
-    CONST INT SIZE = 256;
-    //char* mesError[SIZE];
+    CONST INT SIZE = 2000;
     int res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res)
         //похожий вариант прочтения:
@@ -1207,7 +1276,6 @@ int checkTables()
                 }
                 catch (...)
                 {
-                    CONST INT SIZE = 2000;
                     WCHAR errorMes[SIZE];
                     size_t szType;
                     mbstowcs_s(&szType, errorMes, msg, SIZE);
@@ -1232,6 +1300,14 @@ int checkTables()
             {
                 const char* createTable =
                     "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
+                    "nickname TEXT NOT NULL,"
+                    "phone NUMBER NOT NULL,"
+                    "email TEXT NULL,"
+                    "path_icon TEXT,"
+                    "icon BLOB,"
+                    "status INT NOT NULL);";
+                /*const char* createTable =
+                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
                     "first_name TEXT NOT NULL,"
                     "last_name TEXT NOT NULL,"
                     "middle_name TEXT,"
@@ -1239,8 +1315,7 @@ int checkTables()
                     "email TEXT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
-                    "status INT NOT NULL);";
-                //char** errorTUser = mesError;
+                    "status INT NOT NULL);";*/
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
@@ -1446,8 +1521,8 @@ int CreatingAuthorWindow(HWND hWnd)
 }
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0,
-       MAIN_WINDOW_POSITION_X, MAIN_WINDOW_POSITION_Y, NULL, NULL, hInstance, NULL);
+   HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+       MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInstance, NULL);
    if (!hWnd)
    {
       return FALSE;
@@ -1461,14 +1536,92 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hWnd, (HMENU)IDR_SEARCH_FIELD, hInstance, NULL);
    CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
-   //CreateWindow(L"BUTTON", L"Прикрепить файл", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 380, SEND_MES_WINDOW_Y, 140, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_SEARCH, hInstance, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_ADD_USER, hInstance, NULL);
-   //CreateWindow(L"BUTTON", L"Удалить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 170, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
    return TRUE;
+}
+int nicknameWindow()
+{
+    HWND mainWin = CreateWindow(szNicknameClass, L"My Chat", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, NICK_REGISTRATION_WINDOW_WIDTH, NICK_REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEVICE_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    HWND desriptInfo = CreateWindow(L"STATIC", L"Введите ваше имя: ", WS_VISIBLE | WS_CHILD, DESCRIPT_NICK_FIELD_POS_X, DESCRIPT_NICK_FIELD_POS_Y, DESCRIPT_NICK_FIELD_POS_WIDTH, DESCRIPT_NICK_FIELD_POS_HEIGHT, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND inputNick = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD, INPUT_NICK_FIELD_POS_X, INPUT_NICK_FIELD_POS_Y, INPUT_NICK_FIELD_POS_WIDTH, INPUT_NICK_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGSITRATION_NICKNAME, GetModuleHandle(NULL), NULL);
+    HWND contunieBut = CreateWindow(L"Button", L"Продолжить", WS_VISIBLE | WS_CHILD, NICK_BUTTON_CONTINUE_POS_X, NICK_BUTTON_CONTINUE_POS_Y, INPUT_NICK_FIELD_POS_WIDTH, NICK_BUTTON_CONTINUE_POS_HEIGHT, mainWin, (HMENU)IDB_REGISTRATION_NICK_CONTINUE, GetModuleHandle(NULL), NULL);
+    SendMessage(desriptInfo, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(inputNick, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(contunieBut, WM_SETFONT, (WPARAM)hFont, TRUE);
+    ShowWindow(mainWin, SW_SHOWDEFAULT);
+    MSG msg;
+    while (IsWindow(mainWin)) 
+    {
+        if (GetMessage(&msg, mainWin, 0, 0)) 
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    return 0;
+}
+LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
+{
+    switch (message) 
+    {
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam)) 
+            {
+            case IDB_REGISTRATION_NICK_CONTINUE: 
+            {
+                HWND hNick = GetDlgItem(hWnd, IDR_REGSITRATION_NICKNAME);
+                CONST INT SIZE = 2000;
+                WCHAR wNickStr[SIZE];
+                CHAR chNickStr[SIZE];
+                int len = GetWindowText(hNick, wNickStr, SIZE);
+                WideCharToMultiByte(codePage, 0, wNickStr, wcslen(wNickStr)+1, chNickStr, SIZE, 0, 0);
+                userInfo.setNickname(chNickStr);
+            }
+                break;
+            default:
+                return DefWindowProc(hWnd, message, wParam, lParam);
+            }
+        }
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return 0;
+}
+ATOM NicknameClass(HINSTANCE hInstance)
+{
+    WNDCLASSEX wcex;
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndNickName;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MYCHAT));
+    wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    wcex.lpszMenuName = NULL;
+    wcex.lpszClassName = szNicknameClass;
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    return RegisterClassExW(&wcex);
+}
+
+int registrationInfo() 
+{
+    CONST INT SIZE = 2000;
+    CHAR numberPhone[SIZE];
+    CHAR email[SIZE];
+    CHAR nickname[SIZE];
+    strcpy_s(numberPhone, userInfo.numberPhone());
+    strcpy_s(email, userInfo.email());
+    strcpy_s(nickname, userInfo.nickname());
+    return 0;
 }
 
 LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
@@ -1482,22 +1635,29 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
         case IDB_ENTERING_MAIL_SKIP:
         {
             SendMessage(hWnd, WM_CLOSE, NULL, 0);
+            nicknameWindow();
         }
         break;
         case IDB_ENTERING_MAIL_ACCEPT:
         {
-            HWND text = GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL);
+            HWND hText = GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL);
             CONST INT SIZE = 1024;
-            CHAR tmp[SIZE];
-            WCHAR wtmp[SIZE];
-            int len = GetWindowText(text, wtmp, 1024);
-            WideCharToMultiByte(codePage, 0, wtmp, wcslen(wtmp) + 1, tmp, strlen(tmp), NULL, NULL);
-            if (checkingEMail(tmp) == 1)
+            CHAR chEMail[SIZE];
+            WCHAR wEMail[SIZE];
+            int len = GetWindowText(hText, wEMail, 1024);
+            WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, strlen(chEMail), NULL, NULL);
+            if (checkingEMail(chEMail) == 1)
             {
                 MessageBox(NULL, L"Неправильно введена почта", L"Ошибка", MB_OK | MB_ICONERROR);
                 SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL), L"");
             }
-
+            else 
+            {
+                len = strlen(chEMail);
+                userInfo.setEMail(chEMail);
+                SendMessage(hWnd, WM_CLOSE, NULL, 0);
+                nicknameWindow();
+            }
         }
         break;
         default:
@@ -1560,7 +1720,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             else 
             {
-                AddAdditionalInfo(buffer);
+                INT len = strlen(buffer);
+                userInfo.setNickname(buffer);
+                SendMessage(hWnd, WM_CLOSE, 0, NULL);
+                AddAdditionalInfo();
             }
         }
         break;
@@ -1670,4 +1833,3 @@ LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
         }
     }
 }
-

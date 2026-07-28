@@ -15,14 +15,16 @@
 #define IDR_MAINFRAME                   128
 #define IDR_ENTERING_PHONE				129
 #define IDR_ENTERING_MAIL				130
-#define IDR_MOD_MENU_LAST_NAME          131
-#define IDR_MOD_MENU_FIRST_NAME         132
-#define IDR_MOD_MENU_MIDDLE_NAME        133
-#define IDR_MOD_MENU_PHONE              134
-#define IDR_MOD_MENU_EMAIL              135
-#define IDR_REGISTRATION_REG_PHONE		136
-#define IDR_REGISTRATION_REG_MAIL		137
-#define IDR_REGISTRATION_ACCEPT_PHONE	138
+#define IDR_MOD_MENU_NICKNAME			131
+//#define IDR_MOD_MENU_LAST_NAME          132
+//#define IDR_MOD_MENU_FIRST_NAME         133
+//#define IDR_MOD_MENU_MIDDLE_NAME        134
+#define IDR_MOD_MENU_PHONE              132
+#define IDR_MOD_MENU_EMAIL              133
+#define IDR_REGISTRATION_REG_PHONE		134
+#define IDR_REGISTRATION_REG_MAIL		135
+#define IDR_REGISTRATION_ACCEPT_PHONE	136
+#define IDR_REGSITRATION_NICKNAME		137
 
 //IDB
 #define IDB_ABOUT_PROGRAM               1000
@@ -45,6 +47,7 @@
 #define IDB_REGISTER_ACCEPT				1022
 #define IDB_ENTERING_MAIL_SKIP			1023
 #define IDB_ENTERING_MAIL_ACCEPT		1024
+#define IDB_REGISTRATION_NICK_CONTINUE	1035
 
 //IDM
 #define IDM_ADD_MENU_LAST_NAME          5000
@@ -54,8 +57,7 @@
 #define IDM_ADD_MENU_EMAIL              5004
 #define IDM_MAIN_USER_LIST              5005
 #define IDM_REGISTER_PHONE				5011
-#define IDM_EXTRA_INFO_REG_MAIL			5012
-#define IDM_EXTRA_FIELD_REG_MAIL		5013
+#define IDM_EXTRA_FIELD_REG_MAIL		5012
 
 #define ID_32780                        32780
 #define ID_32781                        32781
