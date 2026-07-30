@@ -30,7 +30,7 @@
 
 VOID startServer(HWND log);
 VOID appendToLog(HWND log, CONST WCHAR* message);
-VOID listenClient();
+void listenClient();
 VOID clientManagement(SOCKET* clientSocket);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
@@ -45,6 +45,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
+INT codePage = 1251;
 WSADATA wsaData;
 //Структура WSADATA содержит информацию о реализации Windows Sockets.
 struct addrinfo* result, * ptr, hints;
@@ -186,7 +187,7 @@ int checkTables(HWND log)
             appendToLog(log, L"Подключение к базе данных успешно.");
         }
         sql::Statement* stmt = connection->createStatement();       /*CreateStatement - создание объекта Statement для дальнейших запросов*/
-        const char* sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='groups';";
+        std::string sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='groups';";
         sql::ResultSet* res = stmt->executeQuery(sql_ex);
         res->next();    /*переход на следующую строку*/
                         /*sql.ResultSet перемещает курсор на одну строку вперед от его текущего положения в объекте ResultSet. В основном*/
@@ -195,7 +196,7 @@ int checkTables(HWND log)
         if (count == 0)
         {
             appendToLog(log, L"Таблица не была создана! Создаём новую.");
-            const char* createGroups = "CREATE TABLE `groups` ("
+            std::string createGroups = "CREATE TABLE `groups` ("
                 "group_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,"
                 "group_name TEXT NOT NULL);";
             if (stmt->execute(createGroups))
@@ -204,18 +205,16 @@ int checkTables(HWND log)
                 appendToLog(log, L"Ошибка пр создании таблицы группы!");
                 return 1;
             }
-            const char* createUsers = "Create TABLE `users`("
+            std::string createUsers = "Create TABLE `users`("
                 "user_id INT PRIMARY KEY,"
-                "first_name varchar(256) NULL,"
-                "last_name varchar(256) NULL,"
-                "middle_name varchar(256) NULL,"
+                "nickname varchar(256),"
                 "number_phone INT NOT NULL);";
             if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
                 return 1;
             }
-            const char* createMessages = "Create TABLE `messages`("
+            std::string createMessages = "Create TABLE `messages`("
                 "message_id INT PRIMARY KEY NOT NULL,"
                 "text_field TEXT NOT NULL,"
                 "file_field BINARY,"
@@ -358,7 +357,7 @@ VOID appendToLog(HWND log, CONST WCHAR* message)
     SendMessage(log, EM_REPLACESEL, FALSE, (LPARAM)L"\n");
     //В конце добавляем новую строку для следующего текста.
 }
-VOID listenClient() 
+void listenClient() 
 {
     do {
         if (listenSocket != INVALID_SOCKET)
@@ -390,8 +389,11 @@ VOID listenClient()
 
 VOID clientManagement(SOCKET* clientSocket) 
 {
-    char* receiveBuf = (char*)malloc(sizeof(char) * 1024);
-    if (receiveBuf == NULL)
+    CONST INT SIZE = 1024;
+    CHAR recvBuf[SIZE];
+    WCHAR wcBuf[SIZE];
+    //char* recvBuf = (char*)malloc(sizeof(char) * 1024);
+    if (recvBuf == NULL)
     {
         appendToLog(logHWND, L"Не хватает памяти для пользователя.");
         closesocket(*clientSocket);
@@ -403,14 +405,55 @@ VOID clientManagement(SOCKET* clientSocket)
     //Запускаем прослушивание клиента
     while (*clientSocket != INVALID_SOCKET) 
     {
-        int iResult = recv(*clientSocket, receiveBuf, strlen(receiveBuf), NULL);
+        WCHAR wcNickname[SIZE];
+        WCHAR wcPhone[SIZE];
+        WCHAR wcEmail[SIZE];
+        INT iResult = recv(*clientSocket, recvBuf, strlen(recvBuf), NULL);
+        BOOL login = false;
         if (iResult > 0)
         {
             appendToLog(logHWND, L"Сообщение успешно успешно получено");
+            if (!login) 
+            {
+                INT res = strncmp(recvBuf, "REG ", 4);
+                if (res == 0) 
+                {
+                    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
+                    int i = 4;
+                    int k = 0;
+                    while (wcBuf[i] =! L";")
+                    {
+                        wcPhone[k] = wcBuf[i];
+                        i++;
+                        k++;
+                    }
+                    wcPhone[k] = L'\0';
+                    k = 0;
+                    i++;
+                    while (wcBuf[i] = !L";") 
+                    {
+                        wcEmail[k] = wcBuf[i];
+                        i++;
+                    }
+                    wcEmail[k] = L'\0';
+                    i++;
+                    k = 0;
+                    while (wcBuf[i] = !L";")
+                    {
+                        wcNickname[k] = wcBuf[i];
+                        i++;
+                        k++;
+                    }
+                    wcNickname[k] = L'\0';
+                    i++;
+                    k = 0;
+                }
+            }
+
         }
         else if (iResult == 0) 
         {
-            appendToLog(logHWND, L"Соединенение с клиентом зарыто");
+            appendToLog(logHWND, L"Соединенение с клиентом закрыто");
             closesocket(*clientSocket);
             *clientSocket = INVALID_SOCKET;
         }
@@ -421,5 +464,5 @@ VOID clientManagement(SOCKET* clientSocket)
             *clientSocket = INVALID_SOCKET;
         }
     }
-    free(receiveBuf);
+    free(recvBuf);
 }
