@@ -410,7 +410,7 @@ int checkExistsEMail(HWND hWnd)
     WCHAR wcMail[SIZE];
     CHAR cMail[SIZE];
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), wcMail, SIZE);
-    WideCharToMultiByte(codePage, 0, wcMail, SIZE, cMail, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcMail, wcslen(wcMail)+1, cMail, SIZE, NULL, NULL);
     CHAR getMail[COMMANDSIZE];
     strcpy_s(getMail, "SELECT COUNT(*) FROM users WHERE email='");
     strcat_s(getMail, cMail);

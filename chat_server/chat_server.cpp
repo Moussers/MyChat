@@ -193,7 +193,7 @@ int checkTables(HWND log)
                         /*sql.ResultSet перемещает курсор на одну строку вперед от его текущего положения в объекте ResultSet. В основном*/
                         /*он используется для перебора строк, возвращаемых SQL - запросом.*/
         int count = res->getInt(1);     /*1 - выбрать из первой колонки количество таблиц*/
-        if (count == 0)
+        if (!count)
         {
             appendToLog(log, L"Таблица не была создана! Создаём новую.");
             std::string createGroups = "CREATE TABLE `groups` ("
@@ -208,7 +208,11 @@ int checkTables(HWND log)
             std::string createUsers = "Create TABLE `users`("
                 "user_id INT PRIMARY KEY,"
                 "nickname varchar(256),"
-                "number_phone INT NOT NULL);";
+                "number_phone INT NOT NULL,"
+                "email TEXT NOT NULL,"
+                "icon BINARY,"
+                "path_icon TEXT,"
+                "status BOOl)";
             if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
@@ -386,6 +390,55 @@ void listenClient()
         }
     } while (true);
 }
+BOOL checkExistNumPhone(WCHAR* numberPhone) 
+{
+    if (!connection) 
+    //connection != 0
+    {
+        return false;
+    }
+    CONST INT SIZE = 1024;
+    CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE number_phone='";
+    WCHAR wTmp[SIZE];
+    CHAR chTmp[SIZE];
+    wcscpy_s(wTmp, sqlReq);
+    wcscat_s(wTmp, numberPhone);
+    wcscat_s(wTmp, L"'");
+    sql::Statement* stmt = connection->createStatement();
+    WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp) + 1, chTmp, SIZE, NULL, NULL);
+    sql::ResultSet* res = stmt->executeQuery(chTmp);
+    //execute - выполнение без возвращения результата
+    //executeQuery - выполнение с возварщением результата
+    //В объекте ResultSet итератор устаналивается на позиции перед первой строкой. 
+    //И чтобы переместиться к первой строке (и ко всем последующим) необходимо вызвать 
+    //метод next(). Пока в наборе ResultSet есть доступные строки, метод next будет 
+    //возвращать true. 
+    res->next();
+    int count = res->getInt(1);
+    //В mySql массиве счёт начинается с единицы, а не с нуля как в обычном массиве.
+    return !count;
+    //!count - count != 0 
+}
+BOOL checkExistEmail(WCHAR* email) 
+{
+    if (!connection) 
+    {
+        return false;
+    }
+    CONST INT SIZE = 1024;
+    CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE email='";
+    WCHAR wTmp[SIZE];
+    CHAR chTmp[SIZE];
+    wcscpy_s(wTmp, sqlReq);
+    wcscat_s(wTmp, email);
+    wcscat_s(wTmp, L"'");
+    sql::Statement* stmt = connection->createStatement();
+    WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp)+1, chTmp, SIZE, NULL, NULL);
+    sql::ResultSet* res = stmt->executeQuery(chTmp);
+    res->next();
+    int count = res->getInt(1);
+    return !count;
+}
 
 VOID clientManagement(SOCKET* clientSocket) 
 {
@@ -438,7 +491,7 @@ VOID clientManagement(SOCKET* clientSocket)
                     wcEmail[k] = L'\0';
                     i++;
                     k = 0;
-                    while (wcBuf[i] = !L";")
+                    while (wcBuf[i] =! L";")
                     {
                         wcNickname[k] = wcBuf[i];
                         i++;
@@ -448,8 +501,14 @@ VOID clientManagement(SOCKET* clientSocket)
                     i++;
                     k = 0;
                 }
+                if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail)) 
+                {
+                    login = true;
+                }
             }
-
+            //!Провериить существование пользователя в базе сервера, по номеру телефона или почте, через две отдельные функции
+            //Если запись сущетсвует то вернуть приложению-клиенту, что запись аккаунт существует
+            //Во время авторизации (не регистрации), проверить через отдельную функцию сущетсвует пользватель, или нет.
         }
         else if (iResult == 0) 
         {
