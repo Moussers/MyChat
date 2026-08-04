@@ -31,7 +31,7 @@
 VOID startServer(HWND log);
 VOID appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
-VOID clientManagement(SOCKET* clientSocket);
+int clientManagement(SOCKET* clientSocket);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -45,7 +45,8 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
-INT codePage = 1251;
+bool serverIsReady = false;
+int codePage = 1251;
 WSADATA wsaData;
 //Структура WSADATA содержит информацию о реализации Windows Sockets.
 struct addrinfo* result, * ptr, hints;
@@ -118,11 +119,12 @@ VOID clearLog(HWND log)
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    /*if (!listenNewClient) 
+    if (!listenNewClient && serverIsReady) 
+    //serverIsReady - serverIsReady != 0, т.е. serverIsReady == 1
     {
         listenNewClient = true;
         CreateThread(NULL, 2048, (LPTHREAD_START_ROUTINE)listenClient, NULL, 0, NULL);
-    }*/
+    }
 	switch (message) 
 	{
 	case WM_COMMAND:
@@ -342,6 +344,7 @@ VOID startServer(HWND log)
     {
         appendToLog(log, L"Сокет готов к прослушиванию");
     }
+    serverIsReady = true;
 }
 VOID appendToLog(HWND log, CONST WCHAR* message) 
 {
@@ -393,7 +396,8 @@ void listenClient()
 BOOL checkExistNumPhone(WCHAR* numberPhone) 
 {
     if (!connection) 
-    //connection != 0
+    //!connection - connection == 0
+    //connection - connection != 0, т.е connection == 1
     {
         return false;
     }
@@ -404,20 +408,30 @@ BOOL checkExistNumPhone(WCHAR* numberPhone)
     wcscpy_s(wTmp, sqlReq);
     wcscat_s(wTmp, numberPhone);
     wcscat_s(wTmp, L"'");
-    sql::Statement* stmt = connection->createStatement();
-    WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp) + 1, chTmp, SIZE, NULL, NULL);
-    sql::ResultSet* res = stmt->executeQuery(chTmp);
-    //execute - выполнение без возвращения результата
-    //executeQuery - выполнение с возварщением результата
-    //В объекте ResultSet итератор устаналивается на позиции перед первой строкой. 
-    //И чтобы переместиться к первой строке (и ко всем последующим) необходимо вызвать 
-    //метод next(). Пока в наборе ResultSet есть доступные строки, метод next будет 
-    //возвращать true. 
-    res->next();
-    int count = res->getInt(1);
-    //В mySql массиве счёт начинается с единицы, а не с нуля как в обычном массиве.
-    return !count;
-    //!count - count != 0 
+    int count = 0;
+    try
+    {
+        sql::Statement* stmt = connection->createStatement();
+        WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp) + 1, chTmp, SIZE, NULL, NULL);
+        sql::ResultSet* res = stmt->executeQuery(chTmp);
+        //execute - выполнение без возвращения результата
+        //executeQuery - выполнение с возварщением результата
+        //В объекте ResultSet итератор устаналивается на позиции перед первой строкой. 
+        //И чтобы переместиться к первой строке (и ко всем последующим) необходимо вызвать 
+        //метод next(). Пока в наборе ResultSet есть доступные строки, метод next будет 
+        //возвращать true. 
+        res->next();
+        count = res->getInt(1);
+        //В mySql массиве счёт начинается с единицы, а не с нуля как в обычном массиве.
+    }
+    catch (sql::SQLException& ex)
+    {
+        WCHAR errors[SIZE];
+        MultiByteToWideChar(1251, 0, ex.what(), strlen(ex.what()) + 1, errors, SIZE);
+        appendToLog(logHWND, errors);
+    }
+    return count;
+    //!count - count == 0 
 }
 BOOL checkExistEmail(WCHAR* email) 
 {
@@ -426,25 +440,36 @@ BOOL checkExistEmail(WCHAR* email)
         return false;
     }
     CONST INT SIZE = 1024;
+    int count = 0;
     CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE email='";
     WCHAR wTmp[SIZE];
     CHAR chTmp[SIZE];
     wcscpy_s(wTmp, sqlReq);
     wcscat_s(wTmp, email);
     wcscat_s(wTmp, L"'");
-    sql::Statement* stmt = connection->createStatement();
-    WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp)+1, chTmp, SIZE, NULL, NULL);
-    sql::ResultSet* res = stmt->executeQuery(chTmp);
-    res->next();
-    int count = res->getInt(1);
-    return !count;
+    try 
+    {
+        sql::Statement* stmt = connection->createStatement();
+        WideCharToMultiByte(codePage, 0, wTmp, wcslen(wTmp) + 1, chTmp, SIZE, NULL, NULL);
+        sql::ResultSet* res = stmt->executeQuery(chTmp);
+        res->next();
+        count = res->getInt(1);
+    }
+    catch (sql::SQLException ex)
+    {
+        WCHAR errors[SIZE];
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what())+1, errors, SIZE);
+        appendToLog(logHWND, errors);
+    }
+    return count;
 }
 
-VOID clientManagement(SOCKET* clientSocket) 
+int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
     CHAR recvBuf[SIZE];
     WCHAR wcBuf[SIZE];
+    WCHAR wcTmp[SIZE];
     //char* recvBuf = (char*)malloc(sizeof(char) * 1024);
     if (recvBuf == NULL)
     {
@@ -453,7 +478,7 @@ VOID clientManagement(SOCKET* clientSocket)
         //* - операция разыменования указателя
         //closescoket - закрывает существующий сокет и освобождает память.
         *clientSocket = INVALID_SOCKET;
-        return;
+        return 1;
     }
     //Запускаем прослушивание клиента
     while (*clientSocket != INVALID_SOCKET) 
@@ -461,7 +486,9 @@ VOID clientManagement(SOCKET* clientSocket)
         WCHAR wcNickname[SIZE];
         WCHAR wcPhone[SIZE];
         WCHAR wcEmail[SIZE];
-        INT iResult = recv(*clientSocket, recvBuf, strlen(recvBuf), NULL);
+        INT iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
+        recvBuf[iResult] = '\0';
+        //iResult - конец строки
         BOOL login = false;
         if (iResult > 0)
         {
@@ -474,16 +501,22 @@ VOID clientManagement(SOCKET* clientSocket)
                     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
                     int i = 4;
                     int k = 0;
-                    while (wcBuf[i] =! L";")
+                    /*int len = wcslen(wcBuf);
+                    for (int p = 0; p < len; p++) 
                     {
-                        wcPhone[k] = wcBuf[i];
+                        wcTmp[p] = wcBuf[p];
+                    }
+                    wcTmp[len] = L'\0';*/
+                    while (wcTmp[i] =! L";")
+                    {
+                        wcPhone[k] = wcTmp[i];
                         i++;
                         k++;
                     }
                     wcPhone[k] = L'\0';
                     k = 0;
                     i++;
-                    while (wcBuf[i] = !L";") 
+                    while (wcBuf[i] =! ";") 
                     {
                         wcEmail[k] = wcBuf[i];
                         i++;
@@ -491,7 +524,7 @@ VOID clientManagement(SOCKET* clientSocket)
                     wcEmail[k] = L'\0';
                     i++;
                     k = 0;
-                    while (wcBuf[i] =! L";")
+                    while (wcBuf[i] =! ";")
                     {
                         wcNickname[k] = wcBuf[i];
                         i++;
@@ -500,10 +533,23 @@ VOID clientManagement(SOCKET* clientSocket)
                     wcNickname[k] = L'\0';
                     i++;
                     k = 0;
-                }
-                if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail)) 
-                {
-                    login = true;
+                    if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail))
+                    {
+                        login = true;
+                        CONST INT SIZE = 1024;
+                        WCHAR buf[SIZE];
+                        WCHAR secondBuf[SIZE];
+                        /*wcscpy(buf, L"Данная учетная запись :");*/
+                        wsprintf(buf, L"Данная учетная запись: %s %s %s", wcPhone, wcEmail, wcNickname);
+                        //s - string (char arrya)
+                        //ws - wide sting (wide char array)
+                        appendToLog(logHWND, secondBuf);
+                        /*appendToLog(logHWND, L"Пользователь зашёл на сервер.");*/
+                        CHAR answer[SIZE];
+                        strcpy_s(answer, "EXIST");
+                        strcat_s(answer, ";");
+                        send(*clientSocket, answer, strlen(answer), 0);
+                    }
                 }
             }
             //!Провериить существование пользователя в базе сервера, по номеру телефона или почте, через две отдельные функции
@@ -515,13 +561,16 @@ VOID clientManagement(SOCKET* clientSocket)
             appendToLog(logHWND, L"Соединенение с клиентом закрыто");
             closesocket(*clientSocket);
             *clientSocket = INVALID_SOCKET;
+            return 1;
         }
         else 
         {
             appendToLog(logHWND, L"Ошибка соединения клиента");
             closesocket(*clientSocket);
             *clientSocket = INVALID_SOCKET;
+            return 1;
         }
     }
     free(recvBuf);
+    return 0;
 }

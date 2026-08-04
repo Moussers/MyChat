@@ -91,7 +91,7 @@ UserInfo userInfo;
 int authorizationForm();
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
-int Recieve(SOCKET clientSocket);
+int recieveData(SOCKET clientSocket);
 int classModUserInfo(HWND hWnd, int idx);
 int registrationInfo(SOCKET listenSock);
 //Точка входа APIENTRY
@@ -1455,10 +1455,10 @@ int accoutSearch(HWND hField, HWND hList)
             strcpy_s(chFirstName,reinterpret_cast<const char*>(sqlite3_column_text(table, 0)));
             strcpy_s(chLastName, reinterpret_cast<const char*>(sqlite3_column_text(table, 1)));
             //reinterpret_cast - делает преобразование без проверки в отличие от static_cast
-            MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, wcslen(wFirstName));
+            MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, SIZE);
             //strlen - расчет количества символов для ansi инча char строки
             //wcslen - расчет количества символом для wide char строки
-            MultiByteToWideChar(codePage, 0, chLastName, strlen(chLastName) + 1, wLastName, wcslen(wLastName));
+            MultiByteToWideChar(codePage, 0, chLastName, strlen(chLastName) + 1, wLastName, SIZE);
             WCHAR toList[SIZE] = {};
             wcscpy_s(toList, wFirstName);
             wcscat_s(toList, L" ");
@@ -1470,19 +1470,25 @@ int accoutSearch(HWND hField, HWND hList)
     sqlite3_close(db);
     return 0;
 }
-int Recieve(SOCKET clientSocket)
+int recieveData(SOCKET clientSocket)
 {
-    INT res = 0;
+    INT iResuslt = 0;
     CHAR recvbuf[512];
-    do
+    while (iResuslt <= 0)
     {
-        res = recv(clientSocket, recvbuf, 512, 0);
+        iResuslt = recv(clientSocket, recvbuf, 512, 0);
         //recv - recieve;
-        if (res < 0)
+        if (iResuslt < 0)
         {
             MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
-    } while (res > 0);
+        INT res = strncmp(recvbuf, "EXIST", 5);
+        if (!res) 
+        //!res - res == 0
+        {
+            return 1;
+        }
+    }
     return 0;
 }
 
@@ -1594,6 +1600,11 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 userInfo.setNickname(chNickStr);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
                 registrationInfo(listenSock);
+                if (recieveData(listenSock)) 
+                {
+                    MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
+                    authorizationForm();
+                }
             }
                 break;
             default:
