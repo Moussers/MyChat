@@ -31,6 +31,7 @@
 VOID startServer(HWND log);
 VOID appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
+void checkReciviedData(INT indexI, INT indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
@@ -179,14 +180,12 @@ int mysqlConnect()
 int checkTables(HWND log) 
 {
     try {
-        if (!connection)
+        if (connection->isClosed())
+        //Метод isClosed() не пингует сервер, чтобы определить, доступен ли он. Согласно спецификации JDBC,
+        //он возвращает true только в том случае, если для соединения был вызван метод closed().
         {
-            appendToLog(log, L"База данных не подключена!");
+            mysqlConnect();
             return 1;
-        }
-        else
-        {
-            appendToLog(log, L"Подключение к базе данных успешно.");
         }
         sql::Statement* stmt = connection->createStatement();       /*CreateStatement - создание объекта Statement для дальнейших запросов*/
         std::string sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='groups';";
@@ -205,12 +204,14 @@ int checkTables(HWND log)
             //if(stmt->execute(createTable) == true)
             {
                 appendToLog(log, L"Ошибка пр создании таблицы группы!");
+                delete stmt;
+                //stmt - удаляем stmt чтобы осовдодить ресурсы. 
                 return 1;
             }
             std::string createUsers = "Create TABLE `users`("
-                "user_id INT PRIMARY KEY,"
+                "user_id INT PRIMARY KEY auto_increment,"
                 "nickname varchar(256),"
-                "number_phone INT NOT NULL,"
+                "number_phone BIGINT NOT NULL,"
                 "email TEXT NOT NULL,"
                 "icon BINARY,"
                 "path_icon TEXT,"
@@ -218,6 +219,7 @@ int checkTables(HWND log)
             if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
+                delete stmt;
                 return 1;
             }
             std::string createMessages = "Create TABLE `messages`("
@@ -233,9 +235,14 @@ int checkTables(HWND log)
             if (stmt->execute(createMessages))
             {
                 appendToLog(log, L"Ошибка при создание таблицы сообщение!");
+                delete stmt;
                 return 1;
             }
         }
+        delete stmt;
+        connection->close();
+        //закрываем соединение;
+        return 0;
     }
     catch (sql::SQLException& ex) 
     {
@@ -253,9 +260,7 @@ int checkTables(HWND log)
         //c_str - Получить массив символов (char array).
         return 1;
     }
-    connection->close();
-    //закрываем соединение
-    return 0;
+    
 }
 VOID startServer(HWND log) 
 {
@@ -393,13 +398,55 @@ void listenClient()
         }
     } while (true);
 }
+BOOL insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
+{
+    if (connection->isClosed()) 
+    {
+        mysqlConnect();
+    }
+    CONST INT SIZE = 1024;
+    try 
+    {
+        CHAR chNickName[SIZE];
+        CHAR chNumPhone[SIZE];
+        CHAR chEmail[SIZE];
+        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone, email) VALUES('";
+        WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);
+        strcat_s(command, chNickName);
+        strcat_s(command, "'");
+        strcat_s(command, ",");
+        WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone) + 1, chNumPhone, SIZE, NULL, NULL);
+        strcat_s(command, chNumPhone);
+        strcat_s(command, ",'");
+        WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
+        strcat_s(command, chEmail);
+        strcat_s(command, "'");
+        strcat_s(command, ");");
+        sql::Statement* stmt = connection->createStatement();
+        stmt->execute(command);
+        //executeQuery - при выполнении возвращает результат, а при insert результат не нужен
+        connection->close();
+        delete stmt;
+        return true;
+    }
+    catch (sql::SQLException ex) 
+    {
+        WCHAR errors[SIZE];
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()+1), errors, SIZE);
+        int len = wcslen(errors);
+        errors[len] = L'\0';
+        appendToLog(logHWND, errors);
+        connection->close();
+    }
+    
+}
 BOOL checkExistNumPhone(WCHAR* numberPhone) 
 {
-    if (!connection) 
-    //!connection - connection == 0
-    //connection - connection != 0, т.е connection == 1
+    if (connection->isClosed()) 
+    //!connection..isClosed() - connection.isClosed() == 0
+    //connection.isClosed() - connection.isClosed() != 0, т.е connection.isClosed() == 1
     {
-        return false;
+        mysqlConnect();
     }
     CONST INT SIZE = 1024;
     CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE number_phone='";
@@ -423,21 +470,22 @@ BOOL checkExistNumPhone(WCHAR* numberPhone)
         res->next();
         count = res->getInt(1);
         //В mySql массиве счёт начинается с единицы, а не с нуля как в обычном массиве.
+        connection->close();
+        return count;
     }
     catch (sql::SQLException& ex)
     {
         WCHAR errors[SIZE];
         MultiByteToWideChar(1251, 0, ex.what(), strlen(ex.what()) + 1, errors, SIZE);
         appendToLog(logHWND, errors);
+        connection->close();
     }
-    return count;
-    //!count - count == 0 
 }
 BOOL checkExistEmail(WCHAR* email) 
 {
-    if (!connection) 
+    if (connection->isClosed()) 
     {
-        return false;
+        mysqlConnect();
     }
     CONST INT SIZE = 1024;
     int count = 0;
@@ -447,6 +495,7 @@ BOOL checkExistEmail(WCHAR* email)
     wcscpy_s(wTmp, sqlReq);
     wcscat_s(wTmp, email);
     wcscat_s(wTmp, L"'");
+    wcscat_s(wTmp, L";");
     try 
     {
         sql::Statement* stmt = connection->createStatement();
@@ -454,16 +503,27 @@ BOOL checkExistEmail(WCHAR* email)
         sql::ResultSet* res = stmt->executeQuery(chTmp);
         res->next();
         count = res->getInt(1);
+        connection->close();
+        return count;
     }
     catch (sql::SQLException ex)
     {
         WCHAR errors[SIZE];
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what())+1, errors, SIZE);
         appendToLog(logHWND, errors);
+        connection->close();
     }
-    return count;
 }
-
+void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin)
+{
+    while (wcSource[(*indexI)] != L';')
+    //=! - отрицание какого-то числа, строка превращается в нулевую строку
+    {
+        wcDestin[(*indexK)] = wcSource[(*indexI)];
+        (*indexI)++;
+        (*indexK)++;
+    }
+}
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -501,35 +561,15 @@ int clientManagement(SOCKET* clientSocket)
                     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
                     int i = 4;
                     int k = 0;
-                    /*int len = wcslen(wcBuf);
-                    for (int p = 0; p < len; p++) 
-                    {
-                        wcTmp[p] = wcBuf[p];
-                    }
-                    wcTmp[len] = L'\0';*/
-                    while (wcTmp[i] =! L";")
-                    {
-                        wcPhone[k] = wcTmp[i];
-                        i++;
-                        k++;
-                    }
+                    checkReciviedData(&i, &k, wcBuf, wcPhone);
                     wcPhone[k] = L'\0';
                     k = 0;
                     i++;
-                    while (wcBuf[i] =! ";") 
-                    {
-                        wcEmail[k] = wcBuf[i];
-                        i++;
-                    }
+                    checkReciviedData(&i, &k, wcBuf, wcEmail);
                     wcEmail[k] = L'\0';
                     i++;
                     k = 0;
-                    while (wcBuf[i] =! ";")
-                    {
-                        wcNickname[k] = wcBuf[i];
-                        i++;
-                        k++;
-                    }
+                    checkReciviedData(&i, &k, wcBuf, wcNickname);
                     wcNickname[k] = L'\0';
                     i++;
                     k = 0;
@@ -539,16 +579,21 @@ int clientManagement(SOCKET* clientSocket)
                         CONST INT SIZE = 1024;
                         WCHAR buf[SIZE];
                         WCHAR secondBuf[SIZE];
-                        /*wcscpy(buf, L"Данная учетная запись :");*/
                         wsprintf(buf, L"Данная учетная запись: %s %s %s", wcPhone, wcEmail, wcNickname);
                         //s - string (char arrya)
                         //ws - wide sting (wide char array)
                         appendToLog(logHWND, secondBuf);
-                        /*appendToLog(logHWND, L"Пользователь зашёл на сервер.");*/
                         CHAR answer[SIZE];
                         strcpy_s(answer, "EXIST");
                         strcat_s(answer, ";");
                         send(*clientSocket, answer, strlen(answer), 0);
+                    }
+                    else 
+                    {
+                        if (insertEntry(wcPhone, wcEmail, wcNickname)) 
+                        {
+                            appendToLog(logHWND, L"Учетная запись успешно добалвена на сервер.");
+                        }
                     }
                 }
             }

@@ -1522,7 +1522,7 @@ int CreatingAuthorWindow(HWND hWnd)
     //LBS_NOTIFY - нужен для работы флага LB_GETCURSEL
     //LB_CURSEL - нужен чтобы получить id пользователя по которму мы можем выводить сообщение
     CreateWindow(L"STATIC", L"Версия:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, ABOUT_VERSION_FIELD_POX_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Закрыть", WS_VISIBLE | WS_CHILD | WS_BORDER, 320, 150, 70, 20, userClass, (HMENU)IDB_ABOUT_PROG_BUTTON_CANCEL, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"BUTTON", L"Закрыть", WS_VISIBLE | WS_CHILD | WS_BORDER, ABOUT_BUTTON_CLOSE_POS_X, ABOUT_BUTTON_CLOSE_POS_Y, ABOUT_BUTTON_CLOSE_POS_WIDTH, ABOUT_BUTTON_CLOSE_POS_HEIGHT, userClass, (HMENU)IDB_ABOUT_PROG_BUTTON_CANCEL, GetModuleHandle(NULL), NULL);
     ShowWindow(userClass, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(userClass))
@@ -1646,9 +1646,9 @@ int registrationInfo(SOCKET lSocket)
     strcpy_s(nickname, SIZE, userInfo.nickname());
     CHAR regist[SIZE] = "REG ";
     strcat_s(regist, numberPhone);
-    strcat_s(regist, "; ");
+    strcat_s(regist, ";");
     strcat_s(regist, email);
-    strcat_s(regist, "; ");
+    strcat_s(regist, ";");
     strcat_s(regist, nickname);
     strcat_s(regist, ";");
     int iResult = send(lSocket, regist, strlen(regist), 0);
