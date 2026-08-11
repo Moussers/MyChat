@@ -29,13 +29,13 @@ WCHAR szAdditionalInfoClass[MAX_LOADSTRING] = L"Additional_extra_info_class";
 WCHAR szNicknameClass[MAX_LOADSTRING] = L"Nickname_window_class";
 
 //ATOM Class
-ATOM MyRegisterClass(HINSTANCE hInstance);
+ATOM UserWndProcClass(HINSTANCE hInstance);
 ATOM AuthorizationClass(HINSTANCE hInstance);
 ATOM AdditionalInfoClass(HINSTANCE hInstance);
 ATOM NicknameClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK    WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
+BOOL             createUserWndProc();
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -107,7 +107,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Инициализация глобальных строк
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_MYCHAT, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+    UserWndProcClass(hInstance);
     AuthorizationClass(hInstance);
     AdditionalInfoClass(hInstance);
     NicknameClass(hInstance);
@@ -1059,11 +1059,11 @@ int disconnectFromServ(SOCKET listenSock)
     WSACleanup();
 }
 
-ATOM MyRegisterClass(HINSTANCE hInstance)
+ATOM UserWndProcClass(HINSTANCE hInstance)
 {
     //ATOM - 2 байтовых WORD.
     WNDCLASSEX wcex;
-    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.cbSize         = sizeof(WNDCLASSEX);
     wcex.style          = CS_HREDRAW | CS_VREDRAW;
     //CS_HREDRAW - перерисовывает окно при перемещении или изменении размера клиентской части (окна).
     //CS_VREDRAW - перерисовывает окно при перемещении или изменении высоты клиентской части (окна).
@@ -1118,6 +1118,7 @@ ATOM AdditionalInfoClass(HINSTANCE hInstance)
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     return RegisterClassExW(&wcex);
 }
+
 int AddAdditionalInfo() 
 {
     HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -1191,6 +1192,7 @@ int authorizationForm()
     }
     return 0;
 }
+
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -1474,6 +1476,7 @@ int recieveData(SOCKET clientSocket)
 {
     INT iResuslt = 0;
     CHAR recvbuf[512];
+    INT res = 0;
     while (iResuslt <= 0)
     {
         iResuslt = recv(clientSocket, recvbuf, 512, 0);
@@ -1482,14 +1485,19 @@ int recieveData(SOCKET clientSocket)
         {
             MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
-        INT res = strncmp(recvbuf, "EXIST", 5);
+        res = strncmp(recvbuf, "EXIST", 5);
         if (!res) 
         //!res - res == 0
         {
             return 1;
         }
+        res = strncmp(recvbuf, "EXISTOK", 7);
+        if (!res) 
+        {
+            return 0;
+        }
     }
-    return 0;
+    return 1;
 }
 
 int CreatingAuthorWindow(HWND hWnd) 
@@ -1535,27 +1543,27 @@ int CreatingAuthorWindow(HWND hWnd)
     }
     return 0;
 }
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL createUserWndProc()
 {
    HWND hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-       MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInstance, NULL);
+       MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInst, NULL);
    if (!hWnd)
    {
       return FALSE;
    }
-   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInstance, NULL);
+   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hWnd, 0, hInst, NULL);
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hWnd, 0, hInst, NULL);
+   CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hWnd, (HMENU)IDM_MAIN_USER_LIST, hInst, NULL);
    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
    {
        return 1;
    }
-   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hWnd, (HMENU)IDR_SEARCH_FIELD, hInstance, NULL);
-   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInstance, NULL);
-   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_SEARCH, hInstance, NULL);
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hWnd, (HMENU)IDR_SEARCH_FIELD, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hWnd, 0, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
-   CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_ADD_USER, hInstance, NULL);
-   ShowWindow(hWnd, nCmdShow);
+   CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hWnd, (HMENU)IDB_ADD_USER, hInst, NULL);
+   ShowWindow(hWnd, SW_SHOWDEFAULT);
    UpdateWindow(hWnd);
    return TRUE;
 }
@@ -1605,6 +1613,11 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                     MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
                     authorizationForm();
                 }
+                else 
+                {
+                    createUserWndProc();
+                }
+
             }
                 break;
             default:
@@ -1644,13 +1657,15 @@ int registrationInfo(SOCKET lSocket)
     strcpy_s(numberPhone, SIZE, userInfo.numberPhone());
     strcpy_s(email, SIZE, userInfo.email());
     strcpy_s(nickname, SIZE, userInfo.nickname());
-    CHAR regist[SIZE] = "REG ";
-    strcat_s(regist, numberPhone);
-    strcat_s(regist, ";");
+    //CHAR regist[SIZE] = "REG ";
+    CHAR regist[SIZE];
+    strcpy_s(regist, numberPhone);
+    strcat_s(regist, ",");
     strcat_s(regist, email);
-    strcat_s(regist, ";");
+    strcat_s(regist, ",");
     strcat_s(regist, nickname);
-    strcat_s(regist, ";");
+    strcat_s(regist, "/");
+    strcat_s(regist,"reg");
     int iResult = send(lSocket, regist, strlen(regist), 0);
     if (iResult == INVALID_SOCKET) 
     {
@@ -1683,7 +1698,7 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, SIZE, NULL, NULL);
             if (checkingEMail(chEMail) == 1)
             {
-                MessageBox(NULL, L"Неправильно введена почта", L"Ошибка", MB_OK | MB_ICONERROR);
+                MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
                 SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL), L"");
             }
             else 

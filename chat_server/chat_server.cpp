@@ -31,7 +31,7 @@
 VOID startServer(HWND log);
 VOID appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
-void checkReciviedData(INT indexI, INT indexK, WCHAR* wcSource, WCHAR* wcDestin);
+void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
@@ -47,6 +47,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
+BOOL login = false;
 int codePage = 1251;
 WSADATA wsaData;
 //Структура WSADATA содержит информацию о реализации Windows Sockets.
@@ -238,6 +239,18 @@ int checkTables(HWND log)
                 delete stmt;
                 return 1;
             }
+            std::string createGroup = "Create Table `group`"
+                "(group_id INT PRIMARY KEY NOT NULL,"
+                "group_name varchar(256) NOT NULL);";
+            if (stmt->execute(createGroup))
+            {
+                appendToLog(log, L"Ошибка создания таблицы group");
+                delete stmt;
+                return 1;
+            }
+            std::string createConstaList = "Create Table `UserContactList`("
+                "list_id INT PRIMARY KEY NOT NULL"
+                "list_user JSON NULL);";
         }
         delete stmt;
         connection->close();
@@ -524,12 +537,68 @@ void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDesti
         (*indexK)++;
     }
 }
+int getUrl(CHAR* recvBuf) 
+{
+    int i = 0;
+    int p = 0;
+    while (recvBuf[i] != '\0')
+    {
+        if (recvBuf[i] == '\\')
+        {
+            break;
+        }
+        i++;
+    }
+    CONST INT SIZE = 1024;
+    CHAR command[SIZE];
+    while (recvBuf[i] != '\0') 
+    {
+        command[p] = recvBuf[i];
+        i++;
+        p++;
+    }
+    command[p] = '\0';
+    if (strcmp(command, "reg")) 
+    {
+        return 1;
+    }
+    return 0;
+}
+int sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+{
+    login = true;
+    CONST INT SIZE = 1024;
+    WCHAR buf[SIZE]{};
+    CHAR answer[SIZE];
+    if (!strcmp(status, "EXIST")) 
+    {
+        wsprintf(buf, L"Данная учетная запись: %s %s %s сущетсвует!", wcPhone, wcEmail, wcNickname);
+        //s - string (char arrya)
+        //ws - wide sting (wide char array)
+    }
+    if (strcmp(status, "EXISTOK")) 
+    {
+        wcscpy_s(buf, L"Учетная запись успешно добавлена на сервер.");
+    }
+    /*int len = wcslen(buf);
+    buf[len] = L'\0';*/
+    appendToLog(logHWND, buf);
+    strcpy_s(answer, status);
+    strcat_s(answer, ";");
+    send(*clientSocket, answer, strlen(answer), 0);
+}
+int checkRegEntry(CHAR* recvBuf, WCHAR* wcBuf, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
+{
+    
+    return 0;
+}
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
     CHAR recvBuf[SIZE];
     WCHAR wcBuf[SIZE];
     WCHAR wcTmp[SIZE];
+    int len = 0;
     //char* recvBuf = (char*)malloc(sizeof(char) * 1024);
     if (recvBuf == NULL)
     {
@@ -546,6 +615,8 @@ int clientManagement(SOCKET* clientSocket)
         WCHAR wcNickname[SIZE];
         WCHAR wcPhone[SIZE];
         WCHAR wcEmail[SIZE];
+        CHAR answer[SIZE];
+        CHAR status[SIZE];
         INT iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
         recvBuf[iResult] = '\0';
         //iResult - конец строки
@@ -555,10 +626,13 @@ int clientManagement(SOCKET* clientSocket)
             appendToLog(logHWND, L"Сообщение успешно успешно получено");
             if (!login) 
             {
-                INT res = strncmp(recvBuf, "REG ", 4);
-                if (res == 0) 
+                /*INT res = strncmp(recvBuf, "REG ", 4);*/
+                int res = getUrl(recvBuf);
+                switch (res) {
+                /*if (res == 0) */
+                case 1:
                 {
-                    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
+                    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
                     int i = 4;
                     int k = 0;
                     checkReciviedData(&i, &k, wcBuf, wcPhone);
@@ -575,26 +649,29 @@ int clientManagement(SOCKET* clientSocket)
                     k = 0;
                     if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail))
                     {
-                        login = true;
-                        CONST INT SIZE = 1024;
-                        WCHAR buf[SIZE];
-                        WCHAR secondBuf[SIZE];
-                        wsprintf(buf, L"Данная учетная запись: %s %s %s", wcPhone, wcEmail, wcNickname);
-                        //s - string (char arrya)
-                        //ws - wide sting (wide char array)
-                        appendToLog(logHWND, secondBuf);
-                        CHAR answer[SIZE];
-                        strcpy_s(answer, "EXIST");
-                        strcat_s(answer, ";");
-                        send(*clientSocket, answer, strlen(answer), 0);
+                        strcpy_s(status, "EXIST");
+                        int res = strlen(status);
+                        status[res] = '\0';
+                        sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
                     }
-                    else 
+                    else
                     {
-                        if (insertEntry(wcPhone, wcEmail, wcNickname)) 
+                        if (insertEntry(wcPhone, wcEmail, wcNickname))
                         {
-                            appendToLog(logHWND, L"Учетная запись успешно добалвена на сервер.");
+                            strcpy(status, "EXISTOK");
+                            int res = strlen(status);
+                            status[res] = '\0';
+                            sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
                         }
                     }
+                }
+                break;
+                case 2:
+                {
+                }
+                    break;
+                default:
+                    return 1;
                 }
             }
             //!Провериить существование пользователя в базе сервера, по номеру телефона или почте, через две отдельные функции
