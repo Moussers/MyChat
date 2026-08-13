@@ -31,10 +31,14 @@
 void startServer(HWND log);
 void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
-void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin);
+void checkReciviedData(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
 int mysqlConnect();
+bool sendDataToUser(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
+int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
+bool checkExistEmail(WCHAR* email);
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -238,18 +242,15 @@ int checkTables(HWND log)
                 delete stmt;
                 return 1;
             }
-            std::string createGroup = "Create Table `group`"
-                "(group_id INT PRIMARY KEY NOT NULL,"
-                "group_name varchar(256) NOT NULL);";
-            if (stmt->execute(createGroup))
+            std::string createContactList = "Create Table `UserContactList`("
+                "list_id INT PRIMARY KEY NOT NULL"
+                "list_of_users JSON NULL);";
+            if (stmt->execute(createContactList))
             {
                 appendToLog(log, L"Ошибка создания таблицы group");
                 delete stmt;
                 return 1;
             }
-            std::string createConstaList = "Create Table `UserContactList`("
-                "list_id INT PRIMARY KEY NOT NULL"
-                "list_user JSON NULL);";
         }
         delete stmt;
         connection->close();
@@ -410,7 +411,7 @@ void listenClient()
         }
     } while (true);
 }
-BOOL insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
 {
     if (connection->isClosed()) 
     {
@@ -462,7 +463,7 @@ BOOL checkExistNumPhone(WCHAR* numberPhone)
     }
     CONST INT SIZE = 1024;
     CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE number_phone='";
-    WCHAR wTmp[SIZE];
+    WCHAR wTmp[SIZE]{};
     CHAR chTmp[SIZE];
     wcscpy_s(wTmp, sqlReq);
     wcscat_s(wTmp, numberPhone);
@@ -493,7 +494,7 @@ BOOL checkExistNumPhone(WCHAR* numberPhone)
         connection->close();
     }
 }
-BOOL checkExistEmail(WCHAR* email) 
+bool checkExistEmail(WCHAR* email) 
 {
     if (connection->isClosed()) 
     {
@@ -502,7 +503,7 @@ BOOL checkExistEmail(WCHAR* email)
     CONST INT SIZE = 1024;
     int count = 0;
     CONST WCHAR sqlReq[] = L"SELECT COUNT(*) FROM users WHERE email='";
-    WCHAR wTmp[SIZE];
+    WCHAR wTmp[SIZE]{};
     CHAR chTmp[SIZE];
     wcscpy_s(wTmp, sqlReq);
     wcscat_s(wTmp, email);
@@ -526,7 +527,7 @@ BOOL checkExistEmail(WCHAR* email)
         connection->close();
     }
 }
-void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin)
+void checkReciviedData(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
 {
     while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
@@ -564,7 +565,7 @@ int getUrl(CHAR* recvBuf)
     }
     return 0;
 }
-BOOL sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+bool sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
 {
     login = true;
     CONST INT SIZE = 1024;
@@ -586,11 +587,48 @@ BOOL sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR 
     send(*clientSocket, answer, strlen(answer), 0);
     return true;
 }
-//int checkRegEntry(CHAR* recvBuf, WCHAR* wcBuf, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
-//{
-//    
-//    return 0;
-//}
+int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
+{
+    CONST INT SIZE = 1024;
+    WCHAR wcNickname[SIZE];
+    WCHAR wcPhone[SIZE];
+    WCHAR wcEmail[SIZE];
+    WCHAR wcBuf[SIZE];
+    CHAR status[SIZE];
+    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
+    int i = 0;
+    int k = 0;
+    checkReciviedData(&i, &k, wcBuf, wcPhone);
+    wcPhone[k] = L'\0';
+    k = 0;
+    i++;
+    checkReciviedData(&i, &k, wcBuf, wcEmail);
+    wcEmail[k] = L'\0';
+    i++;
+    k = 0;
+    checkReciviedData(&i, &k, wcBuf, wcNickname);
+    wcNickname[k] = L'\0';
+    i++;
+    k = 0;
+    if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail))
+    {
+        strcpy_s(status, "EXIST");
+        int res = strlen(status);
+        status[res] = '\0';
+        sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
+    }
+    else
+    {
+        if (insertEntry(wcPhone, wcEmail, wcNickname))
+        {
+            strcpy_s(status, "EXISTOK");
+            int res = strlen(status);
+            status[res] = '\0';
+            sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
+        }
+    }
+    return 0;
+}
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -610,11 +648,6 @@ int clientManagement(SOCKET* clientSocket)
     //Запускаем прослушивание клиента
     while (*clientSocket != INVALID_SOCKET) 
     {
-        WCHAR wcNickname[SIZE];
-        WCHAR wcPhone[SIZE];
-        WCHAR wcEmail[SIZE];
-        CHAR answer[SIZE];
-        CHAR status[SIZE];
         INT iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
         recvBuf[iResult] = '\0';
         //iResult - конец строки
@@ -626,42 +659,12 @@ int clientManagement(SOCKET* clientSocket)
                 /*INT res = strncmp(recvBuf, "REG ", 4);*/
                 int res = getUrl(recvBuf);
                 ActionsAtServer action = static_cast<ActionsAtServer>(res);
-                switch (action) {
+                switch (action) 
+                {
                 /*if (res == 0) */
                 case REGISTRATION:
                 {
-                    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
-                    int i = 0;
-                    int k = 0;
-                    checkReciviedData(&i, &k, wcBuf, wcPhone);
-                    wcPhone[k] = L'\0';
-                    k = 0;
-                    i++;
-                    checkReciviedData(&i, &k, wcBuf, wcEmail);
-                    wcEmail[k] = L'\0';
-                    i++;
-                    k = 0;
-                    checkReciviedData(&i, &k, wcBuf, wcNickname);
-                    wcNickname[k] = L'\0';
-                    i++;
-                    k = 0;
-                    if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail))
-                    {
-                        strcpy_s(status, "EXIST");
-                        int res = strlen(status);
-                        status[res] = '\0';
-                        sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
-                    }
-                    else
-                    {
-                        if (insertEntry(wcPhone, wcEmail, wcNickname))
-                        {
-                            strcpy_s(status, "EXISTOK");
-                            int res = strlen(status);
-                            status[res] = '\0';
-                            sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
-                        }
-                    }
+                    checkRegEntry(clientSocket, recvBuf);
                 }
                 break;
                 case AUTHORIZATION:
