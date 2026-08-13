@@ -31,13 +31,14 @@
 void startServer(HWND log);
 void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
-void checkReciviedData(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
+void getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
 int mysqlConnect();
 bool sendDataToUser(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
 int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
-bool checkExistEmail(WCHAR* email);
+int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
+int checkExistEmail(WCHAR* email);
 bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
@@ -153,7 +154,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 //Подключение к серверу
 int mysqlConnect() 
 {
-    try {
+    try 
+    {
         sql::mysql::MySQL_Driver* driver;
         driver = sql::mysql::get_mysql_driver_instance();
         connection = driver->connect("tcp://127.0.0.1:3306", "root", SQL_SERVER_PASSWORD);
@@ -173,7 +175,8 @@ int mysqlConnect()
         //ex.what() - возвращает строку с ошибкой.
         std::wstring n_str = str;
         std::wstring wstr = L"JDBC Error: " + n_str;
-        MessageBox(NULL, wstr.c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+        //MessageBox(NULL, wstr.c_str(), L"Ошибка", MB_OK | MB_ICONERROR);
+        appendToLog(logHWND, wstr.c_str());
         //c_str - получить указатель на строку.
         //c_str - Получить массив символов (char array).
         return 1;
@@ -200,7 +203,7 @@ int checkTables(HWND log)
         int count = res->getInt(1);     /*1 - выбрать из первой колонки количество таблиц*/
         if (!count)
         {
-            appendToLog(log, L"Таблица не была создана! Создаём новую.");
+            appendToLog(log, L"Таблицы не былы созданы! Создаём новые таблицы.");
             std::string createGroups = "CREATE TABLE `groups` ("
                 "group_id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,"
                 "group_name TEXT NOT NULL);";
@@ -243,8 +246,8 @@ int checkTables(HWND log)
                 return 1;
             }
             std::string createContactList = "Create Table `UserContactList`("
-                "list_id INT PRIMARY KEY NOT NULL"
-                "list_of_users JSON NULL);";
+                "list_id INT PRIMARY KEY NOT NULL,"
+                "list_of_users JSON NOT NULL);";
             if (stmt->execute(createContactList))
             {
                 appendToLog(log, L"Ошибка создания таблицы group");
@@ -450,10 +453,11 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname)
         errors[len] = L'\0';
         appendToLog(logHWND, errors);
         connection->close();
+        return false;
     }
     
 }
-BOOL checkExistNumPhone(WCHAR* numberPhone) 
+int checkExistNumPhone(WCHAR* numberPhone) 
 {
     if (connection->isClosed()) 
     //!connection..isClosed() - connection.isClosed() == 0
@@ -494,7 +498,7 @@ BOOL checkExistNumPhone(WCHAR* numberPhone)
         connection->close();
     }
 }
-bool checkExistEmail(WCHAR* email) 
+int checkExistEmail(WCHAR* email) 
 {
     if (connection->isClosed()) 
     {
@@ -527,7 +531,7 @@ bool checkExistEmail(WCHAR* email)
         connection->close();
     }
 }
-void checkReciviedData(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
+void getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
 {
     while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
@@ -536,6 +540,7 @@ void checkReciviedData(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDesti
         (*indexI)++;
         (*indexK)++;
     }
+    indexI++;
 }
 int getUrl(CHAR* recvBuf) 
 {
@@ -563,6 +568,10 @@ int getUrl(CHAR* recvBuf)
     {
         return 1;
     }
+    if (!strcmp(command, "login")) 
+    {
+        return 2;
+    }
     return 0;
 }
 bool sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
@@ -577,54 +586,87 @@ bool sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR 
         //s - string (char arrya)
         //ws - wide sting (wide char array)
     }
-    if (!strcmp(status, "EXISTOK")) 
+    if (!strcmp(status, "CREATED")) 
     {
         wcscpy_s(buf, L"Учетная запись успешно добавлена на сервер.");
     }
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
     strcat_s(answer, ";");
-    send(*clientSocket, answer, strlen(answer), 0);
+    send(*clientSocket, answer, strlen(answer)+1, 0);
     return true;
+}
+int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf) 
+{
+    CONST INT SIZE = 1024;
+    WCHAR wcBuf[SIZE];
+    WCHAR wcNumPhone[SIZE];
+    WCHAR wcEmail[SIZE];
+    WCHAR buf[SIZE];
+    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
+    int i = 0;
+    int k = 0;
+    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
+    wcNumPhone[k] = '\0';
+    k = 0;
+    getSubDataFromStr(&i, &k, wcBuf, wcEmail);
+    wcEmail[k] = '\0';
+    k = 0;
+    if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail)) 
+    {
+        wsprintf(buf, L"Учетная запись: %s %s найдена!", wcNumPhone, wcEmail);
+        appendToLog(logHWND, buf);
+        CHAR answer[SIZE];
+        strcpy(answer, "LOGINOK");
+        send(*clientSokcet, answer, strlen(answer) + 1, 0);
+    }
+    else 
+    {
+        wsprintf(buf, L"Ошибка авторизации!\nУчетная запись: %s %s не найдена!", wcNumPhone, wcEmail);
+        appendToLog(logHWND, buf);
+        CHAR answer[SIZE];
+        strcpy(answer, "LOGINERROR");
+        send(*clientSokcet, answer, strlen(answer) + 1, 0);
+    }
 }
 int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
     CONST INT SIZE = 1024;
     WCHAR wcNickname[SIZE];
-    WCHAR wcPhone[SIZE];
+    WCHAR wcNumPhone[SIZE];
     WCHAR wcEmail[SIZE];
     WCHAR wcBuf[SIZE];
     CHAR status[SIZE];
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
     int i = 0;
     int k = 0;
-    checkReciviedData(&i, &k, wcBuf, wcPhone);
-    wcPhone[k] = L'\0';
+    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
+    wcNumPhone[k] = L'\0';
     k = 0;
-    i++;
-    checkReciviedData(&i, &k, wcBuf, wcEmail);
+    //i++;
+    getSubDataFromStr(&i, &k, wcBuf, wcEmail);
     wcEmail[k] = L'\0';
-    i++;
+    //i++;
     k = 0;
-    checkReciviedData(&i, &k, wcBuf, wcNickname);
+    getSubDataFromStr(&i, &k, wcBuf, wcNickname);
     wcNickname[k] = L'\0';
-    i++;
+    //i++;
     k = 0;
-    if (checkExistNumPhone(wcPhone) || checkExistEmail(wcEmail))
+    if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
         strcpy_s(status, "EXIST");
         int res = strlen(status);
         status[res] = '\0';
-        sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
+        sendDataToUser(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
     }
     else
     {
-        if (insertEntry(wcPhone, wcEmail, wcNickname))
+        if (insertEntry(wcNumPhone, wcEmail, wcNickname))
         {
-            strcpy_s(status, "EXISTOK");
+            strcpy_s(status, "CREATED");
             int res = strlen(status);
             status[res] = '\0';
-            sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
+            sendDataToUser(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
         }
     }
     return 0;

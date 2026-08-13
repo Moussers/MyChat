@@ -20,7 +20,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE;
 
 }
-void writtingDownLog(const WCHAR* record)
+VOID writtingDownLog(const WCHAR* record)
 {
     HANDLE logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     //dwDesiredAccess - предоставляет атрибуты, иначе говоря права доступа на чтение и запись файлу.
