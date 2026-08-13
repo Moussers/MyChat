@@ -51,15 +51,16 @@
 #define IDB_REGISTRATION_NICK_CONTINUE	1035
 
 //IDM
-#define IDM_ADD_MENU_LAST_NAME          5000
-#define IDM_ADD_MENU_FIRST_NAME         5001
-#define IDM_ADD_MENU_MIDDLE_NAME        5002
-#define IDM_ADD_MENU_PHONE              5003
-#define IDM_ADD_MENU_EMAIL              5004
-#define IDM_MAIN_USER_LIST              5005
-#define IDM_REGISTER_PHONE				5011
-#define IDM_REGISTER_EMAIL				5012
-#define IDM_EXTRA_FIELD_REG_MAIL		5013
+#define IDM_ADD_MENU_NICKNAME			5000
+//#define IDM_ADD_MENU_LAST_NAME          5000
+//#define IDM_ADD_MENU_FIRST_NAME         5001
+//#define IDM_ADD_MENU_MIDDLE_NAME        5002
+#define IDM_ADD_MENU_PHONE              5001
+#define IDM_ADD_MENU_EMAIL              5002
+#define IDM_MAIN_USER_LIST              5003
+#define IDM_REGISTER_PHONE				5004
+#define IDM_REGISTER_EMAIL				5005
+#define IDM_EXTRA_FIELD_REG_MAIL		5006
 
 #define ID_32780                        32780
 #define ID_32781                        32781

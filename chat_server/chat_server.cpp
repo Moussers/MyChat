@@ -28,11 +28,13 @@
 #define PORT "4000"
 #define MAX_CONNECTIONS 100
 
-VOID startServer(HWND log);
-VOID appendToLog(HWND log, CONST WCHAR* message);
+void startServer(HWND log);
+void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
 void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
+int checkTables(HWND log);
+int mysqlConnect();
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -44,10 +46,11 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
+enum ActionsAtServer {REGISTRATION = 1, AUTHORIZATION = 2};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
-BOOL login = false;
+bool login = false;
 int codePage = 1251;
 WSADATA wsaData;
 //Структура WSADATA содержит информацию о реализации Windows Sockets.
@@ -56,10 +59,6 @@ struct addrinfo* result, * ptr, hints;
 //hints - для сети
 
 HWND logHWND;
-
-VOID startServer(HWND log);
-int checkTables(HWND log);
-int mysqlConnect();
 sql::Connection* connection;
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmd)
 //_In_ - для передачи входящих параметров в функцию;
@@ -275,7 +274,7 @@ int checkTables(HWND log)
     }
     
 }
-VOID startServer(HWND log) 
+void startServer(HWND log) 
 {
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     //WSAStartup - инициализирует SOCKET
@@ -364,7 +363,7 @@ VOID startServer(HWND log)
     }
     serverIsReady = true;
 }
-VOID appendToLog(HWND log, CONST WCHAR* message) 
+void appendToLog(HWND log, CONST WCHAR* message) 
 {
     INT length = GetWindowTextLength(log);
     //GetWindowTextLength - функция получает длину строки дескриптора и 
@@ -529,7 +528,7 @@ BOOL checkExistEmail(WCHAR* email)
 }
 void checkReciviedData(INT* indexI, INT* indexK, WCHAR* wcSource, WCHAR* wcDestin)
 {
-    while (wcSource[(*indexI)] != L';')
+    while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
     {
         wcDestin[(*indexK)] = wcSource[(*indexI)];
@@ -543,8 +542,9 @@ int getUrl(CHAR* recvBuf)
     int p = 0;
     while (recvBuf[i] != '\0')
     {
-        if (recvBuf[i] == '\\')
+        if (recvBuf[i] == '/')
         {
+            i++;
             break;
         }
         i++;
@@ -558,13 +558,13 @@ int getUrl(CHAR* recvBuf)
         p++;
     }
     command[p] = '\0';
-    if (strcmp(command, "reg")) 
+    if(!strcmp(command, "registration"))
     {
         return 1;
     }
     return 0;
 }
-int sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+BOOL sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
 {
     login = true;
     CONST INT SIZE = 1024;
@@ -576,22 +576,21 @@ int sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *
         //s - string (char arrya)
         //ws - wide sting (wide char array)
     }
-    if (strcmp(status, "EXISTOK")) 
+    if (!strcmp(status, "EXISTOK")) 
     {
         wcscpy_s(buf, L"Учетная запись успешно добавлена на сервер.");
     }
-    /*int len = wcslen(buf);
-    buf[len] = L'\0';*/
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
     strcat_s(answer, ";");
     send(*clientSocket, answer, strlen(answer), 0);
+    return true;
 }
-int checkRegEntry(CHAR* recvBuf, WCHAR* wcBuf, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
-{
-    
-    return 0;
-}
+//int checkRegEntry(CHAR* recvBuf, WCHAR* wcBuf, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
+//{
+//    
+//    return 0;
+//}
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -599,7 +598,6 @@ int clientManagement(SOCKET* clientSocket)
     WCHAR wcBuf[SIZE];
     WCHAR wcTmp[SIZE];
     int len = 0;
-    //char* recvBuf = (char*)malloc(sizeof(char) * 1024);
     if (recvBuf == NULL)
     {
         appendToLog(logHWND, L"Не хватает памяти для пользователя.");
@@ -620,7 +618,6 @@ int clientManagement(SOCKET* clientSocket)
         INT iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
         recvBuf[iResult] = '\0';
         //iResult - конец строки
-        BOOL login = false;
         if (iResult > 0)
         {
             appendToLog(logHWND, L"Сообщение успешно успешно получено");
@@ -628,12 +625,13 @@ int clientManagement(SOCKET* clientSocket)
             {
                 /*INT res = strncmp(recvBuf, "REG ", 4);*/
                 int res = getUrl(recvBuf);
-                switch (res) {
+                ActionsAtServer action = static_cast<ActionsAtServer>(res);
+                switch (action) {
                 /*if (res == 0) */
-                case 1:
+                case REGISTRATION:
                 {
                     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
-                    int i = 4;
+                    int i = 0;
                     int k = 0;
                     checkReciviedData(&i, &k, wcBuf, wcPhone);
                     wcPhone[k] = L'\0';
@@ -658,7 +656,7 @@ int clientManagement(SOCKET* clientSocket)
                     {
                         if (insertEntry(wcPhone, wcEmail, wcNickname))
                         {
-                            strcpy(status, "EXISTOK");
+                            strcpy_s(status, "EXISTOK");
                             int res = strlen(status);
                             status[res] = '\0';
                             sendDataToUser(clientSocket, wcPhone, wcEmail, wcNickname, status);
@@ -666,7 +664,7 @@ int clientManagement(SOCKET* clientSocket)
                     }
                 }
                 break;
-                case 2:
+                case AUTHORIZATION:
                 {
                 }
                     break;

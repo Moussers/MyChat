@@ -92,7 +92,7 @@ int authorizationForm();
 int insertEntry(HWND hwnd);
 void writtingDownLog(const WCHAR* record);
 int recieveData(SOCKET clientSocket);
-int classModUserInfo(HWND hWnd, int idx);
+int classModUserInfo(HWND hWnd, INT idx);
 int registrationInfo(SOCKET listenSock);
 //Точка входа APIENTRY
 //APIENTRY - это как и CALLBACK, фукнция обратного вызова
@@ -132,10 +132,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
     return (int) msg.wParam;
 }
-int checkTables();
-int checkingUserInfo(HWND hWnd);
-int modifyUserInfo(HWND hWnd);
-int accoutSearch(HWND hField, HWND hList);
+INT checkTables();
+INT checkingUserInfo(HWND hWnd);
+INT modifyUserInfo(HWND hWnd);
+INT accoutSearch(HWND hField, HWND hList);
 LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -363,7 +363,7 @@ int updateList(HWND userList)
     sqlite3_close(db);
     return 0;
 }
-int checkingUserInfo(HWND hWnd) 
+INT checkingUserInfo(HWND hWnd) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -375,24 +375,25 @@ int checkingUserInfo(HWND hWnd)
     }
     CONST INT SIZE = 2000;
     WCHAR data[SIZE];
-    int len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), data, SIZE);
+    int len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), data, SIZE);
     //Первый аргумент - это дескрптор дескриптор, из этого дескриптора мы получаем строку, и размер 
     //строки который сохраняется в отдельной int переменной.
     //GetWindowText нужен чтобы получить саму строку которую мы записываем в переменную вторым аргументом 
     //и её длину. Длину мы получаем как отдельное число записываем int переменную.
     if (len == 0) 
     {
-        MessageBox(NULL, L"Не введена фамилия!", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Не введено имя пользовтеля!", L"Ошибка", MB_OK | MB_ICONERROR);
+        //MessageBox(NULL, L"Не введена фамилия!", L"Ошибка", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
         return 1;
     }
-    len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), data, SIZE);
+    /*len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), data, SIZE);
     if (len == 0) 
     {
         MessageBox(NULL, L"Не введено имя!", L"Ошибка", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
         return 1;
-    }
+    }*/
     sqlite3_close(db);
 }
 int checkExistsEMail(HWND hWnd) 
@@ -486,9 +487,9 @@ int checkExistsPhone(HWND hWnd)
 int insertEntry(HWND hWnd)
 {
     WCHAR wNickname[USERSIZE];
-    /*WCHAR lastName[USERSIZE];
-    WCHAR firstName[USERSIZE];
-    WCHAR middleName[USERSIZE];*/
+    /*WCHAR wLastName[USERSIZE];
+    WCHAR wFirstName[USERSIZE];
+    WCHAR wMiddleName[USERSIZE];*/
     WCHAR numbrerPhone[USERSIZE];
     WCHAR email[USERSIZE];
     WCHAR userId[IDSIZE];
@@ -499,15 +500,15 @@ int insertEntry(HWND hWnd)
     INT status = 0;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
-    //(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), lastName, USERSIZE);
+    //(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), wLastName, USERSIZE);
     //GetWindowText - функция которая копирует строку из дескриптора окна в переменную,
     //с размером который мы указываем в поле buffer, последний параметр
-    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), firstName, USERSIZE);
-    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_MIDDLE_NAME), middleName, USERSIZE);
+    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), wFirstName, USERSIZE);
+    //GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_MIDDLE_NAME), wMiddleName, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), numbrerPhone, USERSIZE);
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), email, USERSIZE);
-    //MessageBox(NULL, lastName, L"INFO", MB_OK | MB_ICONERROR);
-    //MessageBox(NULL, firstName, L"INFO", MB_OK | MB_ICONERROR);
+    //MessageBox(NULL, wLastName, L"INFO", MB_OK | MB_ICONERROR);
+    //MessageBox(NULL, wFirstName, L"INFO", MB_OK | MB_ICONERROR);
     const char lsUsrId[] = "SELECT MAX(USER_ID) FROM users";
     sqlite3* db;
     int res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -547,6 +548,7 @@ int insertEntry(HWND hWnd)
     strcat_s(command, buffer);
     strcat_s(command, ",");
     strcat_s(command, "'");
+    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), wNickname, USERSIZE);
     WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname)+1, buffer, USERSIZE, NULL, NULL);
     /*WideCharToMultiByte(codePage, 0, lastName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
     strcat_s(command, buffer);
@@ -629,10 +631,10 @@ int insertEntry(HWND hWnd)
     sqlite3_close(db);
     return 0;
 }
-int modifyUserInfo(HWND hWnd)
+INT modifyUserInfo(HWND hWnd)
 {
     sqlite3* db;
-    int res = sqlite3_open("DatabaseMessanger.db", &db);
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
     if (res) 
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -715,7 +717,7 @@ int modifyUserInfo(HWND hWnd)
     }
     return 0;
 }
-int deleteUser(int idx) 
+int deleteUser(INT idx) 
 {
     if (idx == -1) 
     {
@@ -789,14 +791,14 @@ int deleteUser(int idx)
     sqlite3_close(db);
     return 0;
 }
-int classModUserInfo(HWND hWnd, int idx) 
+int classModUserInfo(HWND hWnd, INT idx) 
 {
     if (idx == -1) 
     {
         return 1;
     }
     sqlite3* db;
-    int res = sqlite3_open("DatabaseMessanger.db", &db);        //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);        //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res) 
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -953,9 +955,10 @@ void addUser()
     SendMessage(hMiddleName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hPhone, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hMail, WM_SETFONT, (WPARAM)fontTitle, TRUE);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(30), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
+    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(30), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
+    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
+    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
     CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(90), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
     CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(120), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_ADDING_ENTRY_POS_X, CANCEL_ADDING_ENTRY_POS_Y, CANCEL_ADDING_ENTRY_WIDTH, CANCEL_ADDING_ENTRY_HEIGHT, userClass, (HMENU)IDB_CANCELLING_USER_ADD, GetModuleHandle(NULL), NULL);
@@ -1238,11 +1241,11 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     return 0;
 }
 
-int checkTables()
+INT checkTables()
 {
     sqlite3* db;
     CONST INT SIZE = 2000;
-    int res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res)
         //похожий вариант прочтения:
         //if(res != 0) 
@@ -1254,19 +1257,19 @@ int checkTables()
     }
     const char* groupTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'groups';";
     //sqlite_master - хранит количество таблиц
-    sqlite3_stmt* table;
+    sqlite3_stmt* stmt;
     //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
     //который находится в const char* переменной
-    if (sqlite3_prepare_v2(db, groupTable, -1, &table, NULL) == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, groupTable, -1, &stmt, NULL) == SQLITE_OK)
         //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     {
-        INT curRow = sqlite3_step(table);
+        INT curRow = sqlite3_step(stmt);
         //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
         if (curRow == SQLITE_ROW)
             //SQLITE_ROW - идентификатор строки
             //Если int перменная получает значение sqlite_row, то это значит строка найденна
         {
-            INT countRows = sqlite3_column_int(table, 0);
+            INT countRows = sqlite3_column_int(stmt, 0);
             //sqlite3_column_int - выводит текущий индекс колонки
             if (countRows == 0)
             {
@@ -1298,36 +1301,27 @@ int checkTables()
                 }
             }
         }
-        sqlite3_finalize(table);
+        sqlite3_finalize(stmt);
         //sqlite3_finalize - очищает память от переменной.
     }
     const char* userTable = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' and name = 'users';";
-    if (sqlite3_prepare_v2(db, userTable, -1, &table, NULL) == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, userTable, -1, &stmt, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(table);
+        INT curRow = sqlite3_step(stmt);
         if (curRow == SQLITE_ROW)
         {
-            INT countRows = sqlite3_column_int(table, 0);
+            INT countRows = sqlite3_column_int(stmt, 0);
             if (countRows == 0)
             {
                 const char* createTable =
-                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
+                    "CREATE TABLE users ("
+                    "user_id INT PRIMARY KEY NOT NULL,"
                     "nickname TEXT NOT NULL,"
                     "phone NUMBER NOT NULL,"
                     "email TEXT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
                     "status INT NOT NULL);";
-                /*const char* createTable =
-                    "CREATE TABLE users (user_id INT PRIMARY KEY NOT NULL,"
-                    "first_name TEXT NOT NULL,"
-                    "last_name TEXT NOT NULL,"
-                    "middle_name TEXT,"
-                    "phone NUMBER NOT NULL,"
-                    "email TEXT NULL,"
-                    "path_icon TEXT,"
-                    "icon BLOB,"
-                    "status INT NOT NULL);";*/
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
@@ -1356,20 +1350,20 @@ int checkTables()
                 msg = NULL;
             }
         }
-        sqlite3_finalize(table);
+        sqlite3_finalize(stmt);
     }
     const char* messageTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name = 'messages';";
-    if (sqlite3_prepare_v2(db, messageTable, -1, &table, NULL) == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, messageTable, -1, &stmt, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(table);
+        INT curRow = sqlite3_step(stmt);
         if (curRow == SQLITE_ROW)
         {
-            int countRows = sqlite3_column_int(table, 0);
+            INT countRows = sqlite3_column_int(stmt, 0);
             if (countRows == 0)
             {
-                MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"Информация", MB_OK | MB_ICONINFORMATION);
-                const char* createTable = "CREATE TABLE messages"
-                    "(message_id PRIMARY KEY NOT NULL,"
+                //MessageBox(NULL, L"Таблица сообщений не создана! Создаём новую", L"ИНФО", MB_OK | MB_ICONINFORMATION);
+                const char* createTable = "CREATE TABLE messages("
+                    "message_id INT PRIMARY KEY NOT NULL,"
                     "text_field TEXT NOT NULL,"
                     "file_field BLOB,"
                     "sender INT,"
@@ -1378,12 +1372,11 @@ int checkTables()
                     "FOREIGN KEY (sender) REFERENCES users(user_id),"
                     "FOREIGN KEY (recipent) REFERENCES users(user_id),"
                     "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
-                //char** errorTMes = mesError;
                 char* msg = NULL;
                 try {
-                    int result = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    //Пятый аргумент в sqlite3_exec - записывает ошибку в переменную которую мы передали.
-                    if (result == SQLITE_OK)
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    //Пятый аргумент в sqlite3_exec - записывает ошибку в переменную char указатель (char*) которую мы передали.
+                    if (status == SQLITE_OK)
                     {
                         MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
                     }
@@ -1408,12 +1401,57 @@ int checkTables()
                 msg = NULL;
             }
         }
-        sqlite3_finalize(table);
+        sqlite3_finalize(stmt);
+    }
+    const char* contactListTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name ='user contact list';";
+    if (sqlite3_prepare_v2(db, contactListTable, -1, &stmt, 0))
+    //const char* zSql, SQL     - выражение(в кодировке UTF - 8)
+    //int nByte,                - максимальный размер в байтах строки zSql
+    //sqlite3_stmt **ppStmt,    - указатель на компилируемое выражение sqlite3_stmt
+    //const char** pzTail       - указатель на неиспользуемую часть zSql
+    {
+        INT curRow = sqlite3_step(stmt);
+        if (curRow == SQLITE_ROW) 
+        {
+            INT countRows = sqlite3_column_int(stmt, 0);
+            if (countRows == 0) 
+            {
+                //MessageBox(NULL, L"Таблица списка контактов пользователя не была создана! Создаём новую", L"ИНФО", MB_OK | MB_ICONINFORMATION);
+                const char* createTable = "Create Table user contact list("
+                "list_id INT PRIMARY KEY NOT NULL"
+                "list user JSON);";
+                char* msg = NULL;
+                try 
+                {
+                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
+                    if (status == SQLITE_OK) 
+                    {
+                        MessageBox(NULL, L"Таблица списка контактов пользователя создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }
+                    else 
+                    {
+                        MessageBox(NULL, L"Ошибка при создании таблицы контактов пользователя", L"Инфо", MB_OK | MB_ICONERROR);
+                        throw ("SQL-ERROR");
+                    }
+                }
+                catch (...) 
+                {
+                    CONST INT SIZE = 2000;
+                    WCHAR errorMes[SIZE];
+                    size_t szType;
+                    mbstowcs_s(&szType, errorMes, msg, SIZE);
+                    msg = cleaningMemory(msg);
+                    writtingDownLog(errorMes);
+                    sqlite3_close(db);
+                    return 1;
+                }
+            }
+        }
     }
     sqlite3_close(db);
     return 0;
 }
-int accoutSearch(HWND hField, HWND hList) 
+INT accoutSearch(HWND hField, HWND hList) 
 {
     SendMessage(hList, LB_RESETCONTENT, NULL, NULL);
     sqlite3* db;
@@ -1443,19 +1481,19 @@ int accoutSearch(HWND hField, HWND hList)
         return 0;
     }
     WideCharToMultiByte(codePage, 0, wStr, SIZE + 1, chStr, SIZE, NULL, NULL);
-    sqlite3_stmt* table;
+    sqlite3_stmt* stmt;
     char getUserFirstName[1024] = "SELECT first_name, last_name FROM users WHERE first_name LIKE '%";
     strcat_s(getUserFirstName, chStr);
     strcat_s(getUserFirstName, "%' OR last_name LIKE '%");
     strcat_s(getUserFirstName, chStr);
     strcat_s(getUserFirstName, "%'");
-    if (sqlite3_prepare_v2(db, getUserFirstName, -1, &table, NULL) == SQLITE_OK) 
+    if (sqlite3_prepare_v2(db, getUserFirstName, -1, &stmt, NULL) == SQLITE_OK) 
     {
         INT curRow;
-        while ((curRow = sqlite3_step(table)) == SQLITE_ROW)
+        while ((curRow = sqlite3_step(stmt)) == SQLITE_ROW)
         {
-            strcpy_s(chFirstName,reinterpret_cast<const char*>(sqlite3_column_text(table, 0)));
-            strcpy_s(chLastName, reinterpret_cast<const char*>(sqlite3_column_text(table, 1)));
+            strcpy_s(chFirstName,reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+            strcpy_s(chLastName, reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
             //reinterpret_cast - делает преобразование без проверки в отличие от static_cast
             MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, SIZE);
             //strlen - расчет количества символов для ansi инча char строки
@@ -1468,7 +1506,7 @@ int accoutSearch(HWND hField, HWND hList)
             SendMessage(hField, LB_ADDSTRING, NULL, (LPARAM)chFirstName);
         }
     }
-    sqlite3_finalize(table);
+    sqlite3_finalize(stmt);
     sqlite3_close(db);
     return 0;
 }
@@ -1485,8 +1523,7 @@ int recieveData(SOCKET clientSocket)
         {
             MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
-        res = strncmp(recvbuf, "EXIST", 5);
-        if (!res) 
+        if(!strncmp(recvbuf, "EXIST", 5))
         //!res - res == 0
         {
             return 1;
@@ -1665,7 +1702,7 @@ int registrationInfo(SOCKET lSocket)
     strcat_s(regist, ",");
     strcat_s(regist, nickname);
     strcat_s(regist, "/");
-    strcat_s(regist,"reg");
+    strcat_s(regist,"registration");
     int iResult = send(lSocket, regist, strlen(regist), 0);
     if (iResult == INVALID_SOCKET) 
     {
@@ -1887,4 +1924,5 @@ LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
     }
+    return 0;
 }
