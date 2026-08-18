@@ -1728,9 +1728,16 @@ INT loginInfo(SOCKET lSocket)
     strcpy_s(email, SIZE, userInfo.email());
     CHAR author[SIZE];
     strcpy_s(author, numberPhone);
-    strcat_s(author, ",");
-    strcat_s(author, email);
-    strcat_s(author, "/");
+    if (strcmp(email, "")) 
+    {
+        strcat_s(author, "/");
+    }
+    else 
+    {
+        strcat_s(author, ",");
+        strcat_s(author, email);
+        strcat_s(author, "/");
+    }
     strcat_s(author, "login");
     INT iResult = send(lSocket, author, strlen(author), 0);
     if (iResult == INVALID_SOCKET) 

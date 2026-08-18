@@ -31,12 +31,14 @@
 void startServer(HWND log);
 void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
-void getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
+bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
 int mysqlConnect();
-bool sendDataToUser(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
-int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
+void sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
+void sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
+void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
+void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
 bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname);
@@ -531,8 +533,12 @@ int checkExistEmail(WCHAR* email)
         connection->close();
     }
 }
-void getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
+bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
 {
+    if (wcSource[(*indexI)] == L'/')
+    {
+        return false;
+    }
     while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
     {
@@ -541,6 +547,7 @@ void getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDesti
         (*indexK)++;
     }
     indexI++;
+    return true;
 }
 int getUrl(CHAR* recvBuf) 
 {
@@ -574,17 +581,67 @@ int getUrl(CHAR* recvBuf)
     }
     return 0;
 }
-bool sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr) 
+{
+    if (wcscmp(wcDest, L"")) 
+    {
+        wcscat_s(wcSource, sizeStr, wcDest);
+        wcscat_s(wcSource, sizeStr, L" ");
+        return true;
+    }
+    return false;
+}
+
+void sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status) 
 {
     login = true;
     CONST INT SIZE = 1024;
     WCHAR buf[SIZE]{};
     CHAR answer[SIZE];
+    if (!strcmp(status, "NOEXIST"))
+    {
+        wcscpy_s(buf, L"Учетная запись: ");
+        wcscat_s(buf, L"\0");
+        setData(buf, wcNumPhone, SIZE);
+        wcscat_s(buf, L"не сущеcтвует на сервере!");
+        wcscat_s(buf, L"\0");
+    }
     if (!strcmp(status, "EXIST")) 
     {
-        wsprintf(buf, L"Данная учетная запись: %s %s %s сущетсвует!", wcPhone, wcEmail, wcNickname);
+        wcscpy_s(buf, L"Данная учетная запись: ");
+        wcscat_s(buf, L"\0");
+        setData(buf, wcNumPhone, SIZE);
+        setData(buf, wcEmail, SIZE);
+        setData(buf, wcNickname, SIZE);
+        wcscat_s(buf, L"существет!");
+        wcscat_s(buf, L"\0");
+    }
+    appendToLog(logHWND, buf);
+    strcpy_s(answer, status);
+    strcat_s(answer, "/");
+    strcat_s(answer, "authorization");
+    send(*clientSocket, answer, strlen(answer), 0);
+}
+
+void sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+{
+    login = true;
+    CONST INT SIZE = 1024;
+    WCHAR buf[SIZE]{};
+    CHAR answer[SIZE];
+    CHAR extraInfo[SIZE];
+    if (!strcmp(status, "EXIST")) 
+    {
+        //wsprintf(buf, L"Данная учетная запись: %s %s %s сущетсвует!", wcNumPhone, wcEmail, wcNickname);
         //s - string (char arrya)
         //ws - wide sting (wide char array)
+        wcscpy_s(buf, L"Данная учетная запись: ");
+        wcscat_s(buf, L"\0");
+        setData(buf, wcNumPhone, SIZE);
+        setData(buf, wcEmail, SIZE);
+        setData(buf, wcNickname, SIZE);
+        wcscat_s(buf, L"существет!");
+        wcscat_s(buf, L"\0");
     }
     if (!strcmp(status, "CREATED")) 
     {
@@ -592,9 +649,10 @@ bool sendDataToUser(SOCKET* clientSocket, WCHAR *wcPhone, WCHAR* wcEmail, WCHAR 
     }
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
+    strcat_s(answer, "/");
+    strcat_s(answer, "registration");
     strcat_s(answer, ";");
     send(*clientSocket, answer, strlen(answer)+1, 0);
-    return true;
 }
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf) 
 {
@@ -617,7 +675,7 @@ int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf)
         wsprintf(buf, L"Учетная запись: %s %s найдена!", wcNumPhone, wcEmail);
         appendToLog(logHWND, buf);
         CHAR answer[SIZE];
-        strcpy(answer, "LOGINOK");
+        strcpy_s(answer, "LOGINOK");
         send(*clientSokcet, answer, strlen(answer) + 1, 0);
     }
     else 
@@ -625,11 +683,46 @@ int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf)
         wsprintf(buf, L"Ошибка авторизации!\nУчетная запись: %s %s не найдена!", wcNumPhone, wcEmail);
         appendToLog(logHWND, buf);
         CHAR answer[SIZE];
-        strcpy(answer, "LOGINERROR");
+        strcpy_s(answer, "LOGINERROR");
         send(*clientSokcet, answer, strlen(answer) + 1, 0);
     }
 }
-int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
+void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf) 
+{
+    CONST INT SIZE = 1024;
+    WCHAR wcBuf[SIZE];
+    WCHAR wcNumPhone[SIZE]{};
+    WCHAR wcEmail[SIZE]{};
+    WCHAR wcNickname[SIZE]{};
+    CHAR status[SIZE];
+    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
+    int i = 0;
+    int k = 0;
+    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
+    wcNumPhone[k] = L'\0';
+    k = 0;
+    if (getSubDataFromStr(&i, &k, wcBuf, wcEmail)) 
+    {
+        wcEmail[k] = L'\0';
+        k = 0;
+    }
+    if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
+    {
+        strcpy_s(status, "EXIST");
+        int len = strlen(status);
+        status[len] = '\0';
+        sendDataByAuthor(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+    }
+    else 
+    {
+        strcpy_s(status, "NOEXIST");
+        int len = strlen(status);
+        status[len] = '\0';
+        sendDataByAuthor(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+    }
+}
+
+void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
     CONST INT SIZE = 1024;
     WCHAR wcNickname[SIZE];
@@ -657,7 +750,7 @@ int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
         strcpy_s(status, "EXIST");
         int res = strlen(status);
         status[res] = '\0';
-        sendDataToUser(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+        sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
     }
     else
     {
@@ -666,11 +759,11 @@ int checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
             strcpy_s(status, "CREATED");
             int res = strlen(status);
             status[res] = '\0';
-            sendDataToUser(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+            sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
         }
     }
-    return 0;
 }
+
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -711,6 +804,7 @@ int clientManagement(SOCKET* clientSocket)
                 break;
                 case AUTHORIZATION:
                 {
+                    checkAuthorizEntry(clientSocket, recvBuf);
                 }
                     break;
                 default:
