@@ -1129,7 +1129,7 @@ INT AddAdditionalInfo()
     HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     HWND extraMail = CreateWindow(L"STATIC", L"Укажите почту, как дополнительное средство для связи:", WS_CHILD | WS_VISIBLE, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_X, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_Y, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_WIDTH, DESCRIPT_EMAIL_AS_EXTRA_INFO_POS_HEIGHT, mainWin, NULL, GetModuleHandle(NULL), NULL);
-    HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_REG_MAIL, GetModuleHandle(NULL), NULL);
+    HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1173,17 +1173,17 @@ INT authorizationForm()
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL);
     HWND email = CreateWindow(L"STATIC", L"Почта:", WS_CHILD, 10, 110, 170, 26, registrWin, (HMENU)IDM_REGISTER_EMAIL, GetModuleHandle(NULL), NULL);
-    HWND enteringPhoneByReg = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_REG_PHONE, GetModuleHandle(NULL), NULL);
+    HWND enteringPhoneByReg = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_PHONE, GetModuleHandle(NULL), NULL);
     //WS_VISIBLE - при запуске программы делает поле: STATIC, EDIT, BUTTON и тд. видимым в окне программы.
-    HWND enteringPhoneByAccept = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_ACCEPT_PHONE, GetModuleHandle(NULL), NULL);
-    HWND enteringEmailByAccept = CreateWindow(L"EDIT", L"", WS_CHILD | WS_BORDER, 10, 140, 360, 32, registrWin, (HMENU)IDR_REGISTRATION_ACCEPT_EMAIL, GetModuleHandle(NULL), NULL);
+    HWND enteringPhoneByLogin = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_LOGIN_PHONE, GetModuleHandle(NULL), NULL);
+    HWND enteringEmailByLogin = CreateWindow(L"EDIT", L"", WS_CHILD | WS_BORDER, 10, 140, 360, 32, registrWin, (HMENU)IDR_LOGIN_EMAIL, GetModuleHandle(NULL), NULL);
     HWND reg = CreateWindow(L"BUTTON", L"Зарегистрироваться", WS_CHILD | WS_VISIBLE | WS_BORDER, REGISTRATION_BY_PHONE_POS_X, REGISTRATION_BY_PHONE_POS_Y, REGISTRATION_BY_PHONE_POS_WIDTH, REGISTRATION_BY_PHONE_POS_HEIGHT, registrWin, (HMENU)IDB_REGISTER_REGIST, GetModuleHandle(NULL), NULL);
     HWND accept = CreateWindow(L"BUTTON", L"Войти", WS_CHILD | WS_BORDER, LOG_IN_TO_REGISTER_POX_X, LOG_IN_TO_REGISTER_POX_Y, LOG_IN_TO_REGISTER_POX_WIDTH, LOG_IN_TO_REGISTER_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ATHOR_ACCEPT, GetModuleHandle(NULL), NULL);
     SendMessage(numPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(email, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(enteringPhoneByReg, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(enteringPhoneByAccept, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(enteringEmailByAccept, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(enteringPhoneByLogin, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(enteringEmailByLogin, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(reg, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accept, WM_SETFONT, (WPARAM)hFont, TRUE);
     ShowWindow(registrWin, SW_SHOWDEFAULT);
@@ -1513,33 +1513,89 @@ INT accoutSearch(HWND hField, HWND hList)
     sqlite3_close(db);
     return 0;
 }
+INT getUrl(CHAR* recvBuf) 
+{
+    INT i = 0;
+    INT p = 0;
+    CONST INT SIZE = 1024;
+    CHAR command[SIZE]{};
+    while (recvBuf[i] != '/') 
+    {
+        i++;
+    }
+    i++;
+    while (recvBuf[i] != '\0') 
+    {
+        command[p] = recvBuf[i];
+        i++;
+        p++;
+    }
+    if (!strcmp(command, "registration"))
+    {
+        return 0;
+    }
+    if (!strcmp(command, "authorization")) 
+    {
+        return 1;
+    }
+    return -1;
+}
+
+BOOL recievedAuthorData(CHAR* recvBuf) 
+{
+    CONST INT SIZE = 1024;
+    CHAR command[SIZE]{};
+    INT i = 0;
+    while (recvBuf[i] != '/') 
+    {
+        command[i] = recvBuf[i];
+        i++;
+    }
+    if (!strcmp(command, "EXIST"))
+        //!res - res == 0
+    {
+        return 1;
+    }
+    if(!strcmp(command, "NOEXIST"))
+    {
+        return 0;
+    }
+    return -1;
+}
+
 INT recieveData(SOCKET clientSocket)
 {
     INT iResuslt = 0;
-    CHAR recvbuf[512];
-    INT res = 0;
+    CHAR recvBuf[512]{};
     while (iResuslt <= 0)
     {
-        iResuslt = recv(clientSocket, recvbuf, 512, 0);
+        iResuslt = recv(clientSocket, recvBuf, 512, 0);
         //recv - recieve;
-        /*int len = strlen(recvbuf);
-        recvbuf[len+1] = '\0';*/
         if (iResuslt < 0)
         {
             MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
-        if(!strcmp(recvbuf, "EXIST;"))
-        //!res - res == 0
+        INT res = getUrl(recvBuf);
+        switch (res) 
         {
+        case IDS_REGISTRATION: 
+        {
+
+        }
+        break;
+        case IDS_AUTHORIZATION: 
+        {
+            if (!recievedAuthorData(recvBuf)) 
+            {
+                MessageBox(NULL, L"Такой учетной записи не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
+            }
+        }
+        break;
+        default: 
             return 1;
-        }
-        res = strcmp(recvbuf, "CREATED;");
-        if (!res) 
-        {
-            return 0;
-        }
+        }       
     }
-    return 1;
+    return -1;
 }
 
 int CreatingAuthorWindow(HWND hWnd) 
@@ -1703,8 +1759,11 @@ INT registrationInfo(SOCKET lSocket)
     CHAR regist[SIZE];
     strcpy_s(regist, numberPhone);
     strcat_s(regist, ",");
-    strcat_s(regist, email);
-    strcat_s(regist, ",");
+    if (strcmp(email, "")) 
+    {
+        strcat_s(regist, email);
+        strcat_s(regist, ",");
+    }
     strcat_s(regist, nickname);
     strcat_s(regist, "/");
     strcat_s(regist,"registration");
@@ -1728,7 +1787,7 @@ INT loginInfo(SOCKET lSocket)
     strcpy_s(email, SIZE, userInfo.email());
     CHAR author[SIZE];
     strcpy_s(author, numberPhone);
-    if (strcmp(email, "")) 
+    if (!strcmp(email, "")) 
     {
         strcat_s(author, "/");
     }
@@ -1765,7 +1824,7 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
         break;
         case IDB_ENTERING_MAIL_ACCEPT:
         {
-            HWND hText = GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL);
+            HWND hText = GetDlgItem(hWnd, IDR_REGISTRATION_MAIL);
             CONST INT SIZE = 1024;
             CHAR chEMail[SIZE];
             WCHAR wEMail[SIZE];
@@ -1774,7 +1833,7 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             if (checkingEMail(chEMail) == 1)
             {
                 MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
-                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_MAIL), L"");
+                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_MAIL), L"");
             }
             else 
             {
@@ -1837,12 +1896,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 return 1;
             }
-            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), wcPhone, USERSIZE);
+            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), wcPhone, USERSIZE);
             WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, buffer, USERSIZE, NULL, NULL);
             if (checkingNumberPhone(buffer) == 1)
             {
                 MessageBox(NULL, L"Пользователь ввёл неправелный номер", L"Ошибка", MB_OK | MB_ICONERROR);
-                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), L"");
+                SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), L"");
             }
             else 
             {
@@ -1864,8 +1923,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             WCHAR wcEMAIL[SIZE];
             CHAR chNumPhone[SIZE];
             CHAR chEMAIL[SIZE];
-            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_PHONE), wcNumPhone, SIZE);
-            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_EMAIL), wcEMAIL, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDR_LOGIN_PHONE), wcNumPhone, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDR_LOGIN_EMAIL), wcEMAIL, SIZE);
             WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone)+1, chNumPhone, SIZE, NULL, NULL);
             WideCharToMultiByte(codePage, 0, wcEMAIL, wcslen(wcEMAIL)+1, chEMAIL, SIZE, NULL, NULL);
             if (!checkingNumberPhone(chNumPhone) || !checkingEMail(chEMAIL))
@@ -1940,9 +1999,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_EMAIL), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHOR_ACCEPT), SW_HIDE);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), SW_SHOW);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_PHONE), SW_HIDE);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_EMAIL), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_PHONE), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_EMAIL), SW_HIDE);
         }
         else
         {
@@ -1950,9 +2009,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_EMAIL), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHOR_ACCEPT), SW_SHOW);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_REG_PHONE), SW_HIDE);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_PHONE), SW_SHOW);
-            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_ACCEPT_EMAIL), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_PHONE), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_EMAIL), SW_SHOW);
         }
     }
     break;

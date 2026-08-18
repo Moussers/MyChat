@@ -35,8 +35,8 @@ bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDesti
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
 int mysqlConnect();
-void sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
-void sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
+bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
+bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
 void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
@@ -53,7 +53,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 1, AUTHORIZATION = 2};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -539,6 +539,10 @@ bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDesti
     {
         return false;
     }
+    if (wcSource[(*indexI)] == L',') 
+    {
+        (*indexI)++;
+    }
     while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
     {
@@ -553,15 +557,11 @@ int getUrl(CHAR* recvBuf)
 {
     int i = 0;
     int p = 0;
-    while (recvBuf[i] != '\0')
+    while (recvBuf[i] != '/')
     {
-        if (recvBuf[i] == '/')
-        {
-            i++;
-            break;
-        }
         i++;
     }
+    i++;
     CONST INT SIZE = 1024;
     CHAR command[SIZE];
     while (recvBuf[i] != '\0') 
@@ -573,13 +573,13 @@ int getUrl(CHAR* recvBuf)
     command[p] = '\0';
     if(!strcmp(command, "registration"))
     {
-        return 1;
+        return 0;
     }
     if (!strcmp(command, "login")) 
     {
-        return 2;
+        return 1;
     }
-    return 0;
+    return -1;
 }
 bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr) 
 {
@@ -592,38 +592,42 @@ bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr)
     return false;
 }
 
-void sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status) 
+bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status) 
 {
     login = true;
     CONST INT SIZE = 1024;
     WCHAR buf[SIZE]{};
-    CHAR answer[SIZE];
+    CHAR answer[SIZE]{};
     if (!strcmp(status, "NOEXIST"))
     {
         wcscpy_s(buf, L"Учетная запись: ");
-        wcscat_s(buf, L"\0");
         setData(buf, wcNumPhone, SIZE);
         wcscat_s(buf, L"не сущеcтвует на сервере!");
-        wcscat_s(buf, L"\0");
+        //wcscat_s(buf, L"\0");
     }
     if (!strcmp(status, "EXIST")) 
     {
         wcscpy_s(buf, L"Данная учетная запись: ");
-        wcscat_s(buf, L"\0");
         setData(buf, wcNumPhone, SIZE);
         setData(buf, wcEmail, SIZE);
         setData(buf, wcNickname, SIZE);
-        wcscat_s(buf, L"существет!");
-        wcscat_s(buf, L"\0");
+        wcscat_s(buf, L"существует!");
+        //wcscat_s(buf, L"\0");
     }
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
     strcat_s(answer, "/");
     strcat_s(answer, "authorization");
-    send(*clientSocket, answer, strlen(answer), 0);
+    int iResult = send(*clientSocket, answer, strlen(answer), 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        appendToLog(logHWND, L"Ошибка при отправке данных клиенту!");
+        return false;
+    }
+    return true;
 }
 
-void sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
+bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
 {
     login = true;
     CONST INT SIZE = 1024;
@@ -652,7 +656,13 @@ void sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     strcat_s(answer, "/");
     strcat_s(answer, "registration");
     strcat_s(answer, ";");
-    send(*clientSocket, answer, strlen(answer)+1, 0);
+    int iResult = send(*clientSocket, answer, strlen(answer)+1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        appendToLog(logHWND, L"Ошибка при отправке данных клиенту!");
+        return false;
+    }
+    return true;
 }
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf) 
 {
@@ -788,7 +798,7 @@ int clientManagement(SOCKET* clientSocket)
         //iResult - конец строки
         if (iResult > 0)
         {
-            appendToLog(logHWND, L"Сообщение успешно успешно получено");
+            appendToLog(logHWND, L"Сообщение успешно успешно получено\n");
             if (!login) 
             {
                 /*INT res = strncmp(recvBuf, "REG ", 4);*/
