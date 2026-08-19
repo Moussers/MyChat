@@ -371,7 +371,7 @@ void startServer(HWND log)
 }
 void appendToLog(HWND log, CONST WCHAR* message) 
 {
-    INT length = GetWindowTextLength(log);
+    int length = GetWindowTextLength(log);
     //GetWindowTextLength - функция получает длину строки дескриптора и 
     //записывает число в int переменную
     SendMessage(log, EM_SETSEL, (WPARAM)length, (LPARAM)length);
@@ -422,7 +422,7 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname)
     {
         mysqlConnect();
     }
-    CONST INT SIZE = 1024;
+    CONST int SIZE = 1024;
     try 
     {
         CHAR chNickName[SIZE];
@@ -594,7 +594,6 @@ bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr)
 
 bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status) 
 {
-    login = true;
     CONST INT SIZE = 1024;
     WCHAR buf[SIZE]{};
     CHAR answer[SIZE]{};
@@ -629,7 +628,6 @@ bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, W
 
 bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHAR *wcNickname, CHAR* status)
 {
-    login = true;
     CONST INT SIZE = 1024;
     WCHAR buf[SIZE]{};
     CHAR answer[SIZE];
@@ -699,6 +697,7 @@ int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf)
 }
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
+    login = true;
     CONST INT SIZE = 1024;
     WCHAR wcBuf[SIZE];
     WCHAR wcNumPhone[SIZE]{};
@@ -730,10 +729,12 @@ void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf)
         status[len] = '\0';
         sendDataByAuthor(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
     }
+    login = false;
 }
 
 void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
+    login = true;
     CONST INT SIZE = 1024;
     WCHAR wcNickname[SIZE];
     WCHAR wcNumPhone[SIZE];
@@ -746,14 +747,11 @@ void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
     wcNumPhone[k] = L'\0';
     k = 0;
-    //i++;
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
     wcEmail[k] = L'\0';
-    //i++;
     k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNickname);
     wcNickname[k] = L'\0';
-    //i++;
     k = 0;
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
@@ -772,6 +770,7 @@ void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
             sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
         }
     }
+    login = false;
 }
 
 int clientManagement(SOCKET* clientSocket) 
@@ -793,7 +792,7 @@ int clientManagement(SOCKET* clientSocket)
     //Запускаем прослушивание клиента
     while (*clientSocket != INVALID_SOCKET) 
     {
-        INT iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
+        int iResult = recv(*clientSocket, recvBuf, SIZE, NULL);
         recvBuf[iResult] = '\0';
         //iResult - конец строки
         if (iResult > 0)
@@ -801,7 +800,6 @@ int clientManagement(SOCKET* clientSocket)
             appendToLog(logHWND, L"Сообщение успешно успешно получено\n");
             if (!login) 
             {
-                /*INT res = strncmp(recvBuf, "REG ", 4);*/
                 int res = getUrl(recvBuf);
                 ActionsAtServer action = static_cast<ActionsAtServer>(res);
                 switch (action) 
@@ -816,7 +814,7 @@ int clientManagement(SOCKET* clientSocket)
                 {
                     checkAuthorizEntry(clientSocket, recvBuf);
                 }
-                    break;
+                break;
                 default:
                     return 1;
                 }

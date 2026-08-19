@@ -40,6 +40,10 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 CONST INT arraySize = 2000;
+INT checkTables();
+INT checkingUserInfo(HWND hWnd);
+INT modifyUserInfo(HWND hWnd);
+INT accoutSearch(HWND hField, HWND hList);
 
 class UserInfo
 {
@@ -90,6 +94,8 @@ CHAR* UserInfo::nickname()
 UserInfo userInfo;
 INT authorizationForm();
 INT insertEntry(HWND hwnd);
+INT checkExistsEMail(HWND hWnd);
+INT checkExistsNumPhone(HWND hWnd);
 VOID writtingDownLog(const WCHAR* record);
 INT recieveData(SOCKET clientSocket);
 INT classModUserInfo(HWND hWnd, INT idx);
@@ -98,7 +104,7 @@ INT connectToServ();
 INT disconnectFromServ(SOCKET listenSock);
 //Точка входа APIENTRY
 //APIENTRY - это как и CALLBACK, фукнция обратного вызова
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
@@ -113,7 +119,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AuthorizationClass(hInstance);
     AdditionalInfoClass(hInstance);
     NicknameClass(hInstance);
-    int checkTables();
+    checkTables();
     // Выполнить инициализацию приложения:
     /*if (!InitInstance(hInstance, nCmdShow))
     {
@@ -134,10 +140,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     }
     return (int) msg.wParam;
 }
-INT checkTables();
-INT checkingUserInfo(HWND hWnd);
-INT modifyUserInfo(HWND hWnd);
-INT accoutSearch(HWND hField, HWND hList);
 LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -244,8 +246,9 @@ INT checkingNumberPhone(CHAR* strPhone)
         MessageBox(NULL, L"Строка являеться пустой", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
-    INT len = static_cast<INT>(strlen(strPhone));
-    int i = 0;
+    //INT len = static_cast<INT>(strlen(strPhone));
+    INT len = strlen(strPhone);
+    INT i = 0;
     if (strPhone[0] == '+') 
     {
         for (int i = 0; i < len; i++) 
@@ -256,7 +259,8 @@ INT checkingNumberPhone(CHAR* strPhone)
     INT posOpenParet = -1;
     INT posCloseParet = -1;
     bool hasDash = false;
-    len = static_cast<int>(strlen(strPhone));
+    //len = static_cast<INT>(strlen(strPhone));
+    len = strlen(strPhone);
     for (int i = startPosition; i < len; ++i) 
     {
     if ((strPhone[i] < L'0') || (strPhone[i] > '9'))
@@ -377,14 +381,14 @@ INT checkingUserInfo(HWND hWnd)
     }
     CONST INT SIZE = 2000;
     WCHAR data[SIZE];
-    int len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), data, SIZE);
+    INT len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), data, SIZE);
     //Первый аргумент - это дескрптор дескриптор, из этого дескриптора мы получаем строку, и размер 
     //строки который сохраняется в отдельной int переменной.
     //GetWindowText нужен чтобы получить саму строку которую мы записываем в переменную вторым аргументом 
     //и её длину. Длину мы получаем как отдельное число записываем int переменную.
     if (len == 0) 
     {
-        MessageBox(NULL, L"Не введено имя пользовтеля!", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Не введено имя пользователя!", L"Ошибка", MB_OK | MB_ICONERROR);
         //MessageBox(NULL, L"Не введена фамилия!", L"Ошибка", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
         return 1;
@@ -398,7 +402,7 @@ INT checkingUserInfo(HWND hWnd)
     }*/
     sqlite3_close(db);
 }
-int checkExistsEMail(HWND hWnd) 
+INT checkExistsEMail(HWND hWnd) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -440,7 +444,7 @@ int checkExistsEMail(HWND hWnd)
     sqlite3_close(db);
     return 0;
 }
-int checkExistsPhone(HWND hWnd) 
+INT checkExistsNumPhone(HWND hWnd) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db );
@@ -578,7 +582,7 @@ INT insertEntry(HWND hWnd)
     strcat_s(command, "'");
     strcat_s(command, ",");
     strcat_s(command, "'");
-    if (checkExistsPhone(hWnd) == 1) 
+    if (checkExistsNumPhone(hWnd) == 1) 
     {
         return 1;
     }
@@ -1172,13 +1176,13 @@ INT authorizationForm()
     TabCtrl_InsertItem(tabCrl, 1, &tct);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     HWND numPhone = CreateWindow(L"STATIC", L"Номер телефона:", WS_CHILD | WS_VISIBLE, REGISTRATION_PHONE_FIELD_POS_X, REGISTRATION_PHONE_FIELD_POS_Y, REGISTRATION_PHONE_FIELD_POS_WIDTH, REGISTRATION_PHONE_FIELD_POS_HEIGHT, registrWin, (HMENU)IDM_REGISTER_PHONE, GetModuleHandle(NULL), NULL);
-    HWND email = CreateWindow(L"STATIC", L"Почта:", WS_CHILD, 10, 110, 170, 26, registrWin, (HMENU)IDM_REGISTER_EMAIL, GetModuleHandle(NULL), NULL);
+    HWND email = CreateWindow(L"STATIC", L"Почта:", WS_CHILD, REGISTRATION_EMAIL_DATA_POS_X, REGISTRATION_EMAIL_DATA_POS_Y, REGISTRATION_EMAIL_DATA_WIDTH, REGISTRATION_EMAIL_DATA_HEIGHTS, registrWin, (HMENU)IDM_REGISTER_EMAIL, GetModuleHandle(NULL), NULL);
     HWND enteringPhoneByReg = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_REGISTRATION_PHONE, GetModuleHandle(NULL), NULL);
     //WS_VISIBLE - при запуске программы делает поле: STATIC, EDIT, BUTTON и тд. видимым в окне программы.
     HWND enteringPhoneByLogin = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, INPUT_REGISTERED_PHONE_POS_X, INPUT_REGISTERED_PHONE_POS_Y, INPUT_REGISTERED_PHONE_POS_WIDTH, INPUT_REGISTERED_PHONE_POS_HEIGHT, registrWin, (HMENU)IDR_LOGIN_PHONE, GetModuleHandle(NULL), NULL);
     HWND enteringEmailByLogin = CreateWindow(L"EDIT", L"", WS_CHILD | WS_BORDER, 10, 140, 360, 32, registrWin, (HMENU)IDR_LOGIN_EMAIL, GetModuleHandle(NULL), NULL);
     HWND reg = CreateWindow(L"BUTTON", L"Зарегистрироваться", WS_CHILD | WS_VISIBLE | WS_BORDER, REGISTRATION_BY_PHONE_POS_X, REGISTRATION_BY_PHONE_POS_Y, REGISTRATION_BY_PHONE_POS_WIDTH, REGISTRATION_BY_PHONE_POS_HEIGHT, registrWin, (HMENU)IDB_REGISTER_REGIST, GetModuleHandle(NULL), NULL);
-    HWND accept = CreateWindow(L"BUTTON", L"Войти", WS_CHILD | WS_BORDER, LOG_IN_TO_REGISTER_POX_X, LOG_IN_TO_REGISTER_POX_Y, LOG_IN_TO_REGISTER_POX_WIDTH, LOG_IN_TO_REGISTER_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ATHOR_ACCEPT, GetModuleHandle(NULL), NULL);
+    HWND accept = CreateWindow(L"BUTTON", L"Войти", WS_CHILD | WS_BORDER, LOG_IN_TO_REGISTER_POX_X, LOG_IN_TO_REGISTER_POX_Y, LOG_IN_TO_REGISTER_POX_WIDTH, LOG_IN_TO_REGISTER_POX_HEIGHT, registrWin, (HMENU)IDB_REGISTER_ATHORIZ_ACCEPT, GetModuleHandle(NULL), NULL);
     SendMessage(numPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(email, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(enteringPhoneByReg, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1587,7 +1591,12 @@ INT recieveData(SOCKET clientSocket)
         {
             if (!recievedAuthorData(recvBuf)) 
             {
-                MessageBox(NULL, L"Такой учетной записи не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
+                //MessageBox(NULL, L"Такой учетной записи не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
+                return 0;
+            }
+            else
+            {
+                return 1;
             }
         }
         break;
@@ -1713,7 +1722,9 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 }
                 else 
                 {
-                    createUserWndProc();
+                    MessageBox(NULL, L"Аккаунт успешно создан!\nВойдите в него.", L"Ифно", MB_OK | MB_ICONINFORMATION);
+                    
+                    //createUserWndProc();
                 }
 
             }
@@ -1755,7 +1766,6 @@ INT registrationInfo(SOCKET lSocket)
     strcpy_s(numberPhone, SIZE, userInfo.numberPhone());
     strcpy_s(email, SIZE, userInfo.email());
     strcpy_s(nickname, SIZE, userInfo.nickname());
-    //CHAR regist[SIZE] = "REG ";
     CHAR regist[SIZE];
     strcpy_s(regist, numberPhone);
     strcat_s(regist, ",");
@@ -1872,7 +1882,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             }
         }
-        int wmId = LOWORD(wParam);
+        INT wmId = LOWORD(wParam);
         switch (wmId)
         {
         case IDB_ABOUT_PROGRAM:
@@ -1912,7 +1922,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-        case IDB_REGISTER_ATHOR_ACCEPT: 
+        case IDB_REGISTER_ATHORIZ_ACCEPT: 
         {
             if (connectToServ()) 
             {
@@ -1932,7 +1942,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 userInfo.setNumberPhone(chNumPhone);
                 userInfo.setEMail(chEMAIL);
                 loginInfo(listenSock);
-                recieveData(listenSock);
+                if (!recieveData(listenSock)) 
+                {
+                    MessageBox(NULL, L"Такого аккаунта не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
+                }
+                else 
+                {
+                    createUserWndProc();
+                }
             }
         }
         break;
@@ -1998,7 +2015,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_PHONE), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_EMAIL), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_SHOW);
-            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHOR_ACCEPT), SW_HIDE);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHORIZ_ACCEPT), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_PHONE), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_EMAIL), SW_HIDE);
@@ -2008,7 +2025,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_PHONE), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDM_REGISTER_EMAIL), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_REGIST), SW_HIDE);
-            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHOR_ACCEPT), SW_SHOW);
+            ShowWindow(GetDlgItem(hWnd, IDB_REGISTER_ATHORIZ_ACCEPT), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), SW_HIDE);
             ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_PHONE), SW_SHOW);
             ShowWindow(GetDlgItem(hWnd, IDR_LOGIN_EMAIL), SW_SHOW);
