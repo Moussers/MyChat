@@ -49,6 +49,7 @@ INT checkingUserInfo(HWND hWnd);
 INT modifyUserInfo(HWND hWnd);
 INT accoutSearch(HWND hField, HWND hList);
 INT updateList(HWND userList);
+INT recievedRegData(CHAR* recvBuf);
 INT deleteUser(INT idx);
 
 class UserInfo
@@ -62,7 +63,7 @@ public:
 public:
     void setNumberPhone(CHAR* numberPhone);
     CHAR* numberPhone();
-    void setEMail(CHAR* email);
+    void setEmail(CHAR* email);
     CHAR* email();
     void setNickname(CHAR* nickname);
     CHAR* nickname();
@@ -78,7 +79,7 @@ CHAR* UserInfo::numberPhone()
     return m_numberPhone;
 }
 
-void UserInfo::setEMail(CHAR* email) 
+void UserInfo::setEmail(CHAR* email) 
 {
     strcpy_s(m_email, email);
 }
@@ -265,7 +266,7 @@ INT checkingNumberPhone(CHAR* strPhone)
     }
     INT posOpenParet = -1;
     INT posCloseParet = -1;
-    bool hasDash = false;
+    BOOL hasDash = FALSE;
     //len = static_cast<INT>(strlen(strPhone));
     len = strlen(strPhone);
     for (int i = startPosition; i < len; ++i) 
@@ -303,14 +304,14 @@ INT checkingNumberPhone(CHAR* strPhone)
     }
     do 
     {
-        hasDash = false;
+        hasDash = FALSE;
         posDash = 0;
         for (int i = 0; i < len; ++i)
         {
             if (strPhone[i] == '-')
             {
                 posDash = i;
-                hasDash = true;
+                hasDash = TRUE;
                     break;
             }
         }
@@ -322,7 +323,7 @@ INT checkingNumberPhone(CHAR* strPhone)
             }
         }
     } while (hasDash);
-    len = static_cast<int>(strlen(strPhone));
+    len = strlen(strPhone);
     if (len != 11) 
     {
         MessageBox(NULL, L"Неправельный размер номера телефона", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -894,17 +895,11 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     ATOM reg = RegisterClassEx(&userWnd);
                     HWND userClass = CreateWindow(INFO_MODIFICATION_CLASS, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hLastName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    /*HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hFirstName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);*/
-                    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
-                    /*CreateWindow(L"EDIT", wLastName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wFirstName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wMiddleName, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);*/
-                    CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(110), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+                    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, MOD_ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, MOD_CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, MOD_CANCEL_BUTTON_HEIGHT, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
@@ -952,31 +947,30 @@ VOID addUser()
     userWnd.lpszMenuName = NULL;
     userWnd.lpszClassName = USER_ACCOUNT_CLASS_NAME;
     ATOM reg = RegisterClassEx(&userWnd);
-    HFONT fontTitle = CreateFont(20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
-    //FW_NORMAL - указывает тип шрифта (жирный, полужирный и тд.)
-    //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
-    //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
     HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     //HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     //HMENU - внутренее поле в котором мы можем храннить вписанный текст
-    HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    //HWND hMiddleName = CreateWindow(L"STATIC", L"Отчество:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(60), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(30), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(60), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    //SendMessage(hLastName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    HFONT fontTitle = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+    //FW_NORMAL - указывает тип шрифта (жирный, полужирный и тд.)
+    //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
+    //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
+    HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hNickInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
+    HWND hPhoneInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+    HWND hEmailInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+    HWND hBtnOK = CreateWindow(L"BUTTON", L"Ок", WS_VISIBLE | WS_CHILD | WS_BORDER, ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_ADD, GetModuleHandle(NULL), NULL);
+    HWND hBtnCancel = CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_ADDING_ENTRY_POS_X, CANCEL_ADDING_ENTRY_POS_Y, CANCEL_ADDING_ENTRY_WIDTH, CANCEL_ADDING_ENTRY_HEIGHT, userClass, (HMENU)IDB_CANCELLING_USER_ADD, GetModuleHandle(NULL), NULL);
+    //Приравнивание ресурса к HMENU нужно для всех типов окон с которым юзер взаимодействует: нажатие клавиши, ввод в поле и так далее.  
     SendMessage(hNickname, WM_SETFONT, (WPARAM)fontTitle, TRUE);
-    //SendMessage(hMiddleName, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hPhone, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     SendMessage(hMail, WM_SETFONT, (WPARAM)fontTitle, TRUE);
-    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_LAST_NAME, GetModuleHandle(NULL), NULL);
-    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(30), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_FIRST_NAME, GetModuleHandle(NULL), NULL);
-    //CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_MIDDLE_NAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(60), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(90), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_X(120), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, CANCEL_ADDING_ENTRY_POS_X, CANCEL_ADDING_ENTRY_POS_Y, CANCEL_ADDING_ENTRY_WIDTH, CANCEL_ADDING_ENTRY_HEIGHT, userClass, (HMENU)IDB_CANCELLING_USER_ADD, GetModuleHandle(NULL), NULL);
-    //Приравнивание ресурса к HMENU нужно для всех типов окон с которым юзер взаимодействует: нажатие клавиши, ввод в поле и так далее.
-    CreateWindow(L"BUTTON", L"Ок", WS_VISIBLE | WS_CHILD | WS_BORDER, ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_ADD, GetModuleHandle(NULL), NULL);
+    SendMessage(hNickInputFld, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hPhoneInputFld, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hEmailInputFld, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hBtnCancel, WM_SETFONT, (WPARAM)fontTitle, TRUE);
+    SendMessage(hBtnOK, WM_SETFONT, (WPARAM)fontTitle, TRUE);
     ShowWindow(userClass, SW_SHOWDEFAULT);
     UpdateWindow(userClass);
     MSG msg;
@@ -1227,13 +1221,25 @@ INT authorizationForm()
     return 0;
 }
 
+INT getDataFromServ(SOCKET lSocket) 
+{
+    CONST INT SIZE = 1024;
+    CHAR command[SIZE]{};
+    strcpy_s(command, "/getDataFromServ");
+    INT iResult = send(lSocket, command, strlen(command)+1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        MessageBox(NULL, L"Ошибка при отправке данных", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
     {
     case WM_COMMAND:
     {
-        //INT wmId = LOWORD(wParam);
         switch (LOWORD(wParam)) 
         {
         case IDB_ADD_USER:
@@ -1567,9 +1573,34 @@ INT getUrl(CHAR* recvBuf)
     {
         return 1;
     }
+    if (!strcmp(command, "sendDataToUser"))
+    {
+        return 2;
+    }
     return -1;
 }
-BOOL recievedRegData(CHAR* recvBuf) 
+
+INT insertServDataToDB(CHAR* recvBuf) 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"База данных не подключена!", L"Ошибка", MB_OK | MB_ICONERROR);
+    }
+    INT i = 1;
+    while (recvBuf[i] != '/') 
+    {
+        while (recvBuf[i] != ';')
+        {
+
+        }
+        i++;
+    }
+    return 0;
+}
+
+INT recievedRegData(CHAR* recvBuf) 
 {
     CONST INT SIZE = 1024;
     CHAR command[SIZE]{};
@@ -1645,6 +1676,11 @@ INT recieveData(SOCKET clientSocket)
             return 1;
         }
         break;
+        case IDS_GETDATA_FROM_SERV_BD:
+        {
+
+        }
+        break;
         default: 
             return 1;
         }       
@@ -1700,10 +1736,10 @@ INT createExtraAthorizWnd()
     HWND hMain = CreateWindow(szWndAthorizationClass, szAthorizationTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 410, 270, NULL, NULL, hInst, NULL);
     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
     HWND hPhoneDescript = CreateWindow(L"STATIC", L"Номер телефона:", WS_VISIBLE | WS_CHILD, 10, 20, 140, 30, hMain, NULL, GetModuleHandle(NULL), NULL);
-    HWND hPhoneInputField = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 60, 360, 35, hMain, (HMENU)IDB_EXTRA_REG_INPUT_PHONE_FIELD, GetModuleHandle(NULL), NULL);
+    HWND hPhoneInputField = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 60, 360, 35, hMain, (HMENU)IDR_EXTRA_REG_INPUT_PHONE_FIELD, GetModuleHandle(NULL), NULL);
     HWND hMailDescript = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, 10, 100, 70, 30, hMain, NULL, GetModuleHandle(NULL), NULL);
-    HWND hMailInputField = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 140, 360, 35, hMain, NULL, GetModuleHandle(NULL), NULL);
-    HWND hAccept = CreateWindow(L"Button", L"Войти", WS_VISIBLE | WS_CHILD | WS_BORDER, 280, 190, 80, 35, hMain, NULL, GetModuleHandle(NULL), NULL);
+    HWND hMailInputField = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 140, 360, 35, hMain, (HMENU)IDR_EXTRA_REG_INPUT_EMAIL_FIELD, GetModuleHandle(NULL), NULL);
+    HWND hAccept = CreateWindow(L"Button", L"Войти", WS_VISIBLE | WS_CHILD | WS_BORDER, 280, 190, 80, 35, hMain, (HMENU)IDB_EXTRA_REG_ACCEPT, GetModuleHandle(NULL), NULL);
     SendMessage(hPhoneDescript, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hPhoneInputField, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hMailDescript, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1737,8 +1773,19 @@ INT createUserWndProc()
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
+   getDataFromServ(listenSock);
+   recieveData(listenSock);
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);
+   MSG msg;
+   while (IsWindow(hMain)) 
+   {
+       if (GetMessage(&msg, hMain, 0, 0)) 
+       {
+           TranslateMessage(&msg);
+           DispatchMessage(&msg);
+       }
+   }
    return 0;
 }
 INT nicknameWindow()
@@ -1852,7 +1899,7 @@ INT registrationInfo(SOCKET lSocket)
     return 0;
 }
 
-INT loginInfo(SOCKET lSocket) 
+INT dataLogin(SOCKET lSocket) 
 {
     CONST INT SIZE = 1024;
     CHAR numberPhone[SIZE];
@@ -1914,7 +1961,7 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             else 
             {
                 len = strlen(chEMail);
-                userInfo.setEMail(chEMail);
+                userInfo.setEmail(chEMail);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
                 nicknameWindow();
             }
@@ -1938,7 +1985,35 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
     {
         switch (LOWORD(wParam)) 
         {
-        //case
+        case IDB_EXTRA_REG_ACCEPT:
+        {
+            CONST INT SIZE = 1024;
+            WCHAR wcNumPhone[SIZE]{};
+            WCHAR wcEmail[SIZE]{};
+            CHAR chNumPhone[SIZE]{};
+            CHAR chEmail[SIZE]{};
+            GetWindowText(GetDlgItem(hWnd, IDR_EXTRA_REG_INPUT_PHONE_FIELD), wcNumPhone, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDR_EXTRA_REG_INPUT_EMAIL_FIELD), wcEmail, SIZE);
+            WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone)+1, chNumPhone, SIZE, NULL, NULL);
+            WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail)+1, chEmail, SIZE, NULL, NULL);
+            if (!checkingNumberPhone(chNumPhone) || !checkingEMail(chEmail))
+            {
+                userInfo.setNumberPhone(chNumPhone);
+                userInfo.setEmail(chEmail);
+                dataLogin(listenSock);
+                if (!recieveData(listenSock)) 
+                {
+                    MessageBox(NULL, L"Такого аккаунта не существует!", L"Ошибка", MB_OK | MB_ICONERROR);
+                }
+                else 
+                {
+                    SendMessage(hWnd, WM_CLOSE, 0, NULL);
+                    createUserWndProc();
+                }
+            }
+
+        }
+        break;
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }
@@ -2025,14 +2100,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (!checkingNumberPhone(chNumPhone) || !checkingEMail(chEMAIL))
             {
                 userInfo.setNumberPhone(chNumPhone);
-                userInfo.setEMail(chEMAIL);
-                loginInfo(listenSock);
+                userInfo.setEmail(chEMAIL);
+                dataLogin(listenSock);
                 if (!recieveData(listenSock)) 
                 {
                     MessageBox(NULL, L"Такого аккаунта не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
                 }
                 else 
                 {
+                    SendMessage(hWnd, WM_CLOSE, 0, NULL);
                     createUserWndProc();
                 }
             }

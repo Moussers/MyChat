@@ -53,7 +53,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, GETDATA_FROM_USER = 2};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -194,7 +194,6 @@ int checkTables(HWND log)
         //он возвращает true только в том случае, если для соединения был вызван метод closed().
         {
             mysqlConnect();
-            return 1;
         }
         sql::Statement* stmt = connection->createStatement();       /*CreateStatement - создание объекта Statement для дальнейших запросов*/
         std::string sql_ex = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema ='serv_db' AND table_name='groups';";
@@ -579,6 +578,10 @@ int getUrl(CHAR* recvBuf)
     {
         return 1;
     }
+    if (!strcmp(command, "getDataFromServ")) 
+    {
+        return 2;
+    }
     return -1;
 }
 bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr) 
@@ -772,6 +775,47 @@ void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     login = false;
 }
 
+int sendDataToUser(SOCKET* clientSocket) 
+{
+    if (connection->isClosed()) 
+    {
+        mysqlConnect();
+    }
+    sql::Statement *stmt = connection->createStatement();
+    /*command = "SELECT COUNT(*) FROM users;";
+    sql::ResultSet *res = stmt->executeQuery(command);
+    res->next();
+    int count = res->getInt(1);*/
+    //Получаем количество записей в таблице, вытягивая из первого столбца значение
+    std::string command = "SELECT * FROM users;";
+    std::string databaseData = "[";
+    sql::ResultSet *res = stmt->executeQuery(command);
+    while (res->next())
+    {
+        int id = res->getInt(1);
+        std::string nickname = res->getString(2);
+        int phone = res->getInt(3);
+        std::string email = res->getString(4);
+        //Получаем данные из базы данных
+        databaseData += std::to_string(id);
+        databaseData += ", ";
+        databaseData += nickname;
+        databaseData += ", ";
+        databaseData += std::to_string(phone);
+        databaseData += ", ";
+        databaseData += email;
+        databaseData += "; ";
+    }
+    databaseData += "]/sendDataToUser";
+    int iResult = send(*clientSocket, databaseData.c_str(), strlen(databaseData.c_str()), 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        appendToLog(logHWND, L"Ошибка отпраки данных из бд клиенту.");
+        return 1;
+    }
+    return 0;
+}
+
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -803,7 +847,6 @@ int clientManagement(SOCKET* clientSocket)
                 ActionsAtServer action = static_cast<ActionsAtServer>(res);
                 switch (action) 
                 {
-                /*if (res == 0) */
                 case REGISTRATION:
                 {
                     checkRegEntry(clientSocket, recvBuf);
@@ -812,6 +855,11 @@ int clientManagement(SOCKET* clientSocket)
                 case AUTHORIZATION:
                 {
                     checkAuthorizEntry(clientSocket, recvBuf);
+                }
+                break;
+                case GETDATA_FROM_USER: 
+                {
+                    sendDataToUser(clientSocket);
                 }
                 break;
                 default:
