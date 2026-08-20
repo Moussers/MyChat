@@ -653,7 +653,6 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     strcpy_s(answer, status);
     strcat_s(answer, "/");
     strcat_s(answer, "registration");
-    strcat_s(answer, ";");
     int iResult = send(*clientSocket, answer, strlen(answer)+1, 0);
     if (iResult == INVALID_SOCKET) 
     {
