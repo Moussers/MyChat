@@ -1580,22 +1580,83 @@ INT getUrl(CHAR* recvBuf)
     return -1;
 }
 
-INT insertServDataToDB(CHAR* recvBuf) 
+INT insertDataToDb(CHAR* id, CHAR* nickname, CHAR* numPhone, CHAR* email) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
-    if (res) 
+    if (res)
     {
         MessageBox(NULL, L"База данных не подключена!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
     }
-    INT i = 1;
-    while (recvBuf[i] != '/') 
+    CONST INT SIZE = 1024;
+    //"INSERT INTO users (user_id, nickname, phone, email, status) VALUES(
+    CHAR command[SIZE]{};
+    strcpy_s(command, "INSERT INTO users(user_id, nickname, phone, email,status)VALUES(");
+    strcat_s(command, id);
+    strcat_s(command, ",");
+    strcat_s(command, "'");
+    strcat_s(command, nickname);
+    strcat_s(command, "'");
+    strcat_s(command, ",");
+    strcat_s(command, numPhone);
+    strcat_s(command, ",");
+    strcat_s(command, "'");
+    strcat_s(command, email);
+    strcat_s(command, "',0");
+    strcat_s(command, ");");
+    char* msg;
+    //"INSERT INTO users(user_id, nickname, number_phone, email)VALUES(2,dog,79324781441,dog@mail.ru);"
+    try 
     {
-        while (recvBuf[i] != ';')
+        if(sqlite3_exec(db, command, NULL, NULL, &msg) != SQLITE_OK)
         {
-
+            MessageBox(NULL, L"Ошибка добавления аккаунта в базу данных клиента!", L"Ошибка", MB_OK | MB_ICONERROR);
+            throw "SQL-Error";
         }
-        i++;
+        msg = cleaningMemory(msg);
+        sqlite3_close(db);
+        return 0;
+    }
+    catch (...) 
+    {
+        CONST INT SIZE = 2000;
+        WCHAR mesError[SIZE];
+        size_t n_size;
+        mbstowcs_s(&n_size, mesError, msg, SIZE);
+        msg = cleaningMemory(msg);
+        writtingDownLog(mesError);
+        return 1;
+    }
+}
+
+BOOL getStringFromArr(INT& indexI, INT& indexK, CHAR* chSource, CHAR* chDest) 
+{
+    while (chSource[indexI] != ',' && chSource[indexI] != ';')
+    {
+        chDest[indexK] = chSource[indexI];
+        indexK++;
+        indexI++;
+    }
+    indexI++;
+    chDest[indexK] = '\0';
+    indexK = 0;
+    return TRUE;
+}
+
+INT insertServDataToDB(CHAR* recvBuf) 
+{
+    INT i = 1;
+    CONST INT SIZE = 512;
+    CHAR id[SIZE], nickname[SIZE], email[SIZE], numPhone[SIZE];
+    while (recvBuf[i] != ']')
+    {
+        INT k = 0;
+        getStringFromArr(i, k, recvBuf, id);
+        getStringFromArr(i, k, recvBuf, nickname);
+        getStringFromArr(i, k, recvBuf, numPhone);
+        getStringFromArr(i, k, recvBuf, email);
+        insertDataToDb(id, nickname, numPhone, email);
     }
     return 0;
 }
@@ -1645,10 +1706,11 @@ BOOL recievedAuthorizData(CHAR* recvBuf)
 INT recieveData(SOCKET clientSocket)
 {
     INT iResuslt = 0;
-    CHAR recvBuf[512]{};
+    CONST INT SIZE = 3000;
+    CHAR recvBuf[SIZE]{};
     while (iResuslt <= 0)
     {
-        iResuslt = recv(clientSocket, recvBuf, 512, 0);
+        iResuslt = recv(clientSocket, recvBuf, SIZE, 0);
         //recv - recieve;
         if (iResuslt < 0)
         {
@@ -1678,7 +1740,7 @@ INT recieveData(SOCKET clientSocket)
         break;
         case IDS_GETDATA_FROM_SERV_BD:
         {
-
+            insertServDataToDB(recvBuf);
         }
         break;
         default: 

@@ -532,24 +532,25 @@ int checkExistEmail(WCHAR* email)
         connection->close();
     }
 }
-bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin)
+bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDest)
 {
-    if (wcSource[(*indexI)] == L'/')
+    if (wcSource[*indexI] == L'/')
     {
         return false;
     }
-    if (wcSource[(*indexI)] == L',') 
+    if (wcSource[*indexI] == L',') 
     {
         (*indexI)++;
     }
-    while (wcSource[(*indexI)] != L',' && wcSource[(*indexI)] != L'/')
+    while (wcSource[*indexI] != L',' && wcSource[*indexI] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
     {
-        wcDestin[(*indexK)] = wcSource[(*indexI)];
+        wcDest[*indexK] = wcSource[*indexI];
         (*indexI)++;
         (*indexK)++;
     }
-    indexI++;
+    wcDest[*indexK] = L'\0';
+    *indexK = 0;
     return true;
 }
 int getUrl(CHAR* recvBuf) 
@@ -656,10 +657,9 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     strcpy_s(answer, status);
     strcat_s(answer, "/");
     strcat_s(answer, "registration");
-    int iResult = send(*clientSocket, answer, strlen(answer)+1, 0);
-    if (iResult == INVALID_SOCKET) 
+    if(send(*clientSocket, answer, strlen(answer)+1, 0) == INVALID_SOCKET)
     {
-        appendToLog(logHWND, L"Ошибка при отправке данных клиенту!");
+        appendToLog(logHWND, L"Ошибка при отправке регистрационных данных клиенту!");
         return false;
     }
     return true;
@@ -675,11 +675,11 @@ int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf)
     int i = 0;
     int k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    wcNumPhone[k] = '\0';
-    k = 0;
+    /*wcNumPhone[k] = '\0';
+    k = 0;*/
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    wcEmail[k] = '\0';
-    k = 0;
+    /*wcEmail[k] = '\0';
+    k = 0;*/
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail)) 
     {
         wsprintf(buf, L"Учетная запись: %s %s найдена!", wcNumPhone, wcEmail);
@@ -694,8 +694,13 @@ int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf)
         appendToLog(logHWND, buf);
         CHAR answer[SIZE];
         strcpy_s(answer, "LOGINERROR");
-        send(*clientSokcet, answer, strlen(answer) + 1, 0);
+        if (send(*clientSokcet, answer, strlen(answer) + 1, 0) == INVALID_SOCKET) 
+        {
+            appendToLog(logHWND, L"Ошибка при отправке данных клиенту при авторизации на сервереы!");
+            return 1;
+        }
     }
+    return 0;
 }
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
@@ -710,13 +715,7 @@ void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf)
     int i = 0;
     int k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    wcNumPhone[k] = L'\0';
-    k = 0;
-    if (getSubDataFromStr(&i, &k, wcBuf, wcEmail)) 
-    {
-        wcEmail[k] = L'\0';
-        k = 0;
-    }
+    if (getSubDataFromStr(&i, &k, wcBuf, wcEmail));
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
         strcpy_s(status, "EXIST");
@@ -747,14 +746,8 @@ void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     int i = 0;
     int k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    wcNumPhone[k] = L'\0';
-    k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    wcEmail[k] = L'\0';
-    k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNickname);
-    wcNickname[k] = L'\0';
-    k = 0;
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
         strcpy_s(status, "EXIST");
@@ -794,17 +787,18 @@ int sendDataToUser(SOCKET* clientSocket)
     {
         int id = res->getInt(1);
         std::string nickname = res->getString(2);
-        int phone = res->getInt(3);
+        int64_t phone = res->getInt64(3);
+        //int_64 - больше размер чем у int
         std::string email = res->getString(4);
         //Получаем данные из базы данных
         databaseData += std::to_string(id);
-        databaseData += ", ";
+        databaseData += ",";
         databaseData += nickname;
-        databaseData += ", ";
+        databaseData += ",";
         databaseData += std::to_string(phone);
-        databaseData += ", ";
+        databaseData += ",";
         databaseData += email;
-        databaseData += "; ";
+        databaseData += ";";
     }
     databaseData += "]/sendDataToUser";
     int iResult = send(*clientSocket, databaseData.c_str(), strlen(databaseData.c_str()), 0);
