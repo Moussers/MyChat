@@ -38,7 +38,7 @@ VOID writtingDownLog(const WCHAR* record)
     {
         if (GetLastError() == ERROR_FILE_EXISTS)
         {
-            logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            logFile = CreateFile(L"clientlog.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         }
     }
     if (logFile != INVALID_HANDLE_VALUE)

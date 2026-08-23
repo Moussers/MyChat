@@ -401,13 +401,6 @@ INT checkingUserInfo(HWND hWnd)
         sqlite3_close(db);
         return 1;
     }
-    /*len = GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_FIRST_NAME), data, SIZE);
-    if (len == 0) 
-    {
-        MessageBox(NULL, L"Не введено имя!", L"Ошибка", MB_OK | MB_ICONERROR);
-        sqlite3_close(db);
-        return 1;
-    }*/
     sqlite3_close(db);
 }
 INT checkExistsEMail(HWND hWnd) 
@@ -545,7 +538,6 @@ INT insertEntry(HWND hWnd)
     }
     sqlite3_finalize(table);
     strcpy_s(command, "INSERT INTO users (user_id, nickname, phone, email, status) VALUES(");
-    //strcpy_s(command, "INSERT INTO users (user_id, last_name, first_name, middle_name, phone, email, status) VALUES(");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
@@ -564,21 +556,7 @@ INT insertEntry(HWND hWnd)
     strcat_s(command, "'");
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), wNickname, USERSIZE);
     WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname)+1, buffer, USERSIZE, NULL, NULL);
-    /*WideCharToMultiByte(codePage, 0, lastName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
-    strcat_s(command, buffer);
     strcat_s(command, "'");
-    strcat_s(command, ",");
-    strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, firstName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
-    strcat_s(command, buffer);
-    strcat_s(command, "'");
-    strcat_s(command, ",");
-    strcat_s(command, "'");
-    WideCharToMultiByte(codePage, 0, middleName, USERSIZE + 1, buffer, USERSIZE, NULL, NULL);
-    strcat_s(command, buffer);
-    strcat_s(command, "'");
-    strcat_s(command, ",");
-    strcat_s(command, "'");*/
     WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone)+1, buffer, USERSIZE, NULL, NULL);
     CONST INT SIZE = 2000;
     CHAR temp[SIZE]{};
@@ -658,15 +636,9 @@ INT modifyUserInfo(HWND hWnd)
     CONST INT SIZE = 2000;
     CONST INT NUMSIZE = 256;
     WCHAR wNickname[SIZE];
-    /*WCHAR wLastName[SIZE];
-    WCHAR wFirstName[SIZE];
-    WCHAR wMiddleName[SIZE];*/
     WCHAR wPhone[SIZE];
     WCHAR wEMail[SIZE];
     CHAR chNickname[SIZE];
-    /*CHAR chLastName[SIZE];
-    CHAR chFirstName[SIZE];
-    CHAR chMiddleName[SIZE];*/
     CHAR chPhone[SIZE];
     CHAR chEMail[SIZE];
     CHAR command[SIZE];
@@ -676,23 +648,12 @@ INT modifyUserInfo(HWND hWnd)
     //const char* updateData = "UPDATE users SET last_name = '";
     strcpy_s(command, updateData);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wNickname, SIZE);
-    /*GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_LAST_NAME), wLastName, SIZE);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_FIRST_NAME), wFirstName, SIZE);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_MIDDLE_NAME), wMiddleName, SIZE);*/
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wPhone, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_EMAIL), wEMail, SIZE);
     WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname) + 1, chNickname, SIZE, NULL, NULL);
-    /*WideCharToMultiByte(codePage, 0, wLastName, wcslen(wLastName) + 1, chLastName, SIZE, NULL, NULL);
-    WideCharToMultiByte(codePage, 0, wFirstName, wcslen(wFirstName) + 1, chFirstName, SIZE, NULL, NULL);
-    WideCharToMultiByte(codePage, 0, wMiddleName, wcslen(wMiddleName) + 1, chMiddleName, SIZE, NULL, NULL);*/
     WideCharToMultiByte(codePage, 0, wPhone, wcslen(wPhone) + 1, chPhone, SIZE, NULL, NULL);
     WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, SIZE, NULL, NULL);
     strcat_s(command, chNickname);
-    /*strcat_s(command, chLastName);
-    strcat_s(command, "', first_name = '");
-    strcat_s(command, chFirstName);
-    strcat_s(command, "', middle_name = '");
-    strcat_s(command, chMiddleName);*/
     strcat_s(command, "', phone = '");
     strcat_s(command, chPhone);
     strcat_s(command, "', email = '");
@@ -833,20 +794,19 @@ INT classModUserInfo(HWND hWnd, INT idx)
     WideCharToMultiByte(codePage, 0, wNum, wcslen(wNum) + 1, chNum, IDXSIZE, NULL, NULL);
     strcat_s(command, chNum);
     strcat_s(command, ";");
-    sqlite3_stmt* st;
-    if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK)
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(st);
+        INT curRow = sqlite3_step(stmt);
         if (curRow == SQLITE_ROW)
         {
-            INT changeUserId = sqlite3_column_int(st, 0);
-            sqlite3_finalize(st);
-            //sqlite3_column_int - берет строку из stmt и преобразует строку в
-            //integer значение,записывая в выделенную int переменную;
+            INT changeUserId = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+            //sqlite3_column_int - берет строку из stmt и преобразует строку в integer значение, записывая
+            //в выделенную int переменную;
             //Второй аргумент номер колонки из которой берём значение;
             userId = changeUserId;
             const char* dataUser = "SELECT nickname phone, email FROM users WHERE user_id = ";
-            //const char* dataUser = "SELECT first_name, last_name, middle_name, phone, email FROM users WHERE user_id = ";
             //!SQLITE все работает через запросы которые мы собираем в переменной формата const char*
             WCHAR wId[IDXSIZE]{};
             CHAR chId[IDXSIZE]{};
@@ -855,30 +815,21 @@ INT classModUserInfo(HWND hWnd, INT idx)
             strcpy_s(command, dataUser);
             strcat_s(command, chId);
             strcat_s(command, ";");
-            if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK)
+            if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
             {
-                INT curRow = sqlite3_step(st);
+                INT curRow = sqlite3_step(stmt);
                 //sqlite3_step возвращает значение в sqlite3_stmt, а sqlite3_exec просто выполняет запрос
                 if (curRow == SQLITE_ROW) 
                 {
-                    const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
-                    /*const char* chFirstName = reinterpret_cast<const char*>(sqlite3_column_text(st, 0));
-                    const char* chLastName = reinterpret_cast<const char*>(sqlite3_column_text(st, 1));
-                    const char* chMiddleName = reinterpret_cast<const char*>(sqlite3_column_text(st, 2));*/
-                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(st, 3));
-                    const char* chEMail = reinterpret_cast<const char*>(sqlite3_column_text(st, 4));
-                    WCHAR wNickname[SIZE];
-                    /*WCHAR wLastName[SIZE];
-                    WCHAR wFirstName[SIZE];
-                    WCHAR wMiddleName[SIZE];
-                    MultiByteToWideChar(codePage, 0, chFirstName, strlen(chFirstName) + 1, wFirstName, SIZE);
-                    MultiByteToWideChar(codePage, 0, chLastName, strlen(chLastName) + 1, wLastName, SIZE);
-                    MultiByteToWideChar(codePage, 0, chMiddleName, strlen(chMiddleName) + 1, wMiddleName, SIZE);*/
-                    WCHAR wPhone[SIZE];
-                    WCHAR wEMail[SIZE];
-                    MultiByteToWideChar(codePage, 0, chPhone, strlen(chPhone) + 1, wPhone, SIZE);
-                    MultiByteToWideChar(codePage, 0, chEMail, strlen(chEMail) + 1, wEMail, SIZE);
-                    MultiByteToWideChar(codePage, 0, chNickname, strlen(chNickname) + 1, wNickname, SIZE);
+                    const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+                    const char* chEMail = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                    WCHAR wcNickname[SIZE];
+                    WCHAR wcPhone[SIZE];
+                    WCHAR wcEMail[SIZE];
+                    MultiByteToWideChar(codePage, 0, chNickname, strlen(chPhone) + 1, wcNickname, SIZE);
+                    MultiByteToWideChar(codePage, 0, chEMail, strlen(chEMail) + 1, wcEMail, SIZE);
+                    MultiByteToWideChar(codePage, 0, chPhone, strlen(chNickname) + 1, wcPhone, SIZE);
                     WNDCLASSEX userWnd;
                     ZeroMemory(&userWnd, sizeof(userWnd));
                     userWnd.cbSize = sizeof(WNDCLASSEX);
@@ -897,14 +848,14 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     HWND hLastName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wcNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wcPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+                    CreateWindow(L"EDIT", wcEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, MOD_ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
                     CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, MOD_CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, MOD_CANCEL_BUTTON_HEIGHT, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
                     MSG msg;
-                    sqlite3_finalize(st);
+                    sqlite3_finalize(stmt);
                     sqlite3_close(db);
                     EnableWindow(hWnd, FALSE);
                     while (IsWindow(userClass))
@@ -921,7 +872,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
     }
     EnableWindow(hWnd, TRUE);
     SetActiveWindow(hWnd);
-    sqlite3_finalize(st);
+    sqlite3_finalize(stmt);
     sqlite3_close(db);
     return 0;
 }
@@ -1355,7 +1306,7 @@ INT checkTables()
                     "CREATE TABLE users ("
                     "user_id INT PRIMARY KEY NOT NULL,"
                     "nickname TEXT NOT NULL,"
-                    "phone NUMBER NOT NULL,"
+                    "phone INTEGER NOT NULL,"
                     "email TEXT NULL,"
                     "path_icon TEXT,"
                     "icon BLOB,"
@@ -1520,11 +1471,12 @@ INT accoutSearch(HWND hField, HWND hList)
     }
     WideCharToMultiByte(codePage, 0, wStr, SIZE + 1, chStr, SIZE, NULL, NULL);
     sqlite3_stmt* stmt;
-    char getUserFirstName[1024] = "SELECT first_name, last_name FROM users WHERE first_name LIKE '%";
-    strcat_s(getUserFirstName, chStr);
-    strcat_s(getUserFirstName, "%' OR last_name LIKE '%");
+    char getUserFirstName[1024] = "SELECT nickname FROM users WHERE nickname LIKE '%";
     strcat_s(getUserFirstName, chStr);
     strcat_s(getUserFirstName, "%'");
+    //strcat_s(getUserFirstName, "%' OR last_name LIKE '%");
+    /*strcat_s(getUserFirstName, chStr);
+    strcat_s(getUserFirstName, "%'");*/
     if (sqlite3_prepare_v2(db, getUserFirstName, -1, &stmt, NULL) == SQLITE_OK) 
     {
         INT curRow;
@@ -2181,43 +2133,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (HIWORD(wParam) == LBN_SELCHANGE)
             //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
             {
-                HMENU hMenu = CreatePopupMenu();
-                AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
-                //AppendMenu - добавляет список popup menu новые слова
-                //hMENU - handle hmenu
-                //uFlags - сюда пишем команду которая нужно выполнить
-                //uIDNewItem - id объекта
-                //lpNewItem - название объекта
-                AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
-                POINT pos;
-                GetCursorPos(&pos);
-                //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
-                SetForegroundWindow(hWnd);
-                //SetForegroundWindow - выводит окно POOPUP на передний план
-                INT num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
-                //TrackPopupMenu - отображает контекстное POPUP меню 
-                //TPM_RETURNCMD - вернуть выбранный номер
-                switch (num) 
-                {
-                case IDB_MODIFY_USER:
-                    classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+                /*if (LOWORD(wParam) == VK_RBUTTON)
+                {*/
+                    HMENU hMenu = CreatePopupMenu();
+                    AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
+                    //AppendMenu - добавляет список popup menu новые слова
+                    //hMENU - handle hmenu
+                    //uFlags - сюда пишем команду которая нужно выполнить
+                    //uIDNewItem - id объекта
+                    //lpNewItem - название объекта
+                    AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
+                    //TrackPopupMenu(hMenu, TPM_RIGHTALIGN, TPM_TOPALIGN, TPM_RETURNCMD, TPM_LEFTBUTTON, TPM_VERPOSANIMATION,  );
+                    POINT pos;
+                    GetCursorPos(&pos);
+                    //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
+                    SetForegroundWindow(hWnd);
+                    //SetForegroundWindow - выводит окно POOPUP на передний план
+                    INT num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
+                    //TrackPopupMenu - отображает контекстное POPUP меню 
+                    //TPM_RETURNCMD - вернуть выбранный номер
+                    switch (num)
                     {
-                        return 1;
+                    case IDB_MODIFY_USER:
+                        classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
+                        {
+                            return 1;
+                        }
+                        break;
+                    case IDB_DELETE_USER:
+                        deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                        //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
+                        //чтобы получить id/индекс выбранного пользователя
+                        //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
+                        //выполняется через SendMessage работающий с системой Windows
+                        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
+                        {
+                            return 1;
+                        }
+                        break;
                     }
-                    break;
-                case IDB_DELETE_USER:
-                    deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                    //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
-                    //чтобы получить id/индекс выбранного пользователя
-                    //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
-                    //выполняется через SendMessage работающий с системой Windows
-                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
-                    {
-                        return 1;
-                    }
-                    break;
-                }
+                //}
             }
         }
         break;
