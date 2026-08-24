@@ -221,9 +221,10 @@ int checkTables(HWND log)
                 "nickname varchar(256),"
                 "number_phone BIGINT NOT NULL,"
                 "email TEXT NOT NULL,"
-                "icon BINARY,"
+                "icon BINARY NULL,"
                 "path_icon TEXT,"
-                "status BOOl)";
+                "BIO TEXT NULL,"
+                "last_login DATETIME NOT NULL)";
             if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
@@ -246,9 +247,13 @@ int checkTables(HWND log)
                 delete stmt;
                 return 1;
             }
-            std::string createContactList = "Create Table `UserContactList`("
-                "list_id INT PRIMARY KEY NOT NULL,"
-                "list_of_users JSON NOT NULL);";
+            std::string createContactList = "Create Table `contacts`("
+                "conctact_id INT PRIMARY KEY NOT NULL,"
+                "nickname VARCHAR(256),"
+                "number_phone INT NOT NULL,"
+                "email TEXT NULL,"
+                "icon BINARY NULL,"
+                "last_login DATETIME NOT NULL);";
             if (stmt->execute(createContactList))
             {
                 appendToLog(log, L"Ошибка создания таблицы group");

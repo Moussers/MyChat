@@ -1308,9 +1308,10 @@ INT checkTables()
                     "nickname TEXT NOT NULL,"
                     "phone INTEGER NOT NULL,"
                     "email TEXT NULL,"
-                    "path_icon TEXT,"
-                    "icon BLOB,"
-                    "status INT NOT NULL);";
+                    "birth_day date NOT NULL,"
+                    "icon BLOB NULL,"
+                    "path_icon TEXT NULL,"
+                    "BIO TEXT NULL);";
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
@@ -1406,9 +1407,15 @@ INT checkTables()
             if (countRows == 0) 
             {
                 //MessageBox(NULL, L"Таблица списка контактов пользователя не была создана! Создаём новую", L"ИНФО", MB_OK | MB_ICONINFORMATION);
-                const char* createTable = "Create Table user contact list("
-                "list_id INT PRIMARY KEY NOT NULL"
-                "list_of_users JSON);";
+                const char* createTable = "Create Table contacts("
+                "contact_id INT PRIMARY KEY NOT NULL"
+                "nickname TEXT,"
+                "number_phone INT NOT NULL,"
+                "email TEXT NULL,"
+                "birth_day TEXT NOT NULL,"
+                "icon BLOB NULL,"
+                "BIO text,"
+                "last_login TEXT NOT NULL);";
                 char* msg = NULL;
                 try 
                 {
