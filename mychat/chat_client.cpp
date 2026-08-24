@@ -24,17 +24,13 @@ SOCKET listenSock = INVALID_SOCKET;
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
-WCHAR szAutorization[MAX_LOADSTRING] = L"Autorization_window_class";
-WCHAR szWndAthorizationClass[MAX_LOADSTRING] = L"Extra_authorization_window_class";
-WCHAR szAthorizationTitle[MAX_LOADSTRING] = L"Авторизация";
-WCHAR szAdditionalInfoClass[MAX_LOADSTRING] = L"Additional_extra_info_class";
-WCHAR szNicknameClass[MAX_LOADSTRING] = L"Nickname_window_class";
 
 //ATOM Class
 ATOM UserWndProcClass(HINSTANCE hInstance);
 ATOM AuthorizationClass(HINSTANCE hInstance);
 ATOM AuthorizationFormClass(HINSTANCE hInstance);
 ATOM AdditionalInfoClass(HINSTANCE hInstance);
+ATOM AddingEntryClass(HINSTANCE hInstance);
 ATOM NicknameClass(HINSTANCE hInstance);
 INT             createUserWndProc();
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -166,6 +162,7 @@ INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AuthorizationClass(hInstance);
     AuthorizationFormClass(hInstance);
     AdditionalInfoClass(hInstance);
+    AddingEntryClass(hInstance);
     NicknameClass(hInstance);
     checkTables();
     // Выполнить инициализацию приложения:
@@ -878,9 +875,9 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
                     userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
                     userWnd.lpszMenuName = NULL;
-                    userWnd.lpszClassName = INFO_MODIFICATION_CLASS;
+                    userWnd.lpszClassName = szInfoModificationClass;
                     ATOM reg = RegisterClassEx(&userWnd);
-                    HWND userClass = CreateWindow(INFO_MODIFICATION_CLASS, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND userClass = CreateWindow(szInfoModificationClass, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hLastName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -912,29 +909,10 @@ INT classModUserInfo(HWND hWnd, INT idx)
     sqlite3_close(db);
     return 0;
 }
+
 VOID addUser() 
 {
-    WNDCLASSEX userWnd;
-    //WNDCLASSEXW - Содержит сведения о классе окна.
-    ZeroMemory(&userWnd, sizeof(userWnd));
-    userWnd.cbSize = sizeof(WNDCLASSEX);
-    userWnd.style = CS_HREDRAW | CS_VREDRAW;
-    userWnd.lpfnWndProc = AddNewUserWndProc;
-    //lpfnWndProc - указатель на зарегестрированное и созданное окно.
-    userWnd.cbClsExtra = 0;
-    //Выделение дополнительных байт для класса после его регистрации, память 
-    //будет привязана к самому классу, а не к конкретному окну.
-    userWnd.cbWndExtra = 0;
-    //Выделение дополнительных байт для каждого окна, так как каждое окно будет уникальным,
-    //выделена память будет сохранена для окна пока оно будет существовать.
-    userWnd.hInstance = GetModuleHandle(NULL);
-    userWnd.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));;
-    userWnd.hCursor = LoadCursor(hInst, IDC_ARROW);
-    userWnd.hbrBackground = (HBRUSH)(COLOR_WINDOW);
-    userWnd.lpszMenuName = NULL;
-    userWnd.lpszClassName = USER_ACCOUNT_CLASS_NAME;
-    ATOM reg = RegisterClassEx(&userWnd);
-    HWND userClass = CreateWindow(USER_ACCOUNT_CLASS_NAME, L"Добавить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND userClass = CreateWindow(szUserAccountClassName, L"Добавить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     //HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     //HMENU - внутренее поле в котором мы можем храннить вписанный текст
     HFONT fontTitle = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
@@ -1054,6 +1032,29 @@ INT disconnectFromServ(SOCKET listenSock)
     }
     closesocket(listenSock);
     WSACleanup();
+}
+ATOM AddingEntryClass(HINSTANCE hInstance) 
+{
+    WNDCLASSEX wcex;
+    //WNDCLASSEXW - Содержит сведения о классе окна.
+    ZeroMemory(&wcex, sizeof(wcex));
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = AddNewUserWndProc;
+    //lpfnWndProc - указатель на зарегестрированное и созданное окно.
+    wcex.cbClsExtra = 0;
+    //Выделение дополнительных байт для класса после его регистрации, память 
+    //будет привязана к самому классу, а не к конкретному окну.
+    wcex.cbWndExtra = 0;
+    //Выделение дополнительных байт для каждого окна, так как каждое окно будет уникальным,
+    //выделена память будет сохранена для окна пока оно будет существовать.
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(NULL, MAKEINTRESOURCE(IDI_MYCHAT));;
+    wcex.hCursor = LoadCursor(hInst, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    wcex.lpszMenuName = NULL;
+    wcex.lpszClassName = szUserAccountClassName;
+    return RegisterClassExW(&wcex);
 }
 
 ATOM AuthorizationFormClass(HINSTANCE hInstance) 
@@ -1771,9 +1772,9 @@ INT CreatingAuthorWindow(HWND hWnd)
     //IDC_ARROW - указатель на курсор мышки.
     authorWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
     authorWnd.lpszMenuName = NULL;
-    authorWnd.lpszClassName = INFO_ABOUT_PROGRAM;
+    authorWnd.lpszClassName = szInfoAboutProgram;
     ATOM reg = RegisterClassEx(&authorWnd);
-    HWND userClass = CreateWindow(INFO_ABOUT_PROGRAM, L"О Программе", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, INFO_ABOUT_PROGRAM_WIDTH, INFO_ABOUT_PROGRAM_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND userClass = CreateWindow(szInfoAboutProgram, L"О Программе", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, INFO_ABOUT_PROGRAM_WIDTH, INFO_ABOUT_PROGRAM_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     //WS_OVERLAPPEDWINDOW - добавляет к окну значки закрыть, расширить, свернуть делая окно самостоятельным.
     CreateWindow(L"STATIC", L"Авторы:", WS_VISIBLE | WS_CHILD, ABOUT_AUTHOR_FIELD_POX_X, AUTHOR_FIELD_POS_Y, ABOUT_AUTHOR_FIELD_WIDTH, ABOUT_AUTHOR_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER, AUTHOR_LIST_POS_X, AUTHOR_FIELD_POS_Y, AUTHOR_LIST_POS_WIDTH, AUTHOR_LIST_POS_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
@@ -1825,7 +1826,7 @@ INT createExtraAthorizWnd()
 INT createUserWndProc()
 {
    HWND hMain = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInst, NULL);
-   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, INFO_FIELD_POS_X, INFO_FIELD_POS_Y, INFO_FIELD_WIDTH, INFO_FIELD_HEIGT, hMain, 0, hInst, NULL);
+   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, DESCRIPT_LIST_FIELD_POS_X, DESCRIPT_LIST_FIELD_POS_Y, DESCRIPT_LIST_FIELD_WIDTH, DESCRIPT_LIST_FIELD_HEIGT, hMain, 0, hInst, NULL);
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hMain, 0, hInst, NULL);
    CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hMain, (HMENU)IDM_MAIN_USER_LIST, hInst, NULL);
    if (updateList(GetDlgItem(hMain, IDM_MAIN_USER_LIST)) == 1)
@@ -1834,9 +1835,9 @@ INT createUserWndProc()
    }
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hMain, (HMENU)IDR_SEARCH_FIELD, hInst, NULL);
    CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hMain, 0, hInst, NULL);
-   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEARCH_BUTTON_POS_X, SEARCH_BUTTON_POS_Y, SEARCH_BUTTON_WIDTH, SEARCH_BUTTON_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
-   CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, BUTTON_ADDING_AN_ENTRY_POS_X, BUTTON_ADDING_AN_ENTRY_POS_Y, BUTTON_ADDING_AN_ENTRY_WIDTH, BUTTON_ADDING_AN_ENTRY_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
    recieveData(listenSock);
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);
