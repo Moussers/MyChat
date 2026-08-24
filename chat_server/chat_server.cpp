@@ -538,7 +538,7 @@ int checkExistEmail(WCHAR* email)
 }
 bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDest)
 {
-    if (wcSource[*indexI] == L'/')
+    if (wcSource[*indexI] == L'/' || wcSource[*indexI] == L' ')
     {
         return false;
     }

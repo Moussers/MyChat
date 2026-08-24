@@ -169,10 +169,6 @@ INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     NicknameClass(hInstance);
     checkTables();
     // Выполнить инициализацию приложения:
-    /*if (!InitInstance(hInstance, nCmdShow))
-    {
-        return FALSE;
-    }*/
     authorizationForm();
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYCHAT));
     MSG msg;
@@ -1145,9 +1141,9 @@ INT addAdditionalInfo()
     HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
-    HWND hDataEdit = CreateWindow(L"STATIC", L"Ваша Дата:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, GetModuleHandle(NULL), NULL);
-    //HWND hDyaBox = CreateWindow(L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 40, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
-    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 40, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND hDataEdit = CreateWindow(L"STATIC", L"Ваша Дата:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, hInst, NULL);
+    //HWND hDyaBox = CreateWindow(L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hDataEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1230,6 +1226,7 @@ INT authorizationForm()
 //    }
 //    return 0;
 //}
+
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
