@@ -14,3 +14,6 @@ CONST WCHAR szWndAthorizationClass[MAX_LOADSTRING] = L"Extra_authorization_windo
 CONST WCHAR szAthorizationTitle[MAX_LOADSTRING] = L"Авторизация";
 CONST WCHAR szAdditionalInfoClass[MAX_LOADSTRING] = L"Additional_extra_info_class";
 CONST WCHAR szNicknameClass[MAX_LOADSTRING] = L"Nickname_window_class";
+CONST CHAR numberList[MAX_LOADSTRING] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', 
+'12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', 
+'28', '29', '30', '31'};

@@ -32,7 +32,6 @@ ATOM AuthorizationFormClass(HINSTANCE hInstance);
 ATOM AdditionalInfoClass(HINSTANCE hInstance);
 ATOM AddingEntryClass(HINSTANCE hInstance);
 ATOM NicknameClass(HINSTANCE hInstance);
-INT             createUserWndProc();
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
@@ -40,6 +39,7 @@ LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 CONST INT arraySize = 2000;
+INT createUserWndProc();
 INT checkTables();
 INT checkingUserInfo(HWND hWnd);
 INT modifyUserInfo(HWND hWnd);
@@ -1144,13 +1144,14 @@ INT addAdditionalInfo()
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
     HWND hDataEdit = CreateWindow(L"STATIC", L"Ваша Дата:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, hInst, NULL);
     //HWND hDyaBox = CreateWindow(L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
-    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hDataEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hDyaBox, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(skipButton, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accessButton, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hDyaBox, CB_ADDSTRING, 0, (LPARAM)numberList);
     ShowWindow(mainWin, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(mainWin)) 

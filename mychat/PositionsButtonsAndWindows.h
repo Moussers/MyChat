@@ -1,7 +1,7 @@
 #pragma once
 #include <Windows.h>
 
-#define MAX_LOADSTRING 100
+#define MAX_LOADSTRING 300
 
 //Main Window
 #define MAIN_WINDOW_POSITION_WIDTH 820

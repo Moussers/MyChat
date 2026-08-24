@@ -31,6 +31,7 @@
 void startServer(HWND log);
 void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
+void clearLog(HWND log);
 bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
@@ -116,7 +117,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	}
 }
 
-VOID clearLog(HWND log) 
+void clearLog(HWND log) 
 {
     CONST INT SIZE = 100;
     WCHAR str[SIZE] = {};
