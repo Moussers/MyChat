@@ -58,8 +58,11 @@ private:
     CHAR m_numberPhone[arraySize];
     CHAR m_email[arraySize];
     CHAR m_nickname[arraySize];
+    INT m_birthdayDay;
+    INT m_birthdayMonth;
+    INT m_birthdayYear;
 public:
-    UserInfo() : m_numberPhone(""), m_email(""), m_nickname("") {};
+    UserInfo() : m_numberPhone(""), m_email(""), m_nickname(""), m_birthdayDay(1), m_birthdayMonth(12), m_birthdayYear(1999) {};
 public:
     void setNumberPhone(CHAR* numberPhone);
     CHAR* numberPhone();
@@ -67,6 +70,12 @@ public:
     CHAR* email();
     void setNickname(CHAR* nickname);
     CHAR* nickname();
+    void setBirthdayDay(INT userBirthdayDay);
+    INT birthdayDay();
+    void setBirthdayMonth(INT userBirthdayMonth);
+    INT birthdayMonth();
+    void setBirthdayYear(INT userBirthdayYear);
+    INT birthdayYear();
 };
 
 void UserInfo::setNumberPhone(CHAR* userPhone) 
@@ -98,6 +107,37 @@ CHAR* UserInfo::nickname()
 {
     return m_nickname;
 }
+
+void UserInfo::setBirthdayDay(INT userBirthdayDay) 
+{
+    m_birthdayDay = userBirthdayDay;
+}
+
+INT UserInfo::birthdayDay() 
+{
+    return m_birthdayDay;
+}
+
+void UserInfo::setBirthdayMonth(INT userBirthdayMonth) 
+{
+    m_birthdayMonth = userBirthdayMonth;
+}
+
+INT UserInfo::birthdayMonth() 
+{
+    return m_birthdayMonth;
+}
+
+void UserInfo::setBirthdayYear(INT userBirthdayYear) 
+{
+    m_birthdayYear = userBirthdayYear;
+}
+
+INT UserInfo::birthdayYear() 
+{
+    return m_birthdayYear;
+}
+
 UserInfo userInfo;
 INT authorizationForm();
 INT insertEntry(HWND hwnd);
@@ -1105,8 +1145,13 @@ INT addAdditionalInfo()
     HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
+    HWND hDataEdit = CreateWindow(L"STATIC", L"Ваша Дата:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    //HWND hDyaBox = CreateWindow(L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 40, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 40, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hDataEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hDyaBox, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(skipButton, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accessButton, WM_SETFONT, (WPARAM)hFont, TRUE);
     ShowWindow(mainWin, SW_SHOWDEFAULT);
@@ -1172,19 +1217,19 @@ INT authorizationForm()
     return 0;
 }
 
-INT getDataFromServ(SOCKET lSocket) 
-{
-    CONST INT SIZE = 1024;
-    CHAR command[SIZE]{};
-    strcpy_s(command, "/getDataFromServ");
-    INT iResult = send(lSocket, command, strlen(command)+1, 0);
-    if (iResult == INVALID_SOCKET) 
-    {
-        MessageBox(NULL, L"Ошибка при отправке данных", L"Ошибка", MB_OK | MB_ICONERROR);
-        return 1;
-    }
-    return 0;
-}
+//INT getDataFromServ(SOCKET lSocket) 
+//{
+//    CONST INT SIZE = 1024;
+//    CHAR command[SIZE]{};
+//    strcpy_s(command, "/getDataFromServ");
+//    INT iResult = send(lSocket, command, strlen(command)+1, 0);
+//    if (iResult == INVALID_SOCKET) 
+//    {
+//        MessageBox(NULL, L"Ошибка при отправке данных", L"Ошибка", MB_OK | MB_ICONERROR);
+//        return 1;
+//    }
+//    return 0;
+//}
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -1308,10 +1353,11 @@ INT checkTables()
                     "nickname TEXT NOT NULL,"
                     "phone INTEGER NOT NULL,"
                     "email TEXT NULL,"
-                    "birth_day date NOT NULL,"
+                    "birthday date NULL,"
                     "icon BLOB NULL,"
                     "path_icon TEXT NULL,"
-                    "BIO TEXT NULL);";
+                    "BIO TEXT NULL"
+                    "last_login TEXT NULL);";
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
@@ -1408,14 +1454,14 @@ INT checkTables()
             {
                 //MessageBox(NULL, L"Таблица списка контактов пользователя не была создана! Создаём новую", L"ИНФО", MB_OK | MB_ICONINFORMATION);
                 const char* createTable = "Create Table contacts("
-                "contact_id INT PRIMARY KEY NOT NULL"
-                "nickname TEXT,"
-                "number_phone INT NOT NULL,"
-                "email TEXT NULL,"
-                "birth_day TEXT NOT NULL,"
-                "icon BLOB NULL,"
-                "BIO text,"
-                "last_login TEXT NOT NULL);";
+                    "contact_id INT PRIMARY KEY NOT NULL"
+                    "nickname TEXT,"
+                    "number_phone INT NOT NULL,"
+                    "email TEXT NULL,"
+                    "birth_day TEXT NOT NULL,"
+                    "icon BLOB NULL,"
+                    "BIO text);";
+                    "last_login TEXT NULL);";
                 char* msg = NULL;
                 try 
                 {
@@ -1532,10 +1578,10 @@ INT getUrl(CHAR* recvBuf)
     {
         return 1;
     }
-    if (!strcmp(command, "sendDataToUser"))
+    /*if (!strcmp(command, "sendDataToUser"))
     {
         return 2;
-    }
+    }*/
     return -1;
 }
 
@@ -1697,11 +1743,11 @@ INT recieveData(SOCKET clientSocket)
             return 1;
         }
         break;
-        case IDS_GETDATA_FROM_SERV_BD:
+        /*case IDS_GETDATA_FROM_SERV_BD:
         {
             insertServDataToDB(recvBuf);
         }
-        break;
+        break;*/
         default: 
             return 1;
         }       
@@ -1794,7 +1840,6 @@ INT createUserWndProc()
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 10, SEND_MES_WINDOW_Y, 60, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, 80, SEND_MES_WINDOW_Y, 80, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
-   getDataFromServ(listenSock);
    recieveData(listenSock);
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);

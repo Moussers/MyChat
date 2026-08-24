@@ -33,7 +33,7 @@
 #define REGISTRATION_WINDOW_HEIGHT 270
 
 #define ADDITIONAL_INFO_WIDTH 450
-#define ADDITIONAL_INFO_HEIGHT 230
+#define ADDITIONAL_INFO_HEIGHT 280
 
 //Phone for the registration
 #define REGISTRATION_PHONE_FIELD_POS_X 10
@@ -61,7 +61,7 @@
 
 //An E-Mail window with a skip button
 #define EMAIL_SKIP_BUTTON_POS_X 160
-#define EMAIL_SKIP_BUTTON_POS_Y 140
+#define EMAIL_SKIP_BUTTON_POS_Y 200
 #define EMAIL_SKIP_BUTTON_POS_WIDTH 140
 #define EMAIL_SKIP_BUTTON_POS_HEIGHT 30
 
@@ -73,9 +73,15 @@
 
 //An E-Mail window with a access button
 #define EMAIL_ACCESS_BUTTON_POS_X 310
-#define EMAIL_ACCESS_BUTTON_POS_Y 140
+#define EMAIL_ACCESS_BUTTON_POS_Y 200
 #define EMAIL_ACCESS_BUTTON_POS_WIDTH 100
 #define EMAIL_ACCESS_BUTTON_POS_HEIGHT 30
+
+//Description field for additional registration window
+#define EXTRA_REG_DATA_EDIT_POS_X 20
+#define EXTRA_REG_DATA_EDIT_POS_Y 130
+#define EXTRA_REG_DATA_EDIT_WIDTH 130
+#define EXTRA_REG_DATA_EDIT_HEIGHT 30
 
 //Input Registered phone data
 #define INPUT_REGISTERED_PHONE_POS_X 10

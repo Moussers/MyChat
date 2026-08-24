@@ -37,7 +37,7 @@ int checkTables(HWND log);
 int mysqlConnect();
 bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
 bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
-void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
+bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
@@ -53,7 +53,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, GETDATA_FROM_USER = 2};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -218,13 +218,14 @@ int checkTables(HWND log)
             }
             std::string createUsers = "Create TABLE `users`("
                 "user_id INT PRIMARY KEY auto_increment,"
-                "nickname varchar(256),"
+                "nickname varchar(256) NOT NULL,"
                 "number_phone BIGINT NOT NULL,"
-                "email TEXT NOT NULL,"
+                "email TEXT NULL,"
+                "birthday DATE NULL,"
                 "icon BINARY NULL,"
                 "path_icon TEXT,"
                 "BIO TEXT NULL,"
-                "last_login DATETIME NOT NULL)";
+                "last_login DATETIME NULL);";
             if (stmt->execute(createUsers)) 
             {
                 appendToLog(log, L"Ошибка пр создании таблицы юзер!");
@@ -240,7 +241,7 @@ int checkTables(HWND log)
                 "recipent INT,"
                 "FOREIGN KEY (sender) REFERENCES `users`(user_id),"
                 "FOREIGN KEY (recipent) REFERENCES users(user_id),"
-                "FOREIGN KEY (`group`) REFERENCES `groups`(group_id))";
+                "FOREIGN KEY (`group`) REFERENCES `groups`(group_id));";
             if (stmt->execute(createMessages))
             {
                 appendToLog(log, L"Ошибка при создание таблицы сообщение!");
@@ -252,8 +253,8 @@ int checkTables(HWND log)
                 "nickname VARCHAR(256),"
                 "number_phone INT NOT NULL,"
                 "email TEXT NULL,"
-                "icon BINARY NULL,"
-                "last_login DATETIME NOT NULL);";
+                "icon BINARY NULL);";
+                "last_login DATETIME NULL);";
             if (stmt->execute(createContactList))
             {
                 appendToLog(log, L"Ошибка создания таблицы group");
@@ -455,8 +456,6 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname)
     {
         WCHAR errors[SIZE];
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()+1), errors, SIZE);
-        int len = wcslen(errors);
-        errors[len] = L'\0';
         appendToLog(logHWND, errors);
         connection->close();
         return false;
@@ -738,7 +737,7 @@ void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf)
     login = false;
 }
 
-void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
+bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
     login = true;
     CONST INT SIZE = 1024;
@@ -771,49 +770,50 @@ void checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
         }
     }
     login = false;
+    return true;
 }
 
-int sendDataToUser(SOCKET* clientSocket) 
-{
-    if (connection->isClosed()) 
-    {
-        mysqlConnect();
-    }
-    sql::Statement *stmt = connection->createStatement();
-    /*command = "SELECT COUNT(*) FROM users;";
-    sql::ResultSet *res = stmt->executeQuery(command);
-    res->next();
-    int count = res->getInt(1);*/
-    //Получаем количество записей в таблице, вытягивая из первого столбца значение
-    std::string command = "SELECT * FROM users;";
-    std::string databaseData = "[";
-    sql::ResultSet *res = stmt->executeQuery(command);
-    while (res->next())
-    {
-        int id = res->getInt(1);
-        std::string nickname = res->getString(2);
-        int64_t phone = res->getInt64(3);
-        //int_64 - больше размер чем у int
-        std::string email = res->getString(4);
-        //Получаем данные из базы данных
-        databaseData += std::to_string(id);
-        databaseData += ",";
-        databaseData += nickname;
-        databaseData += ",";
-        databaseData += std::to_string(phone);
-        databaseData += ",";
-        databaseData += email;
-        databaseData += ";";
-    }
-    databaseData += "]/sendDataToUser";
-    int iResult = send(*clientSocket, databaseData.c_str(), strlen(databaseData.c_str()), 0);
-    if (iResult == INVALID_SOCKET) 
-    {
-        appendToLog(logHWND, L"Ошибка отпраки данных из бд клиенту.");
-        return 1;
-    }
-    return 0;
-}
+//int sendDataToUser(SOCKET* clientSocket) 
+//{
+//    if (connection->isClosed()) 
+//    {
+//        mysqlConnect();
+//    }
+//    sql::Statement *stmt = connection->createStatement();
+//    /*command = "SELECT COUNT(*) FROM users;";
+//    sql::ResultSet *res = stmt->executeQuery(command);
+//    res->next();
+//    int count = res->getInt(1);*/
+//    //Получаем количество записей в таблице, вытягивая из первого столбца значение
+//    std::string command = "SELECT * FROM users;";
+//    std::string databaseData = "[";
+//    sql::ResultSet *res = stmt->executeQuery(command);
+//    while (res->next())
+//    {
+//        int id = res->getInt(1);
+//        std::string nickname = res->getString(2);
+//        int64_t phone = res->getInt64(3);
+//        //int_64 - больше размер чем у int
+//        std::string email = res->getString(4);
+//        //Получаем данные из базы данных
+//        databaseData += std::to_string(id);
+//        databaseData += ",";
+//        databaseData += nickname;
+//        databaseData += ",";
+//        databaseData += std::to_string(phone);
+//        databaseData += ",";
+//        databaseData += email;
+//        databaseData += ";";
+//    }
+//    databaseData += "]/sendDataToUser";
+//    int iResult = send(*clientSocket, databaseData.c_str(), strlen(databaseData.c_str()), 0);
+//    if (iResult == INVALID_SOCKET) 
+//    {
+//        appendToLog(logHWND, L"Ошибка отпраки данных из бд клиенту.");
+//        return 1;
+//    }
+//    return 0;
+//}
 
 int clientManagement(SOCKET* clientSocket) 
 {
@@ -856,10 +856,6 @@ int clientManagement(SOCKET* clientSocket)
                     checkAuthorizEntry(clientSocket, recvBuf);
                 }
                 break;
-                case GETDATA_FROM_USER: 
-                {
-                    sendDataToUser(clientSocket);
-                }
                 break;
                 default:
                     return 1;
