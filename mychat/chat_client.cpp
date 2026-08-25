@@ -15,12 +15,14 @@
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
 #define PORT "4000"
+
+// Глобальные переменные:
+CONST INT arraySize = 2000;
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
 CONST UINT codePage = 1251;                     //UINT - unsigned int
 INT userId = 0;
 SOCKET listenSock = INVALID_SOCKET;
-// Глобальные переменные:
 HINSTANCE hInst;                                // текущий экземпляр
 WCHAR szTitle[MAX_LOADSTRING];                  // Текст строки заголовка
 WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса главного окна
@@ -32,13 +34,15 @@ ATOM AuthorizationFormClass(HINSTANCE hInstance);
 ATOM AdditionalInfoClass(HINSTANCE hInstance);
 ATOM AddingEntryClass(HINSTANCE hInstance);
 ATOM NicknameClass(HINSTANCE hInstance);
+
+//Window functions
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndExtraInfo(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK AboutProgram(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-CONST INT arraySize = 2000;
+
 INT createUserWndProc();
 INT checkTables();
 INT checkingUserInfo(HWND hWnd);
@@ -54,11 +58,11 @@ private:
     CHAR m_numberPhone[arraySize];
     CHAR m_email[arraySize];
     CHAR m_nickname[arraySize];
-    INT m_birthdayDay;
-    INT m_birthdayMonth;
-    INT m_birthdayYear;
+    CHAR m_birthdayDay[arraySize];
+    CHAR m_birthdayMonth[arraySize];
+    CHAR m_birthdayYear[arraySize];
 public:
-    UserInfo() : m_numberPhone(""), m_email(""), m_nickname(""), m_birthdayDay(1), m_birthdayMonth(12), m_birthdayYear(1999) {};
+    UserInfo() : m_numberPhone(""), m_email(""), m_nickname(""), m_birthdayDay(""), m_birthdayMonth(""), m_birthdayYear("") {};
 public:
     void setNumberPhone(CHAR* numberPhone);
     CHAR* numberPhone();
@@ -66,12 +70,12 @@ public:
     CHAR* email();
     void setNickname(CHAR* nickname);
     CHAR* nickname();
-    void setBirthdayDay(INT userBirthdayDay);
-    INT birthdayDay();
-    void setBirthdayMonth(INT userBirthdayMonth);
-    INT birthdayMonth();
-    void setBirthdayYear(INT userBirthdayYear);
-    INT birthdayYear();
+    void setBirthdayDay(CHAR* userBirthdayDay);
+    CHAR* birthdayDay();
+    void setBirthdayMonth(CHAR* userBirthdayMonth);
+    CHAR* birthdayMonth();
+    void setBirthdayYear(CHAR* userBirthdayYear);
+    CHAR* birthdayYear();
 };
 
 void UserInfo::setNumberPhone(CHAR* userPhone) 
@@ -104,32 +108,32 @@ CHAR* UserInfo::nickname()
     return m_nickname;
 }
 
-void UserInfo::setBirthdayDay(INT userBirthdayDay) 
+void UserInfo::setBirthdayDay(CHAR* userBirthdayDay) 
 {
-    m_birthdayDay = userBirthdayDay;
+    strcpy_s(m_birthdayDay, userBirthdayDay);
 }
 
-INT UserInfo::birthdayDay() 
+CHAR* UserInfo::birthdayDay() 
 {
     return m_birthdayDay;
 }
 
-void UserInfo::setBirthdayMonth(INT userBirthdayMonth) 
+void UserInfo::setBirthdayMonth(CHAR* userBirthdayMonth) 
 {
-    m_birthdayMonth = userBirthdayMonth;
+    strcpy_s(m_birthdayMonth, userBirthdayMonth);
 }
 
-INT UserInfo::birthdayMonth() 
+CHAR* UserInfo::birthdayMonth() 
 {
     return m_birthdayMonth;
 }
 
-void UserInfo::setBirthdayYear(INT userBirthdayYear) 
+void UserInfo::setBirthdayYear(CHAR* userBirthdayYear) 
 {
-    m_birthdayYear = userBirthdayYear;
+    strcpy_s(m_birthdayYear, userBirthdayYear);
 }
 
-INT UserInfo::birthdayYear() 
+CHAR* UserInfo::birthdayYear() 
 {
     return m_birthdayYear;
 }
@@ -537,7 +541,6 @@ INT insertEntry(HWND hWnd)
     CHAR command[SIZECOMMAND];
     CHAR buffer[USERSIZE];
     INT number = 0;
-    INT status = 0;
     LPCTSTR errMes;
     //UINT - безнаковый целочисленный тип числа
     //(GetDlgItem(hWnd, IDM_ADD_MENU_LAST_NAME), wLastName, USERSIZE);
@@ -570,7 +573,7 @@ INT insertEntry(HWND hWnd)
         }
     }
     sqlite3_finalize(table);
-    strcpy_s(command, "INSERT INTO users (user_id, nickname, phone, email, status) VALUES(");
+    strcpy_s(command, "INSERT INTO users (user_id, nickname, phone, email) VALUES('");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
@@ -585,42 +588,32 @@ INT insertEntry(HWND hWnd)
     //lpUsedDefaultChar - указатель для нескольких символов, если они не указаны в
     //в представленной таблице.
     strcat_s(command, buffer);
-    strcat_s(command, ",");
+    strcat_s(command, "',");
     strcat_s(command, "'");
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), wNickname, USERSIZE);
     WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname)+1, buffer, USERSIZE, NULL, NULL);
+    strcat_s(command, buffer);
+    strcat_s(command, "',");
     strcat_s(command, "'");
     WideCharToMultiByte(codePage, 0, numbrerPhone, wcslen(numbrerPhone)+1, buffer, USERSIZE, NULL, NULL);
     CONST INT SIZE = 2000;
-    CHAR temp[SIZE]{};
     if (checkingNumberPhone(buffer) == 1)
     {
-        return 1;
+        SendMessage(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), WM_SETTEXT, 0, (LPARAM)"");
     }
-    strcat_s(command, temp);
+    strcat_s(command, buffer);
+    strcat_s(command, "',");
     strcat_s(command, "'");
-    strcat_s(command, ",");
-    strcat_s(command, "'");
-    if (checkExistsNumPhone(hWnd) == 1) 
-    {
-        return 1;
-    }
+    checkExistsNumPhone(hWnd);
     WideCharToMultiByte(codePage, 0, email, wcslen(email)+1, buffer, USERSIZE, NULL, NULL);
     if (checkingEMail(buffer) == 1) 
     {
-        return 1;
+        SendMessage(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), WM_SETTEXT, 0, (LPARAM)"");
     }
     strcat_s(command, buffer);
-    strcat_s(command, "'");
-    strcat_s(command, ",");
-    if (checkExistsEMail(hWnd) == 1) 
-    {
-        return 1;
-    }
-    wsprintfA(buffer, "%d", status);
+    strcat_s(command, "');");
+    checkExistsEMail(hWnd);
     //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
-    strcat_s(command, buffer);
-    strcat_s(command, ")");
     char *msg = NULL;
     try {
         res = sqlite3_exec(db, command, NULL, NULL, &msg);
@@ -839,7 +832,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
             //в выделенную int переменную;
             //Второй аргумент номер колонки из которой берём значение;
             userId = changeUserId;
-            const char* dataUser = "SELECT nickname phone, email FROM users WHERE user_id = ";
+            const char* dataUser = "SELECT nickname, phone, email FROM users WHERE user_id = ";
             //!SQLITE все работает через запросы которые мы собираем в переменной формата const char*
             WCHAR wId[IDXSIZE]{};
             CHAR chId[IDXSIZE]{};
@@ -855,13 +848,13 @@ INT classModUserInfo(HWND hWnd, INT idx)
                 if (curRow == SQLITE_ROW) 
                 {
                     const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-                    const char* chEMail = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                    const char* chEmail = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
                     WCHAR wcNickname[SIZE];
                     WCHAR wcPhone[SIZE];
                     WCHAR wcEMail[SIZE];
                     MultiByteToWideChar(codePage, 0, chNickname, strlen(chPhone) + 1, wcNickname, SIZE);
-                    MultiByteToWideChar(codePage, 0, chEMail, strlen(chEMail) + 1, wcEMail, SIZE);
+                    MultiByteToWideChar(codePage, 0, chEmail, strlen(chEmail) + 1, wcEMail, SIZE);
                     MultiByteToWideChar(codePage, 0, chPhone, strlen(chNickname) + 1, wcPhone, SIZE);
                     WNDCLASSEX userWnd;
                     ZeroMemory(&userWnd, sizeof(userWnd));
@@ -1134,6 +1127,13 @@ ATOM AdditionalInfoClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
+INT getNumberStr(CONST WCHAR** array) 
+{
+    INT count = 0;
+    while (array[count++][0] != L'\0');
+    return count-1;
+}
+
 INT addAdditionalInfo() 
 {
     HWND mainWin = CreateWindow(szAdditionalInfoClass, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, ADDITIONAL_INFO_WIDTH, ADDITIONAL_INFO_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -1142,21 +1142,43 @@ INT addAdditionalInfo()
     HWND emailInput = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER, EMAIL_INPUT_FIELD_POS_X, EMAIL_INPUT_FIELD_POS_Y, EMAIL_INPUT_FIELD_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDR_REGISTRATION_MAIL, GetModuleHandle(NULL), NULL);
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
-    HWND hDataEdit = CreateWindow(L"STATIC", L"Ваша Дата:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, hInst, NULL);
-    //HWND hDyaBox = CreateWindow(L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_OVERLAPPED | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
-    HWND hDyaBox = CreateWindowEx(WS_EX_STATICEDGE, L"COMBOBOX", L"День", CBS_DROPDOWN | CBS_HASSTRINGS | WS_VISIBLE, 50, 130, 30, 30, mainWin, NULL, GetModuleHandle(NULL), NULL);
+    HWND hDataEdit = CreateWindow(L"STATIC", L"Дата Рождения:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, hInst, NULL);
+    HWND hDyasBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 20, 160, 60, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_DAYS, GetModuleHandle(NULL), NULL);
+    //WS_CHILD - указывает (связывает) объект с окном, то есть указывает что объект будет являться частью окна
+    HWND hMonthBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 94, 160, 60, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_MONTHS, GetModuleHandle(NULL), NULL);
+    HWND hYearsBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 170, 160, 80, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_DATES, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hDataEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hDyaBox, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hDyasBox, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hMonthBox, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessage(hYearsBox, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(skipButton, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(accessButton, WM_SETFONT, (WPARAM)hFont, TRUE);
-    SendMessage(hDyaBox, CB_ADDSTRING, 0, (LPARAM)numberList);
+    for (int i = 0; i < 31; ++i) 
+    {
+        SendMessage(hDyasBox, CB_ADDSTRING, 0, (LPARAM)numberOfDays[i]);
+    }
+    SendMessage(hDyasBox, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
+    //CB_SETCURSEL - используется для программного выбора элемента в списке элемента управления «поле со списком» (combo box)
+    for (int i = 0; i < 12; ++i) 
+    {
+        SendMessage(hMonthBox, CB_ADDSTRING, 0, (LPARAM)numberOfMonths[i]);
+    }
+    SendMessage(hMonthBox, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
+    INT strLength = getNumberStr(numberOfDates);
+    for (int i = 0; i < strLength; ++i) 
+    {
+        SendMessage(hYearsBox, CB_ADDSTRING, 0, (LPARAM)numberOfDates[i]);
+    }
+    SendMessage(hYearsBox, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
     ShowWindow(mainWin, SW_SHOWDEFAULT);
     MSG msg;
     while (IsWindow(mainWin)) 
     {
-        if (GetMessage(&msg, mainWin, 0, 0)) 
+        if (GetMessage(&msg, NULL, 0, 0)) 
+        //Второй параметр отвечает за обработку сообщений происходящий в окне, ставим NULL, тем самым указываем что нужно 
+        //обрабатывать все сообщения, а не только внутри окна программы
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -1839,7 +1861,7 @@ INT createUserWndProc()
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEARCH_BUTTON_POS_X, SEARCH_BUTTON_POS_Y, SEARCH_BUTTON_WIDTH, SEARCH_BUTTON_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, BUTTON_ADDING_AN_ENTRY_POS_X, BUTTON_ADDING_AN_ENTRY_POS_Y, BUTTON_ADDING_AN_ENTRY_WIDTH, BUTTON_ADDING_AN_ENTRY_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
-   recieveData(listenSock);
+   //recieveData(listenSock);
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);
    MSG msg;
@@ -2002,6 +2024,7 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     {
     case WM_COMMAND: 
     {
+
         switch (LOWORD(wParam))
         {
         case IDB_ENTERING_MAIL_SKIP:
@@ -2012,21 +2035,35 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
         break;
         case IDB_ENTERING_MAIL_ACCEPT:
         {
-            HWND hText = GetDlgItem(hWnd, IDR_REGISTRATION_MAIL);
             CONST INT SIZE = 1024;
-            CHAR chEMail[SIZE];
-            WCHAR wEMail[SIZE];
-            INT len = GetWindowText(hText, wEMail, 1024);
-            WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, SIZE, NULL, NULL);
-            if (checkingEMail(chEMail) == 1)
+            CHAR chEmail[SIZE];
+            CHAR chDays[SIZE];
+            CHAR chMonths[SIZE];
+            CHAR chYears[SIZE];
+            WCHAR wcEmail[SIZE];
+            WCHAR wcDays[SIZE];
+            WCHAR wcMonths[SIZE];
+            WCHAR wcYears[SIZE];
+            GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_MAIL), wcEmail, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_DAYS), wcDays, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_MONTHS), wcMonths, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_DATES), wcYears, SIZE);
+            WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
+            if (checkingEMail(chEmail) == 1)
             {
                 MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
                 SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_MAIL), L"");
             }
             else 
             {
-                len = strlen(chEMail);
-                userInfo.setEmail(chEMail);
+                INT len = strlen(chEmail);
+                userInfo.setEmail(chEmail);
+                WideCharToMultiByte(codePage, 0, wcDays, wcslen(wcDays) + 1, chDays, SIZE, NULL, NULL);
+                WideCharToMultiByte(codePage, 0, wcMonths, wcslen(wcMonths) + 1, chMonths, SIZE, NULL, NULL);
+                WideCharToMultiByte(codePage, 0, wcYears, wcslen(wcYears) + 1, chYears, SIZE, NULL, NULL);
+                userInfo.setBirthdayDay(chDays);
+                userInfo.setBirthdayMonth(chMonths);
+                userInfo.setBirthdayYear(chYears);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
                 nicknameWindow();
             }
