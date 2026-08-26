@@ -179,12 +179,13 @@
 #define MAIN_FIELD_WIDTH 360
 #define MAIN_FIELD_HEIGHT 300
 #define DESCRIPT_FIELD_POS_X 20
-#define DESCRIPT_FIELD_MOD_LAST_POS_Y 20
+#define DESCRIPT_FIELD_MOD_POS_X(x) x+30
 #define DESCRIPT_FIELD_MOD_POS_Y(x) x+30
 #define DESCRIPT_FIELD_WIDTH 100
+#define MOD_DESCRIPT_FIELD_WIDTH(x) x+100
 #define DESCRIPT_FIELD_HEIGHT 150
-#define DESCRIPT_FIELD_MOD_HEIGHT 20 
 #define INPUT_FIELD_POS_X 120
+#define MOD_INPUT_FIELD_WIDTH(x) x+30
 #define COUNT_FIELD_POS_X(x) x+30
 #define COUNT_FIELD_POS_Y(x) x+30
 //Синтаксис псевдо функции через добавить define
@@ -219,17 +220,22 @@
 #define BUTTON_HEIGHT 20
 
 //Modify Window
-#define MODIFY_CLASS_WIDTH 260
+#define MODIFY_CLASS_WIDTH 340
 #define MODIFY_CLASS_HEIGHT 300
-#define MODIFY_BUTTON_EDIT_POS_X 100
+#define MODIFY_BUTTON_EDIT_POS_X(x) x+30
 #define MODIFY_BUTTON_EDIT_POS_Y(x) x+30
 
 //Accept modification
-#define MOD_ACCEPT_BUTTON_POS_X 80
-#define MOD_ACCEPT_BUTTON_WIDTH 60
+//Coordinaters for the modification window
 
-//Cancel moidification
-#define MOD_CANCEL_BUTTON_POS_X 150
-#define MOD_CANCEL_BUTTON_POS_Y 200
-#define MOD_CANCEL_BUTTON_WIDTH 60
-#define MOD_CANCEL_BUTTON_HEIGHT 20
+//For the description fields
+#define DESCRIPT_FIELD_MOD_HEIGHT(x) x+30
+
+//For the input fields 
+#define MOD_INPUT_FIELD_HEIGHT(x) x+30 
+
+//For the buttons
+#define MOD_BUTTON_POS_X(x) x+30
+#define MOD_BUTTON_POS_Y(x) x+30
+#define MOD_BUTTON_HEIGHT(x) x+30
+#define MOD_BUTTON_WIDTH(x) x+30

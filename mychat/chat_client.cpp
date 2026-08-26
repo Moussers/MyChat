@@ -51,6 +51,7 @@ INT accoutSearch(HWND hField, HWND hList);
 INT updateList(HWND userList);
 INT recievedRegData(CHAR* recvBuf);
 INT deleteUser(INT idx);
+CHAR* checkPlusInPhone(const char* numPhone);
 
 class UserInfo
 {
@@ -190,17 +191,23 @@ LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     switch (message) 
     {
     case WM_COMMAND:
-        switch (LOWORD(wParam)) 
+    {
+        switch (LOWORD(wParam))
         {
         case IDB_GIVE_CONSENT_USER_MOD:
+        {
             modifyUserInfo(hWnd);
             SendMessage(hWnd, WM_CLOSE, 0, NULL);
-            break;
-        case IDB_CANCELING_USER_MOD:
-            SendMessage(hWnd, WM_CLOSE, 0, NULL);
-            break;
         }
         break;
+        case IDB_CANCELING_USER_MOD:
+        {
+            SendMessage(hWnd, WM_CLOSE, 0, NULL);
+        }
+        break;
+        }
+    }
+    break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }  
@@ -669,9 +676,9 @@ INT modifyUserInfo(HWND hWnd)
     }
     CONST INT SIZE = 2000;
     CONST INT NUMSIZE = 256;
-    WCHAR wNickname[SIZE];
-    WCHAR wPhone[SIZE];
-    WCHAR wEMail[SIZE];
+    WCHAR wcNickname[SIZE];
+    WCHAR wcPhone[SIZE];
+    WCHAR wcEmail[SIZE];
     CHAR chNickname[SIZE];
     CHAR chPhone[SIZE];
     CHAR chEMail[SIZE];
@@ -679,14 +686,14 @@ INT modifyUserInfo(HWND hWnd)
     WCHAR wNum[NUMSIZE];
     CHAR chNum[NUMSIZE];
     const char* updateData = "UPDATE users SET last_name = '";
-    //const char* updateData = "UPDATE users SET last_name = '";
     strcpy_s(command, updateData);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wNickname, SIZE);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wPhone, SIZE);
-    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_EMAIL), wEMail, SIZE);
-    WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname) + 1, chNickname, SIZE, NULL, NULL);
-    WideCharToMultiByte(codePage, 0, wPhone, wcslen(wPhone) + 1, chPhone, SIZE, NULL, NULL);
-    WideCharToMultiByte(codePage, 0, wEMail, wcslen(wEMail) + 1, chEMail, SIZE, NULL, NULL);
+    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wcNickname, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wcPhone, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_EMAIL), wcEmail, SIZE);
+    WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickname, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, chPhone, SIZE, NULL, NULL);
+    checkPlusInPhone(chPhone);
+    WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEMail, SIZE, NULL, NULL);
     strcat_s(command, chNickname);
     strcat_s(command, "', phone = '");
     strcat_s(command, chPhone);
@@ -800,6 +807,27 @@ INT deleteUser(INT idx)
     sqlite3_close(db);
     return 0;
 }
+CHAR* checkPlusInPhone(const char* numPhone) 
+{
+    CONST INT SIZE = 1024;
+    CHAR arr[1024]{};
+    if (numPhone[0] != '+') 
+    {
+         strcpy_s(arr, "+");
+         strcat_s(arr, numPhone);
+    }
+    else if (numPhone[0] == '+') 
+    {
+        int i = 1;
+        int p = 0;
+        while (numPhone[i] != L'\0') 
+        {
+            arr[0] = numPhone[i];
+        }
+    }
+    return arr;
+}
+
 INT classModUserInfo(HWND hWnd, INT idx) 
 {
     if (idx == -1) 
@@ -822,10 +850,10 @@ INT classModUserInfo(HWND hWnd, INT idx)
     CHAR command[SIZE];
     strcpy_s(command, selId);
     CONST INT IDXSIZE = 256;
-    WCHAR wNum[IDXSIZE];
+    WCHAR wcNum[IDXSIZE];
     CHAR chNum[IDXSIZE];
-    wsprintf(wNum, L"%d\0", idx);
-    WideCharToMultiByte(codePage, 0, wNum, wcslen(wNum) + 1, chNum, IDXSIZE, NULL, NULL);
+    wsprintf(wcNum, L"%d\0", idx);
+    WideCharToMultiByte(codePage, 0, wcNum, wcslen(wcNum) + 1, chNum, IDXSIZE, NULL, NULL);
     strcat_s(command, chNum);
     strcat_s(command, ";");
     sqlite3_stmt* stmt;
@@ -858,12 +886,14 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
                     const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
                     const char* chEmail = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                    CHAR buffer[SIZE]{};
+                    strcpy_s(buffer, checkPlusInPhone(chPhone));
                     WCHAR wcNickname[SIZE];
                     WCHAR wcPhone[SIZE];
                     WCHAR wcEMail[SIZE];
-                    MultiByteToWideChar(codePage, 0, chNickname, strlen(chPhone) + 1, wcNickname, SIZE);
+                    MultiByteToWideChar(codePage, 0, chNickname, strlen(chNickname) + 1, wcNickname, SIZE);
                     MultiByteToWideChar(codePage, 0, chEmail, strlen(chEmail) + 1, wcEMail, SIZE);
-                    MultiByteToWideChar(codePage, 0, chPhone, strlen(chNickname) + 1, wcPhone, SIZE);
+                    MultiByteToWideChar(codePage, 0, buffer, strlen(buffer) + 1, wcPhone, SIZE);
                     WNDCLASSEX userWnd;
                     ZeroMemory(&userWnd, sizeof(userWnd));
                     userWnd.cbSize = sizeof(WNDCLASSEX);
@@ -879,22 +909,29 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     userWnd.lpszClassName = szInfoModificationClass;
                     ATOM reg = RegisterClassEx(&userWnd);
                     HWND userClass = CreateWindow(szInfoModificationClass, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hLastName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_LAST_POS_Y, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, DESCRIPT_FIELD_MOD_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wcNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wcPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(20), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"EDIT", wcEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X, MODIFY_BUTTON_EDIT_POS_Y(50), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_MOD_HEIGHT, userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_ACCEPT_BUTTON_POS_X, ACCEPT_BUTTON_POS_Y, MOD_ACCEPT_BUTTON_WIDTH, ACCEPT_BUTTON_HEIGHT, userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
-                    CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_CANCEL_BUTTON_POS_X, MOD_CANCEL_BUTTON_POS_Y, MOD_CANCEL_BUTTON_WIDTH, MOD_CANCEL_BUTTON_HEIGHT, userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
+                    HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
+                    HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_MOD_POS_X(-10), DESCRIPT_FIELD_MOD_POS_Y(-10), MOD_DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_MOD_HEIGHT(0), userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_MOD_POS_X(-10), DESCRIPT_FIELD_MOD_POS_Y(30), MOD_DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_MOD_HEIGHT(0), userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hEMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_MOD_POS_X(-10), DESCRIPT_FIELD_MOD_POS_Y(70), MOD_DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_MOD_HEIGHT(0), userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    HWND hNickInputFld = CreateWindow(L"EDIT", wcNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(-10), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
+                    HWND hPhoneInputFld = CreateWindow(L"EDIT", wcPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(30), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
+                    HWND hEmailInputFld =  CreateWindow(L"EDIT", wcEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(70), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
+                    HWND hBtnOK = CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_BUTTON_POS_X(100), MOD_BUTTON_POS_Y(170), MOD_BUTTON_WIDTH(30), MOD_BUTTON_HEIGHT(0), userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
+                    HWND hBtnCanc = CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_BUTTON_POS_X(170), MOD_BUTTON_POS_Y(170), MOD_BUTTON_WIDTH(60), MOD_BUTTON_HEIGHT(0), userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
+                    SendMessage(hNickname, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hEMail, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hNickInputFld, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hPhoneInputFld, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hEmailInputFld, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hBtnOK, WM_SETFONT, (WPARAM)hFont, TRUE);
+                    SendMessage(hBtnCanc, WM_SETFONT, (WPARAM)hFont, TRUE);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
                     MSG msg;
-                    sqlite3_finalize(stmt);
-                    sqlite3_close(db);
                     EnableWindow(hWnd, FALSE);
                     while (IsWindow(userClass))
                     {
-                        if (GetMessage(&msg, userClass, 0, 0))
+                        if (GetMessage(&msg, NULL, 0, 0))
                         {
                             TranslateMessage(&msg);
                             DispatchMessage(&msg);
@@ -2039,7 +2076,6 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     {
     case WM_COMMAND: 
     {
-
         switch (LOWORD(wParam))
         {
         case IDB_ENTERING_MAIL_SKIP:

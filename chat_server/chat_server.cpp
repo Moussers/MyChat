@@ -437,7 +437,7 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         CHAR chDay[SIZE]{};
         CHAR chMonth[SIZE]{};
         CHAR chYear[SIZE]{};
-        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone) VALUES('";
+        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone, email, birthday) VALUES('";
         WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);
         strcat_s(command, chNickName);
         strcat_s(command, "',");
@@ -449,10 +449,10 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         strcat_s(command, "','");
         WideCharToMultiByte(codePage, 0, wcYear, wcslen(wcYear) + 1, chYear, SIZE, NULL, NULL);
         strcat_s(command, chYear);
-        strcat_s(command, "':'");
+        strcat_s(command, "-");
         WideCharToMultiByte(codePage, 0, wcMonth, wcslen(wcMonth) + 1, chMonth, SIZE, NULL, NULL);
         strcat_s(command, chMonth);
-        strcat_s(command, "':'");
+        strcat_s(command, "-");
         WideCharToMultiByte(codePage, 0, wcDay, wcslen(wcDay) + 1, chDay, SIZE, NULL, NULL);
         strcat_s(command, chDay);
         strcat_s(command, SIZE, "');");
