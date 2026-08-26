@@ -42,7 +42,7 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname);
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -431,6 +431,7 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
     CONST int SIZE = 2000;
     try 
     {
+        //падает если в массиве команды есть имя на русском
         CHAR chNickName[SIZE]{};
         CHAR chNumPhone[SIZE]{};
         CHAR chEmail[SIZE]{};
@@ -465,7 +466,7 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
     }
     catch (sql::SQLException ex) 
     {
-        WCHAR errors[SIZE];
+        WCHAR errors[SIZE]{};
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()+1), errors, SIZE);
         appendToLog(logHWND, errors);
         connection->close();

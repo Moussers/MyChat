@@ -234,6 +234,10 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         {
             if (checkingUserInfo(hWnd) != 1)
             {
+                if (connectToServ()) 
+                {
+                    return 1;
+                }
                 insertEntry(hWnd);
                 SendMessage(hWnd, WM_CLOSE, 0, NULL);
                 CONST INT SIZE = 1024;
@@ -400,7 +404,7 @@ INT updateList(HWND userList)
         return 1;
     }
     sqlite3_stmt* userTb;
-    const char* getUserList = "SELECT * FROM users";
+    const char* getUserList = "SELECT * FROM contacts";
     if (sqlite3_prepare_v2(db, getUserList, -1, &userTb, NULL) == SQLITE_OK) 
     {
         INT nextRow;
@@ -591,7 +595,7 @@ INT insertEntry(HWND hWnd)
         }
     }
     sqlite3_finalize(table);
-    strcpy_s(command, "INSERT INTO users (user_id, nickname, phone, email) VALUES('");
+    strcpy_s(command, "INSERT INTO contacts (contact_id, nickname, phone, email) VALUES('");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
@@ -708,32 +712,38 @@ INT modifyUserInfo(HWND hWnd)
     WideCharToMultiByte(codePage, 0, wNum, wcslen(wNum) + 1, chNum, NUMSIZE, NULL, NULL);
     strcat_s(command, chNum);
     strcat_s(command, ";");
-    //UPDATE users SET last_name = 'Вислов' first_name = 'Юрий', middle_name = 'Аркадъевич', phone = '+7(956)901-56-76', email = 'urei@mail.ru' WHERE user_id = 0;
-    char* msg = NULL;
-    try {
-        INT status = sqlite3_exec(db, command, NULL, NULL, &msg);
-        if (status == SQLITE_OK)
-        {
-            MessageBox(NULL, L"Пользователь успешно изменён!", L"Инфо", MB_OK | MB_ICONINFORMATION);
-            sqlite3_close(db);
-            return 0;
-        }
-        else
-        {
-            MessageBox(NULL, L"Ошибка при обновлении пользовательских данных!", L"Ошибка", MB_OK | MB_ICONERROR);
-            throw "SQL-ERROR";
-        }
-    }
-    catch (...) 
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
     {
-        CONST INT SIZE = 2000;
-        WCHAR errorMes[SIZE];
-        size_t szType;
-        mbstowcs_s(&szType, errorMes, msg, SIZE);
-        msg = cleaningMemory(msg);
-        writtingDownLog(errorMes);
-        sqlite3_close(db);
-        return 1;
+        if (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            char* msg = NULL;
+            try {
+                INT status = sqlite3_exec(db, command, NULL, NULL, &msg);
+                if (status == SQLITE_OK)
+                {
+                    MessageBox(NULL, L"Пользователь успешно изменён!", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    sqlite3_close(db);
+                    return 0;
+                }
+                else
+                {
+                    MessageBox(NULL, L"Ошибка при обновлении пользовательских данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+                    throw "SQL-ERROR";
+                }
+            }
+            catch (...)
+            {
+                CONST INT SIZE = 2000;
+                WCHAR errorMes[SIZE];
+                size_t szType;
+                mbstowcs_s(&szType, errorMes, msg, SIZE);
+                msg = cleaningMemory(msg);
+                writtingDownLog(errorMes);
+                sqlite3_close(db);
+                return 1;
+            }
+        }
     }
     return 0;
 }
@@ -764,15 +774,15 @@ INT deleteUser(INT idx)
     WideCharToMultiByte(codePage, 0, wchBuffer, BUFSIZE + 1, buffer, BUFSIZE, NULL, NULL);
     strcat_s(command, buffer);
     strcat_s(command, ";");
-    sqlite3_stmt* st;
-    if (sqlite3_prepare_v2(db, command, -1, &st, NULL) == SQLITE_OK) 
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK) 
     {
-        INT nextRow = sqlite3_step(st);
+        INT nextRow = sqlite3_step(stmt);
         if (nextRow == SQLITE_ROW) 
         {
-            INT id = sqlite3_column_int(st, 0);
+            INT id = sqlite3_column_int(stmt, 0);
             //Второй аргумент номер колонки из которой берём значение;
-            const char* delReq = "DELETE FROM users WHERE user_id = ";
+            const char* delReq = "DELETE FROM contacts WHERE user_id = ";
             strcpy_s(command, delReq);
             wsprintf(wchBuffer, L"%d\0", id);
             WideCharToMultiByte(codePage, 0, wchBuffer, BUFSIZE + 1, buffer, BUFSIZE, NULL, NULL);
@@ -808,7 +818,7 @@ INT deleteUser(INT idx)
         MessageBox(NULL, L"ID пользователя не найден!", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
-    sqlite3_finalize(st);
+    sqlite3_finalize(stmt);
     sqlite3_close(db);
     return 0;
 }
@@ -1356,8 +1366,8 @@ INT checkTables()
     CONST INT SIZE = 2000;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);            //sqlite_open - открывает если файл найден или если файл не найден, тогда создааёт его
     if (res)
-        //похожий вариант прочтения:
-        //if(res != 0) 
+    //похожий вариант прочтения:
+    //if(res != 0) 
     {
         MessageBox(NULL, L"База данных не подключена!", L"Ошибка!", MB_OK | MB_ICONERROR);
         sqlite3_close(db);
@@ -1382,21 +1392,22 @@ INT checkTables()
             //sqlite3_column_int - выводит текущий индекс колонки
             if (countRows == 0)
             {
-                MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
+                //MessageBox(NULL, L"Ни одной группы не найдено!\nСоздаём новую...", L"Информация", MB_OK | MB_ICONERROR);
                 const char* createTable = "CREATE TABLE groups (group_id PRIMARY KEY NOT NULL, group_name TEXT NOT NULL);";
                 //char** errorTgroup = mesError;        //Как вариант.
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else
+                    if (status != SQLITE_OK)
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
+                        
                     }
+                    /*else
+                    {
+                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }*/
                 }
                 catch (...)
                 {
@@ -1424,7 +1435,7 @@ INT checkTables()
             {
                 const char* createTable =
                     "CREATE TABLE users ("
-                    "user_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,"
+                    "user_id INT PRIMARY KEY NOT NULL,"
                     "nickname TEXT NOT NULL,"
                     "phone INTEGER NOT NULL,"
                     "email TEXT NULL,"
@@ -1436,15 +1447,16 @@ INT checkTables()
                 char* msg = NULL;
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else
+                    if (status != SQLITE_OK)
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
+                        
                     }
+                    /*else
+                    {
+                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }*/
                 }
                 catch (...)
                 {
@@ -1487,15 +1499,16 @@ INT checkTables()
                 try {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
                     //Пятый аргумент в sqlite3_exec - записывает ошибку в переменную char указатель (char*) которую мы передали.
-                    if (status == SQLITE_OK)
-                    {
-                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else
+                    if (status != SQLITE_OK)
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы сообщение", L"Инфо", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
+                        
                     }
+                    /*else
+                    {
+                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }*/
                 }
                 catch (...)
                 {
@@ -1514,8 +1527,8 @@ INT checkTables()
         }
         sqlite3_finalize(stmt);
     }
-    const char* contactListTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name ='user contact list';";
-    if (sqlite3_prepare_v2(db, contactListTable, -1, &stmt, 0))
+    const char* contactListTable = "SELECT COUNT(*) FROM sqlite_master WHERE type ='table' AND name ='contacts';";
+    if (sqlite3_prepare_v2(db, contactListTable, -1, &stmt, 0) == SQLITE_OK)
     //const char* zSql, SQL     - выражение(в кодировке UTF - 8)
     //int nByte,                - максимальный размер в байтах строки zSql
     //sqlite3_stmt **ppStmt,    - указатель на компилируемое выражение sqlite3_stmt
@@ -1528,12 +1541,12 @@ INT checkTables()
             if (countRows == 0) 
             {
                 //MessageBox(NULL, L"Таблица списка контактов пользователя не была создана! Создаём новую", L"ИНФО", MB_OK | MB_ICONINFORMATION);
-                const char* createTable = "Create Table contacts("
-                    "contact_id INT PRIMARY KEY NOT NULL"
-                    "nickname TEXT,"
-                    "number_phone INT NOT NULL,"
+                const char* createTable = "CREATE TABLE contacts("
+                    "contact_id INT PRIMARY KEY NOT NULL,"
+                    "nickname TEXT NOT NULL,"
+                    "phone INT NOT NULL,"
                     "email TEXT NULL,"
-                    "birth_day TEXT NOT NULL,"
+                    "birth_day TEXT NULL,"
                     "icon BLOB NULL,"
                     "BIO text);";
                     "last_login TEXT NULL);";
@@ -1541,15 +1554,16 @@ INT checkTables()
                 try 
                 {
                     INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status == SQLITE_OK) 
-                    {
-                        MessageBox(NULL, L"Таблица списка контактов пользователя создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }
-                    else 
+                    if (status != SQLITE_OK) 
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы контактов пользователя", L"Инфо", MB_OK | MB_ICONERROR);
                         throw ("SQL-ERROR");
+                        
                     }
+                    /*else 
+                    {
+                        MessageBox(NULL, L"Таблица списка контактов пользователя создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
+                    }*/
                 }
                 catch (...) 
                 {
