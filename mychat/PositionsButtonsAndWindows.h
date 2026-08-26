@@ -65,7 +65,7 @@
 #define EMAIL_SKIP_BUTTON_POS_WIDTH 140
 #define EMAIL_SKIP_BUTTON_POS_HEIGHT 30
 
-//Registration bt phone a button
+//Registration by phone a button
 #define REGISTRATION_BY_PHONE_POS_X 160
 #define REGISTRATION_BY_PHONE_POS_Y 160
 #define REGISTRATION_BY_PHONE_POS_WIDTH 210
@@ -82,6 +82,24 @@
 #define EXTRA_REG_DATA_EDIT_POS_Y 130
 #define EXTRA_REG_DATA_EDIT_WIDTH 180
 #define EXTRA_REG_DATA_EDIT_HEIGHT 30
+
+//Combobox keeps days for user's birthday
+#define EXTRA_REG_DAY_COMBO_POS_X 20
+#define EXTRA_REG_DAY_COMBO_POS_Y 160
+#define EXTRA_REG_DAY_COMBO_WIDTH 60
+#define EXTRA_REG_DAY_COMBO_HEIGHT 220
+
+//Combobox keeps months for user's birthday
+#define EXTRA_REG_MONTH_COMBO_POS_X 94
+#define EXTRA_REG_MONTH_COMBO_POS_Y 160
+#define EXTRA_REG_MONTH_COMBO_WIDTH 60
+#define EXTRA_REG_MONTH_COMBO_HEIGHT 220
+
+//Combobox keeps years for user's birthday
+#define EXTRA_REG_YEAR_COMBO_POS_X 170
+#define EXTRA_REG_YEAR_COMBO_POS_Y 160
+#define EXTRA_REG_YEAR_COMBO_WIDTH 90
+#define EXTRA_REG_YEAR_COMBO_HEIGHT 220
 
 //Input Registered phone data
 #define INPUT_REGISTERED_PHONE_POS_X 10

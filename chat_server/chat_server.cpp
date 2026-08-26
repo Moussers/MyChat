@@ -422,30 +422,40 @@ void listenClient()
         }
     } while (true);
 }
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname) 
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear) 
 {
     if (connection->isClosed()) 
     {
         mysqlConnect();
     }
-    CONST int SIZE = 1024;
+    CONST int SIZE = 2000;
     try 
     {
-        CHAR chNickName[SIZE];
-        CHAR chNumPhone[SIZE];
-        CHAR chEmail[SIZE];
-        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone, email) VALUES('";
+        CHAR chNickName[SIZE]{};
+        CHAR chNumPhone[SIZE]{};
+        CHAR chEmail[SIZE]{};
+        CHAR chDay[SIZE]{};
+        CHAR chMonth[SIZE]{};
+        CHAR chYear[SIZE]{};
+        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone) VALUES('";
         WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);
         strcat_s(command, chNickName);
-        strcat_s(command, "'");
-        strcat_s(command, ",");
+        strcat_s(command, "',");
         WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone) + 1, chNumPhone, SIZE, NULL, NULL);
-        strcat_s(command, chNumPhone);
+        strcat_s(command, SIZE, chNumPhone);
         strcat_s(command, ",'");
         WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
         strcat_s(command, chEmail);
-        strcat_s(command, "'");
-        strcat_s(command, ");");
+        strcat_s(command, "','");
+        WideCharToMultiByte(codePage, 0, wcYear, wcslen(wcYear) + 1, chYear, SIZE, NULL, NULL);
+        strcat_s(command, chYear);
+        strcat_s(command, "':'");
+        WideCharToMultiByte(codePage, 0, wcMonth, wcslen(wcMonth) + 1, chMonth, SIZE, NULL, NULL);
+        strcat_s(command, chMonth);
+        strcat_s(command, "':'");
+        WideCharToMultiByte(codePage, 0, wcDay, wcslen(wcDay) + 1, chDay, SIZE, NULL, NULL);
+        strcat_s(command, chDay);
+        strcat_s(command, SIZE, "');");
         sql::Statement* stmt = connection->createStatement();
         stmt->execute(command);
         //executeQuery - при выполнении возвращает результат, а при insert результат не нужен
@@ -742,29 +752,35 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
 {
     login = true;
     CONST INT SIZE = 1024;
-    WCHAR wcNickname[SIZE];
-    WCHAR wcNumPhone[SIZE];
-    WCHAR wcEmail[SIZE];
-    WCHAR wcBuf[SIZE];
-    CHAR status[SIZE];
+    WCHAR wcNickname[SIZE]{};
+    WCHAR wcNumPhone[SIZE]{};
+    WCHAR wcEmail[SIZE]{};
+    WCHAR wcDay[SIZE]{};
+    WCHAR wcMonth[SIZE]{};
+    WCHAR wcYear[SIZE]{};
+    WCHAR wcBuf[SIZE]{};
+    CHAR status[SIZE]{};
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
     int i = 0;
     int k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
     getSubDataFromStr(&i, &k, wcBuf, wcNickname);
+    getSubDataFromStr(&i, &k, wcBuf, wcDay);
+    getSubDataFromStr(&i, &k, wcBuf, wcMonth);
+    getSubDataFromStr(&i, &k, wcBuf, wcYear);
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
-        strcpy_s(status, "EXIST");
+        strcpy_s(status, SIZE, "EXIST");
         int res = strlen(status);
         status[res] = '\0';
         sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
     }
     else
     {
-        if (insertEntry(wcNumPhone, wcEmail, wcNickname))
+        if (insertEntry(wcNumPhone, wcEmail, wcNickname, wcDay, wcMonth, wcYear))
         {
-            strcpy_s(status, "CREATED");
+            strcpy_s(status, SIZE, "CREATED");
             int res = strlen(status);
             status[res] = '\0';
             sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);

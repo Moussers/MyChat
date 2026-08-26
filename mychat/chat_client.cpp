@@ -226,6 +226,9 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
             {
                 insertEntry(hWnd);
                 SendMessage(hWnd, WM_CLOSE, 0, NULL);
+                CONST INT SIZE = 1024;
+                WCHAR wcNumPhone[SIZE];
+                GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcNumPhone, SIZE);
             }
             break;
         }
@@ -241,36 +244,41 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     return 0;
 }
 
-INT checkingEMail(CHAR* eMail) 
+INT checkingEMail(CHAR* email) 
 {
+    if(!strcmp(email, ""))
+    {
+        MessageBox(NULL, L"Была обнаружена пустая строка\nв поле ввода почты!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
     INT numAt = 0;
-    INT len = strlen(eMail);
+    INT len = strlen(email);
     if (len == 0) 
     {
         return 0;
     }
     for (int i = 0; i < len; ++i) 
     {
-        if (eMail[i] == '@') 
+        if (email[i] == '@') 
         {
             numAt++;
         }
-        if (((eMail[i] < '0') || (eMail[i] > '9')) && ((eMail[i] < 'A') || (eMail[i] > 'Z') )
-            && ((eMail[i] < 'a') || (eMail[i] > 'z')) && (eMail[i] != '.') && (eMail[i] != '_')
-            && (eMail[i] != '-') && (eMail[i] != '@'))
+        if (((email[i] < '0') || (email[i] > '9')) && ((email[i] < 'A') || (email[i] > 'Z') )
+            && ((email[i] < 'a') || (email[i] > 'z')) && (email[i] != '.') && (email[i] != '_')
+            && (email[i] != '-') && (email[i] != '@'))
         {
-            MessageBox(NULL, L"Неверный формат почты", L"Ошибка", MB_OK | MB_ICONERROR);
+            MessageBox(NULL, L"Ошибка ввода!\nНеверный формат почты", L"Ошибка", MB_OK | MB_ICONERROR);
             return 1;
         }
     }
     if (numAt > 1) 
     {
-        MessageBox(NULL, L"Должен быть только один знак @!", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка ввода!\nДолжен быть только один знак @", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
     else if (numAt == 0) 
     {
-        MessageBox(NULL, L"Не обнаружен знак @!", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка ввода!\nНе обнаружен знак @", L"Ошибка", MB_OK | MB_ICONERROR);
         return 1;
     }
     return 0;
@@ -599,7 +607,7 @@ INT insertEntry(HWND hWnd)
     CONST INT SIZE = 2000;
     if (checkingNumberPhone(buffer) == 1)
     {
-        SendMessage(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), WM_SETTEXT, 0, (LPARAM)"");
+        SetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), L"");
     }
     strcat_s(command, buffer);
     strcat_s(command, "',");
@@ -608,7 +616,7 @@ INT insertEntry(HWND hWnd)
     WideCharToMultiByte(codePage, 0, email, wcslen(email)+1, buffer, USERSIZE, NULL, NULL);
     if (checkingEMail(buffer) == 1) 
     {
-        SendMessage(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), WM_SETTEXT, 0, (LPARAM)"");
+        SetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), L"");
     }
     strcat_s(command, buffer);
     strcat_s(command, "');");
@@ -1143,10 +1151,10 @@ INT addAdditionalInfo()
     HWND skipButton = CreateWindow(L"BUTTON", L"Пропустить", WS_CHILD | WS_VISIBLE, EMAIL_SKIP_BUTTON_POS_X, EMAIL_SKIP_BUTTON_POS_Y, EMAIL_SKIP_BUTTON_POS_WIDTH, EMAIL_INPUT_FIELD_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_SKIP, GetModuleHandle(NULL), NULL);
     HWND accessButton = CreateWindow(L"BUTTON", L"Принять", WS_CHILD | WS_VISIBLE, EMAIL_ACCESS_BUTTON_POS_X, EMAIL_ACCESS_BUTTON_POS_Y, EMAIL_ACCESS_BUTTON_POS_WIDTH, EMAIL_ACCESS_BUTTON_POS_HEIGHT, mainWin, (HMENU)IDB_ENTERING_MAIL_ACCEPT, GetModuleHandle(NULL), NULL);
     HWND hDataEdit = CreateWindow(L"STATIC", L"Дата Рождения:", WS_CHILD | WS_VISIBLE, EXTRA_REG_DATA_EDIT_POS_X, EXTRA_REG_DATA_EDIT_POS_Y, EXTRA_REG_DATA_EDIT_WIDTH, EXTRA_REG_DATA_EDIT_HEIGHT, mainWin, NULL, hInst, NULL);
-    HWND hDyasBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 20, 160, 60, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_DAYS, GetModuleHandle(NULL), NULL);
+    HWND hDyasBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, EXTRA_REG_DAY_COMBO_POS_X, EXTRA_REG_DAY_COMBO_POS_Y, EXTRA_REG_DAY_COMBO_WIDTH, EXTRA_REG_DAY_COMBO_HEIGHT, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_DAYS, GetModuleHandle(NULL), NULL);
     //WS_CHILD - указывает (связывает) объект с окном, то есть указывает что объект будет являться частью окна
-    HWND hMonthBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 94, 160, 60, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_MONTHS, GetModuleHandle(NULL), NULL);
-    HWND hYearsBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 170, 160, 80, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_DATES, GetModuleHandle(NULL), NULL);
+    HWND hMonthBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, EXTRA_REG_MONTH_COMBO_POS_X, EXTRA_REG_MONTH_COMBO_POS_Y, EXTRA_REG_MONTH_COMBO_WIDTH, EXTRA_REG_MONTH_COMBO_HEIGHT, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_MONTHS, GetModuleHandle(NULL), NULL);
+    HWND hYearsBox = CreateWindow(L"COMBOBOX", L"", CBS_DROPDOWN | WS_VSCROLL | WS_CHILD | WS_VISIBLE, 170, 160, 90, 220, mainWin, (HMENU)IDC_EXTRA_WIN_COMB_YEARS, GetModuleHandle(NULL), NULL);
     SendMessage(extraMail, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(emailInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessage(hDataEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -1160,7 +1168,7 @@ INT addAdditionalInfo()
         SendMessage(hDyasBox, CB_ADDSTRING, 0, (LPARAM)numberOfDays[i]);
     }
     SendMessage(hDyasBox, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
-    //CB_SETCURSEL - используется для программного выбора элемента в списке элемента управления «поле со списком» (combo box)
+    //CB_SETCURSEL - используется для програмного выбора элемента в списке элемента управления «поле со списком» (combo box)
     for (int i = 0; i < 12; ++i) 
     {
         SendMessage(hMonthBox, CB_ADDSTRING, 0, (LPARAM)numberOfMonths[i]);
@@ -1764,11 +1772,6 @@ INT recieveData(SOCKET clientSocket)
             return 1;
         }
         break;
-        /*case IDS_GETDATA_FROM_SERV_BD:
-        {
-            insertServDataToDB(recvBuf);
-        }
-        break;*/
         default: 
             return 1;
         }       
@@ -1963,9 +1966,15 @@ INT registrationInfo(SOCKET lSocket)
     CHAR numberPhone[SIZE];
     CHAR email[SIZE];
     CHAR nickname[SIZE];
+    CHAR day[SIZE];
+    CHAR month[SIZE];
+    CHAR year[SIZE];
     strcpy_s(numberPhone, SIZE, userInfo.numberPhone());
     strcpy_s(email, SIZE, userInfo.email());
     strcpy_s(nickname, SIZE, userInfo.nickname());
+    strcpy_s(day, SIZE, userInfo.birthdayDay());
+    strcpy_s(month, SIZE, userInfo.birthdayMonth());
+    strcpy_s(year, SIZE, userInfo.birthdayYear());
     CHAR regist[SIZE];
     strcpy_s(regist, numberPhone);
     strcat_s(regist, ",");
@@ -1975,9 +1984,15 @@ INT registrationInfo(SOCKET lSocket)
         strcat_s(regist, ",");
     }
     strcat_s(regist, nickname);
+    strcat_s(regist, ",");
+    strcat_s(regist, day);
+    strcat_s(regist, ",");
+    strcat_s(regist, month);
+    strcat_s(regist, ",");
+    strcat_s(regist, year);
     strcat_s(regist, "/");
     strcat_s(regist,"registration");
-    INT iResult = send(lSocket, regist, strlen(regist), 0);
+    INT iResult = send(lSocket, regist, strlen(regist)+1, 0);
     if (iResult == INVALID_SOCKET) 
     {
         MessageBox(NULL, L"Ошибка отправки данных", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -2047,16 +2062,16 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_MAIL), wcEmail, SIZE);
             GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_DAYS), wcDays, SIZE);
             GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_MONTHS), wcMonths, SIZE);
-            GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_DATES), wcYears, SIZE);
+            GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_YEARS), wcYears, SIZE);
             WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
             if (checkingEMail(chEmail) == 1)
             {
-                MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
+                //MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
                 SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_MAIL), L"");
             }
             else 
             {
-                INT len = strlen(chEmail);
+                //INT len = strlen(chEmail);
                 userInfo.setEmail(chEmail);
                 WideCharToMultiByte(codePage, 0, wcDays, wcslen(wcDays) + 1, chDays, SIZE, NULL, NULL);
                 WideCharToMultiByte(codePage, 0, wcMonths, wcslen(wcMonths) + 1, chMonths, SIZE, NULL, NULL);
