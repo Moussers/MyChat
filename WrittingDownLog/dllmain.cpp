@@ -22,7 +22,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 }
 VOID writtingDownLog(const WCHAR* record)
 {
-    HANDLE logFile = CreateFile(L"clientLog.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
     //dwDesiredAccess - предоставляет атрибуты, иначе говоря права доступа на чтение и запись файлу.
     //dwShareMode - запрещает повторно открывать файл.
     //lpSecurityAttributes - отвечает за настройки безопасности файла, если поставить NULL, тогда 
@@ -38,7 +38,7 @@ VOID writtingDownLog(const WCHAR* record)
     {
         if (GetLastError() == ERROR_FILE_EXISTS)
         {
-            logFile = CreateFile(L"clientlog.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            logFile = CreateFile(L"log.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         }
     }
     if (logFile != INVALID_HANDLE_VALUE)

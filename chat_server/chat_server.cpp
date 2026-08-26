@@ -218,7 +218,7 @@ int checkTables(HWND log)
                 return 1;
             }
             std::string createUsers = "Create TABLE `users`("
-                "user_id INT PRIMARY KEY auto_increment,"
+                "user_id INT PRIMARY KEY NOT NULL,"
                 "nickname varchar(256) NOT NULL,"
                 "number_phone BIGINT NOT NULL,"
                 "email TEXT NULL,"

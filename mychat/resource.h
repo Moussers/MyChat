@@ -45,7 +45,7 @@
 #define IDB_CANCELLING_USER_ADD         1006
 #define IDB_GIVE_CONSENT_USER_ADD       1007
 #define IDB_CANCELING_USER_MOD          1008
-#define IDB_GIVE_CONSENT_USER_MOD       1009
+#define IDB_MOD_BUTTON_OK			    1009
 #define IDB_CONNECT_TO_SERVER           1010
 #define IDB_CLOSE_CONNECT               1011
 #define IDB_EXIT                        1012

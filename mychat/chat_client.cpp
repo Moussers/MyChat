@@ -16,7 +16,9 @@
 #include <CleaningMemory.h>
 #define PORT "4000"
 
-// Глобальные переменные:
+//winUI3
+
+//Глобальные переменные:
 CONST INT arraySize = 2000;
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
@@ -50,6 +52,7 @@ INT modifyUserInfo(HWND hWnd);
 INT accoutSearch(HWND hField, HWND hList);
 INT updateList(HWND userList);
 INT recievedRegData(CHAR* recvBuf);
+INT addUser();
 INT deleteUser(INT idx);
 CHAR* checkPlusInPhone(const char* numPhone);
 
@@ -194,7 +197,7 @@ LRESULT CALLBACK ModifyUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     {
         switch (LOWORD(wParam))
         {
-        case IDB_GIVE_CONSENT_USER_MOD:
+        case IDB_MOD_BUTTON_OK:
         {
             modifyUserInfo(hWnd);
             SendMessage(hWnd, WM_CLOSE, 0, NULL);
@@ -685,18 +688,19 @@ INT modifyUserInfo(HWND hWnd)
     CHAR command[SIZE];
     WCHAR wNum[NUMSIZE];
     CHAR chNum[NUMSIZE];
-    const char* updateData = "UPDATE users SET last_name = '";
+    CHAR buffer[SIZE];
+    const char* updateData = "UPDATE users SET nickname = '";
     strcpy_s(command, updateData);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wcNickname, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wcPhone, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_EMAIL), wcEmail, SIZE);
     WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickname, SIZE, NULL, NULL);
     WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, chPhone, SIZE, NULL, NULL);
-    checkPlusInPhone(chPhone);
+    strcpy_s(buffer, checkPlusInPhone(chPhone));
     WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEMail, SIZE, NULL, NULL);
     strcat_s(command, chNickname);
     strcat_s(command, "', phone = '");
-    strcat_s(command, chPhone);
+    strcat_s(command, buffer);
     strcat_s(command, "', email = '");
     strcat_s(command, chEMail);
     strcat_s(command, "' WHERE user_id = ");
@@ -733,6 +737,7 @@ INT modifyUserInfo(HWND hWnd)
     }
     return 0;
 }
+
 INT deleteUser(INT idx) 
 {
     if (idx == -1) 
@@ -820,9 +825,11 @@ CHAR* checkPlusInPhone(const char* numPhone)
     {
         int i = 1;
         int p = 0;
-        while (numPhone[i] != L'\0') 
+        while (numPhone[i] != '\0') 
         {
-            arr[0] = numPhone[i];
+            arr[p] = numPhone[i];
+            i++;
+            p++;
         }
     }
     return arr;
@@ -916,7 +923,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     HWND hNickInputFld = CreateWindow(L"EDIT", wcNickname, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(-10), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
                     HWND hPhoneInputFld = CreateWindow(L"EDIT", wcPhone, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(30), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_PHONE, GetModuleHandle(NULL), NULL);
                     HWND hEmailInputFld =  CreateWindow(L"EDIT", wcEMail, WS_VISIBLE | WS_CHILD | WS_BORDER, MODIFY_BUTTON_EDIT_POS_X(100), MODIFY_BUTTON_EDIT_POS_Y(70), MOD_INPUT_FIELD_WIDTH(140), MOD_INPUT_FIELD_HEIGHT(0), userClass, (HMENU)IDR_MOD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
-                    HWND hBtnOK = CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_BUTTON_POS_X(100), MOD_BUTTON_POS_Y(170), MOD_BUTTON_WIDTH(30), MOD_BUTTON_HEIGHT(0), userClass, (HMENU)IDB_GIVE_CONSENT_USER_MOD, GetModuleHandle(NULL), NULL);
+                    HWND hBtnOK = CreateWindow(L"BUTTON", L"ОК", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_BUTTON_POS_X(100), MOD_BUTTON_POS_Y(170), MOD_BUTTON_WIDTH(30), MOD_BUTTON_HEIGHT(0), userClass, (HMENU)IDB_MOD_BUTTON_OK, GetModuleHandle(NULL), NULL);
                     HWND hBtnCanc = CreateWindow(L"BUTTON", L"Отмена", WS_VISIBLE | WS_CHILD | WS_BORDER, MOD_BUTTON_POS_X(170), MOD_BUTTON_POS_Y(170), MOD_BUTTON_WIDTH(60), MOD_BUTTON_HEIGHT(0), userClass, (HMENU)IDB_CANCELING_USER_MOD, GetModuleHandle(NULL), NULL);
                     SendMessage(hNickname, WM_SETFONT, (WPARAM)hFont, TRUE);
                     SendMessage(hPhone, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -948,7 +955,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
     return 0;
 }
 
-VOID addUser() 
+INT addUser() 
 {
     HWND userClass = CreateWindow(szUserAccountClassName, L"Добавить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_FIELD_WIDTH, MAIN_FIELD_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
     //HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_X(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
@@ -988,6 +995,7 @@ VOID addUser()
         }
         //структура для обработки соообщения окна
     }
+    return 0;
 }
 
 INT connectToServ()
@@ -1231,6 +1239,7 @@ INT addAdditionalInfo()
     }
     return 0;
 }
+
 INT authorizationForm() 
 {
     HWND registrWin = CreateWindow(szAutorization, L"My Chat", WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT, REGISTRATION_WINDOW_WIDTH, REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -1415,7 +1424,7 @@ INT checkTables()
             {
                 const char* createTable =
                     "CREATE TABLE users ("
-                    "user_id INT PRIMARY KEY NOT NULL,"
+                    "user_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,"
                     "nickname TEXT NOT NULL,"
                     "phone INTEGER NOT NULL,"
                     "email TEXT NULL,"
@@ -1559,6 +1568,7 @@ INT checkTables()
     sqlite3_close(db);
     return 0;
 }
+
 INT accoutSearch(HWND hField, HWND hList) 
 {
     SendMessage(hList, LB_RESETCONTENT, NULL, NULL);
@@ -1619,6 +1629,7 @@ INT accoutSearch(HWND hField, HWND hList)
     sqlite3_close(db);
     return 0;
 }
+
 INT getUrl(CHAR* recvBuf) 
 {
     INT i = 0;
@@ -1915,6 +1926,7 @@ INT createUserWndProc()
    }
    return 0;
 }
+
 INT nicknameWindow()
 {
     HWND mainWin = CreateWindow(szNicknameClass, L"My Chat", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, NICK_REGISTRATION_WINDOW_WIDTH, NICK_REGISTRATION_WINDOW_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -1937,6 +1949,7 @@ INT nicknameWindow()
     }
     return 0;
 }
+
 LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -2177,6 +2190,7 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
     }
     return 0;
 }
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
