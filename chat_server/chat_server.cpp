@@ -40,8 +40,8 @@ bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHA
 bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* wcNickname, CHAR* status);
 bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
-int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
+void checkContactData(CHAR* recvBuf);
 bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
@@ -54,7 +54,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -527,6 +527,7 @@ int checkExistNumPhone(WCHAR* numberPhone)
         MultiByteToWideChar(1251, 0, ex.what(), strlen(ex.what()) + 1, errors, SIZE);
         appendToLog(logHWND, errors);
         connection->close();
+        return -1;
     }
 }
 int checkExistEmail(WCHAR* email) 
@@ -560,6 +561,7 @@ int checkExistEmail(WCHAR* email)
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what())+1, errors, SIZE);
         appendToLog(logHWND, errors);
         connection->close();
+        return -1;
     }
 }
 bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDest)
@@ -609,7 +611,7 @@ int getUrl(CHAR* recvBuf)
     {
         return 1;
     }
-    if (!strcmp(command, "getDataFromServ")) 
+    if (!strcmp(command, "checkingContactData")) 
     {
         return 2;
     }
@@ -694,44 +696,42 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     }
     return true;
 }
-int checkLogin(SOCKET* clientSokcet, CHAR* recvBuf) 
+
+void checkContactData(SOCKET lSocket, CHAR* recvBuf) 
 {
-    CONST INT SIZE = 1024;
-    WCHAR wcBuf[SIZE];
-    WCHAR wcNumPhone[SIZE];
-    WCHAR wcEmail[SIZE];
-    WCHAR buf[SIZE];
-    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
+    CONST INT SIZE = 2000;
+    WCHAR wcBuf[SIZE]{};
+    WCHAR wcNickname[SIZE]{};
+    WCHAR wcNumPhone[SIZE]{};
+    WCHAR wcEmail[SIZE]{};
+    CHAR status[SIZE]{};
     int i = 0;
     int k = 0;
+    MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
+    getSubDataFromStr(&i, &k, wcBuf, wcNickname);
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    /*wcNumPhone[k] = '\0';
-    k = 0;*/
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    /*wcEmail[k] = '\0';
-    k = 0;*/
     if (checkExistNumPhone(wcNumPhone) || checkExistEmail(wcEmail)) 
     {
-        wsprintf(buf, L"Учетная запись: %s %s найдена!", wcNumPhone, wcEmail);
-        appendToLog(logHWND, buf);
-        CHAR answer[SIZE];
-        strcpy_s(answer, "LOGINOK");
-        send(*clientSokcet, answer, strlen(answer) + 1, 0);
+        strcpy_s(status, "EXIST");
+        strcat_s(status, "/CONTACTS");
+        int iResult = send(lSocket, status, strlen(status) + 1, 0);
+        if (iResult == INVALID_SOCKET) 
+        {
+            appendToLog(logHWND, L"Ошибка отправки данных клиенту для подтвержения существующего контакта");
+        }
     }
     else 
     {
-        wsprintf(buf, L"Ошибка авторизации!\nУчетная запись: %s %s не найдена!", wcNumPhone, wcEmail);
-        appendToLog(logHWND, buf);
-        CHAR answer[SIZE];
-        strcpy_s(answer, "LOGINERROR");
-        if (send(*clientSokcet, answer, strlen(answer) + 1, 0) == INVALID_SOCKET) 
+        strcpy_s(status, "NOEXIST");
+        int iResult = send(lSocket, status, strlen(status) + 1, 0);
+        if (iResult == INVALID_SOCKET) 
         {
-            appendToLog(logHWND, L"Ошибка при отправке данных клиенту при авторизации на сервереы!");
-            return 1;
+            appendToLog(logHWND, L"Ошибка отправки данных клиенту для информирования не существующего контакта");
         }
     }
-    return 0;
 }
+
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
     login = true;
@@ -805,48 +805,6 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     return true;
 }
 
-//int sendDataToUser(SOCKET* clientSocket) 
-//{
-//    if (connection->isClosed()) 
-//    {
-//        mysqlConnect();
-//    }
-//    sql::Statement *stmt = connection->createStatement();
-//    /*command = "SELECT COUNT(*) FROM users;";
-//    sql::ResultSet *res = stmt->executeQuery(command);
-//    res->next();
-//    int count = res->getInt(1);*/
-//    //Получаем количество записей в таблице, вытягивая из первого столбца значение
-//    std::string command = "SELECT * FROM users;";
-//    std::string databaseData = "[";
-//    sql::ResultSet *res = stmt->executeQuery(command);
-//    while (res->next())
-//    {
-//        int id = res->getInt(1);
-//        std::string nickname = res->getString(2);
-//        int64_t phone = res->getInt64(3);
-//        //int_64 - больше размер чем у int
-//        std::string email = res->getString(4);
-//        //Получаем данные из базы данных
-//        databaseData += std::to_string(id);
-//        databaseData += ",";
-//        databaseData += nickname;
-//        databaseData += ",";
-//        databaseData += std::to_string(phone);
-//        databaseData += ",";
-//        databaseData += email;
-//        databaseData += ";";
-//    }
-//    databaseData += "]/sendDataToUser";
-//    int iResult = send(*clientSocket, databaseData.c_str(), strlen(databaseData.c_str()), 0);
-//    if (iResult == INVALID_SOCKET) 
-//    {
-//        appendToLog(logHWND, L"Ошибка отпраки данных из бд клиенту.");
-//        return 1;
-//    }
-//    return 0;
-//}
-
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -888,6 +846,10 @@ int clientManagement(SOCKET* clientSocket)
                     checkAuthorizEntry(clientSocket, recvBuf);
                 }
                 break;
+                case CHECKING_CONTACT_DATA: 
+                {
+                    checkContactData(recvBuf);
+                }
                 break;
                 default:
                     return 1;

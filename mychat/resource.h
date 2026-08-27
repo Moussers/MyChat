@@ -1,12 +1,14 @@
 ﻿//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by mychat.rc
-//
+
+//IDS
 #define IDS_REGISTRATION				0
 #define IDS_AUTHORIZATION				1
-#define IDS_GETDATA_FROM_SERV_BD		2
+#define IDS_RECV_CONTACT_STATUS			2
+#define IDS_APP_TITLE                   3
+
 #define IDD_MYCHAT_DIALOG               102
-#define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDI_MYCHAT                      107
 #define IDI_SMALL                       108

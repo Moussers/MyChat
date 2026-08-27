@@ -54,6 +54,7 @@ INT updateList(HWND userList);
 INT recievedRegData(CHAR* recvBuf);
 INT addUser();
 INT deleteUser(INT idx);
+INT sendEntryToServ(SOCKET lSocket, HWND hWnd);
 CHAR* checkPlusInPhone(const char* numPhone);
 
 class UserInfo
@@ -238,11 +239,23 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
                 {
                     return 1;
                 }
-                insertEntry(hWnd);
-                SendMessage(hWnd, WM_CLOSE, 0, NULL);
-                CONST INT SIZE = 1024;
-                WCHAR wcNumPhone[SIZE];
-                GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcNumPhone, SIZE);
+                if (sendEntryToServ(listenSock, hWnd)) 
+                {
+                    return 1;
+                }
+                if (recievedData(listenSock)) 
+                {
+                    insertEntry(hWnd);
+                    SendMessage(hWnd, WM_CLOSE, 0, NULL);
+                    CONST INT SIZE = 1024;
+                    WCHAR wcNumPhone[SIZE];
+                    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcNumPhone, SIZE);
+                }
+                else 
+                {
+                    MessageBox(NULL, L"Номер не существует", L"ИНФО", MB_OK | MB_ICONINFORMATION);
+                    return 1;
+                }
             }
             break;
         }
@@ -757,7 +770,7 @@ INT deleteUser(INT idx)
         sqlite3_close(db);
         return 1;
     }
-    const char* selectIdUser = "SELECT user_id FROM users LIMIT 1 OFFSET ";
+    const char* selectIdUser = "SELECT contact_id FROM contacts LIMIT 1 OFFSET ";
     //прочитать про reinterpret_cast
     CONST INT SIZE = 2000;
     CHAR command[SIZE];
@@ -777,7 +790,7 @@ INT deleteUser(INT idx)
         {
             INT id = sqlite3_column_int(stmt, 0);
             //Второй аргумент номер колонки из которой берём значение;
-            const char* delReq = "DELETE FROM contacts WHERE user_id = ";
+            const char* delReq = "DELETE FROM contacts WHERE contact_id = ";
             strcpy_s(command, delReq);
             wsprintf(wchBuffer, L"%d\0", id);
             WideCharToMultiByte(codePage, 0, wchBuffer, BUFSIZE + 1, buffer, BUFSIZE, NULL, NULL);
@@ -975,9 +988,9 @@ INT addUser()
     //FW_NORMAL - указывает тип шрифта (жирный, полужирный и тд.)
     //Italic - отвечает: true (шрифт наклоненный), fasle (шрифт не наклоненный). Как курсив в microsft word.
     //StrikeOut - отвечает: true (шрифт зачеркнут), false (шрифт не зачеркнут).
-    HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), DESCRIPT_FIELD_WIDTH, DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
+    HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hNickInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_NICKNAME, GetModuleHandle(NULL), NULL);
     HWND hPhoneInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
     HWND hEmailInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_EMAIL, GetModuleHandle(NULL), NULL);
@@ -1302,19 +1315,36 @@ INT authorizationForm()
     return 0;
 }
 
-//INT getDataFromServ(SOCKET lSocket) 
-//{
-//    CONST INT SIZE = 1024;
-//    CHAR command[SIZE]{};
-//    strcpy_s(command, "/getDataFromServ");
-//    INT iResult = send(lSocket, command, strlen(command)+1, 0);
-//    if (iResult == INVALID_SOCKET) 
-//    {
-//        MessageBox(NULL, L"Ошибка при отправке данных", L"Ошибка", MB_OK | MB_ICONERROR);
-//        return 1;
-//    }
-//    return 0;
-//}
+INT sendEntryToServ(SOCKET lSocket, HWND hWnd) 
+{
+    CONST INT SIZE = 2000;
+    WCHAR wcNickname[SIZE]{};
+    WCHAR wcNumPhone[SIZE]{};
+    WCHAR wcEmail[SIZE]{};
+    CHAR chNickname[SIZE]{};
+    CHAR chNumPhone[SIZE]{};
+    CHAR chEmail[SIZE]{};
+    CHAR contactData[SIZE]{};
+    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), wcNickname, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcNumPhone, SIZE);
+    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), wcEmail, SIZE);
+    WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname)+1, chNickname, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone)+1, chNumPhone, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail)+1, chEmail, SIZE, NULL, NULL);
+    strcpy_s(contactData, chNickname);
+    strcat_s(contactData, ",");
+    strcat_s(contactData, chNumPhone);
+    strcat_s(contactData, ",");
+    strcat_s(contactData, chEmail);
+    strcat_s(contactData, "/checkingContactData");
+    INT iResult = send(lSocket, contactData, strlen(contactData) + 1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        MessageBox(NULL, L"Ошибка оптравки данных на сервер!", L"Ошибка", NULL);
+        return 1;
+    }
+    return 0;
+}
 
 LRESULT CALLBACK UserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
@@ -1381,7 +1411,7 @@ INT checkTables()
     //sqlite3_stmt - структура где хранится информация таблице которая была создана с помощью sql-запроса, 
     //который находится в const char* переменной
     if (sqlite3_prepare_v2(db, groupTable, -1, &stmt, NULL) == SQLITE_OK)
-        //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
+    //sqlite3_prepare_v2 - создает структур откуда мы будем брать наши результаты
     {
         INT curRow = sqlite3_step(stmt);
         //sqlite3_step - двигаемся по записям из таблицы вынимая, каждую запись
@@ -1398,17 +1428,11 @@ INT checkTables()
                 //char** errorTgroup = mesError;        //Как вариант.
                 char* msg = NULL;
                 try {
-                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status != SQLITE_OK)
+                    if(sqlite3_exec(db, createTable, NULL, NULL, &msg) != SQLITE_OK);
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы группы", L"Ошибка", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
-                        
                     }
-                    /*else
-                    {
-                        MessageBox(NULL, L"Таблица группа создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }*/
                 }
                 catch (...)
                 {
@@ -1447,17 +1471,11 @@ INT checkTables()
                     "last_login TEXT NULL);";
                 char* msg = NULL;
                 try {
-                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status != SQLITE_OK)
+                    if(sqlite3_exec(db, createTable, NULL, NULL, &msg) != SQLITE_OK);
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы пользователь", L"Ошибка", MB_OK | MB_ICONERROR);
                         throw "SQL-ERROR";
-                        
                     }
-                    /*else
-                    {
-                        MessageBox(NULL, L"Таблица пользователь создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }*/
                 }
                 catch (...)
                 {
@@ -1506,10 +1524,6 @@ INT checkTables()
                         throw "SQL-ERROR";
                         
                     }
-                    /*else
-                    {
-                        MessageBox(NULL, L"Таблица сообщение создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }*/
                 }
                 catch (...)
                 {
@@ -1554,17 +1568,11 @@ INT checkTables()
                 char* msg = NULL;
                 try 
                 {
-                    INT status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
-                    if (status != SQLITE_OK) 
+                    if (sqlite3_exec(db, createTable, NULL, NULL, &msg) != SQLITE_OK)
                     {
                         MessageBox(NULL, L"Ошибка при создании таблицы контактов пользователя", L"Инфо", MB_OK | MB_ICONERROR);
                         throw ("SQL-ERROR");
-                        
                     }
-                    /*else 
-                    {
-                        MessageBox(NULL, L"Таблица списка контактов пользователя создана", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    }*/
                 }
                 catch (...) 
                 {
@@ -1673,10 +1681,6 @@ INT getUrl(CHAR* recvBuf)
     {
         return 1;
     }
-    /*if (!strcmp(command, "sendDataToUser"))
-    {
-        return 2;
-    }*/
     return -1;
 }
 
@@ -1781,7 +1785,8 @@ INT recievedRegData(CHAR* recvBuf)
     }
     return -1;
 }
-BOOL recievedAuthorizData(CHAR* recvBuf) 
+
+BOOL recievedResponse(CHAR* recvBuf) 
 {
     CONST INT SIZE = 1024;
     CHAR command[SIZE]{};
@@ -1796,14 +1801,14 @@ BOOL recievedAuthorizData(CHAR* recvBuf)
         return 0;
     }
     if (!strcmp(command, "EXIST"))
-        //!res - res == 0
+    //!res - res == 0
     {
         return 1;
     }
     return -1;
 }
 
-INT recieveData(SOCKET clientSocket)
+INT recievedData(SOCKET clientSocket)
 {
     INT iResuslt = 0;
     CONST INT SIZE = 3000;
@@ -1830,12 +1835,20 @@ INT recieveData(SOCKET clientSocket)
         break;
         case IDS_AUTHORIZATION: 
         {
-            if (!recievedAuthorizData(recvBuf)) 
+            if (!recievedResponse(recvBuf))
             {
-                //MessageBox(NULL, L"Такой учетной записи не существует.\nСоздайте аккаунт пожалуйста.", L"Ошибка", MB_OK | MB_ICONERROR);
                 return 0;
             }
             return 1;
+        }
+        break;
+        case IDS_RECV_CONTACT_STATUS: 
+        {
+            if (recievedResponse(recvBuf)) 
+            {
+                return 1;
+            }
+            return 0;
         }
         break;
         default: 
