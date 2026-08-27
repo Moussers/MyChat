@@ -583,19 +583,19 @@ INT insertEntry(HWND hWnd)
         sqlite3_close(db);
         return 1;
     }
-    sqlite3_stmt* table;
-    if (sqlite3_prepare_v2(db, lsUsrId, -1, &table, NULL) == SQLITE_OK)
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, lsUsrId, -1, &stmt, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(table);
+        INT curRow = sqlite3_step(stmt);
         if (curRow == SQLITE_ROW)
         {
-            number = sqlite3_column_int(table, 0) + 1;
+            number = sqlite3_column_int(stmt, 0) + 1;
             //+1 - получаем следующий id;
             //Второй аргумент номер колонки из которой берём значение;
         }
     }
-    sqlite3_finalize(table);
-    strcpy_s(command, "INSERT INTO contacts (contact_id, nickname, phone, email) VALUES('");
+    sqlite3_finalize(stmt);
+    strcpy_s(command, "INSERT INTO contacts (contact_id, nickname, phone, email) VALUES(");
     wsprintf(userId, L"%d\0", number);
     WideCharToMultiByte(codePage, 0, userId, IDSIZE + 1, buffer, USERSIZE, NULL, NULL);
     //CodePage (кодовая страница) - отвечает за хранение типа формата в который будет приобразована строка, 
@@ -610,7 +610,7 @@ INT insertEntry(HWND hWnd)
     //lpUsedDefaultChar - указатель для нескольких символов, если они не указаны в
     //в представленной таблице.
     strcat_s(command, buffer);
-    strcat_s(command, "',");
+    strcat_s(command, ",");
     strcat_s(command, "'");
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_NICKNAME), wNickname, USERSIZE);
     WideCharToMultiByte(codePage, 0, wNickname, wcslen(wNickname)+1, buffer, USERSIZE, NULL, NULL);
@@ -638,6 +638,8 @@ INT insertEntry(HWND hWnd)
     //wsprintfA - записывает в переменную идущую первым аргументом в формате ANSI.
     char *msg = NULL;
     try {
+        sqlite3_busy_timeout(db, 5000);
+        //sqlite3_exec(db, "BEGIN IMMEDIATE", NULL, NULL, &msg);
         res = sqlite3_exec(db, command, NULL, NULL, &msg);
         //5 параметр - сам выделяет память и создает массив без участия программиста.
         if (res == SQLITE_OK)
@@ -693,7 +695,7 @@ INT modifyUserInfo(HWND hWnd)
     WCHAR wNum[NUMSIZE];
     CHAR chNum[NUMSIZE];
     CHAR buffer[SIZE];
-    const char* updateData = "UPDATE users SET nickname = '";
+    const char* updateData = "UPDATE contacts SET nickname = '";
     strcpy_s(command, updateData);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_NICKNAME), wcNickname, SIZE);
     GetWindowText(GetDlgItem(hWnd, IDR_MOD_MENU_PHONE), wcPhone, SIZE);
@@ -707,43 +709,36 @@ INT modifyUserInfo(HWND hWnd)
     strcat_s(command, buffer);
     strcat_s(command, "', email = '");
     strcat_s(command, chEMail);
-    strcat_s(command, "' WHERE user_id = ");
+    strcat_s(command, "' WHERE contact_id = ");
     wsprintf(wNum, L"%d\0", userId);
     WideCharToMultiByte(codePage, 0, wNum, wcslen(wNum) + 1, chNum, NUMSIZE, NULL, NULL);
     strcat_s(command, chNum);
     strcat_s(command, ";");
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
-    {
-        if (sqlite3_step(stmt) == SQLITE_ROW)
+    char* msg = NULL;
+    try {
+        INT status = sqlite3_exec(db, command, NULL, NULL, &msg);
+        if (status == SQLITE_OK)
         {
-            char* msg = NULL;
-            try {
-                INT status = sqlite3_exec(db, command, NULL, NULL, &msg);
-                if (status == SQLITE_OK)
-                {
-                    MessageBox(NULL, L"Пользователь успешно изменён!", L"Инфо", MB_OK | MB_ICONINFORMATION);
-                    sqlite3_close(db);
-                    return 0;
-                }
-                else
-                {
-                    MessageBox(NULL, L"Ошибка при обновлении пользовательских данных!", L"Ошибка", MB_OK | MB_ICONERROR);
-                    throw "SQL-ERROR";
-                }
-            }
-            catch (...)
-            {
-                CONST INT SIZE = 2000;
-                WCHAR errorMes[SIZE];
-                size_t szType;
-                mbstowcs_s(&szType, errorMes, msg, SIZE);
-                msg = cleaningMemory(msg);
-                writtingDownLog(errorMes);
-                sqlite3_close(db);
-                return 1;
-            }
+            MessageBox(NULL, L"Пользователь успешно изменён!", L"Инфо", MB_OK | MB_ICONINFORMATION);
+            sqlite3_close(db);
+            return 0;
         }
+        else
+        {
+            MessageBox(NULL, L"Ошибка при обновлении пользовательских данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+            throw "SQL-ERROR";
+        }
+    }
+    catch (...)
+    {
+        CONST INT SIZE = 2000;
+        WCHAR errorMes[SIZE];
+        size_t szType;
+        mbstowcs_s(&szType, errorMes, msg, SIZE);
+        msg = cleaningMemory(msg);
+        writtingDownLog(errorMes);
+        sqlite3_close(db);
+        return 1;
     }
     return 0;
 }
@@ -859,7 +854,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
         sqlite3_close(db);
         return 1;
     }
-    const char* selId = "SELECT user_id FROM users LIMIT 1 OFFSET ";
+    const char* selId = "SELECT contact_id FROM contacts LIMIT 1 OFFSET ";
     //SELECT user_id FROM users LIMIT 1 OFFSET - сдвиг на какое количество
     //записей и получение id записи, которая будет единственной благодаря
     //ключу LIMIT 
@@ -867,25 +862,26 @@ INT classModUserInfo(HWND hWnd, INT idx)
     CHAR command[SIZE];
     strcpy_s(command, selId);
     CONST INT IDXSIZE = 256;
-    WCHAR wcNum[IDXSIZE];
-    CHAR chNum[IDXSIZE];
-    wsprintf(wcNum, L"%d\0", idx);
-    WideCharToMultiByte(codePage, 0, wcNum, wcslen(wcNum) + 1, chNum, IDXSIZE, NULL, NULL);
-    strcat_s(command, chNum);
+    WCHAR wcId[IDXSIZE];
+    CHAR chId[IDXSIZE];
+    wsprintf(wcId, L"%d\0", idx);
+    WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, IDXSIZE, NULL, NULL);
+    strcat_s(command, chId);
     strcat_s(command, ";");
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    sqlite3_stmt* stGetId;
+    HWND userClass = NULL;
+    if (sqlite3_prepare_v2(db, command, -1, &stGetId, NULL) == SQLITE_OK)
     {
-        INT curRow = sqlite3_step(stmt);
+        INT curRow = sqlite3_step(stGetId);
         if (curRow == SQLITE_ROW)
         {
-            INT changeUserId = sqlite3_column_int(stmt, 0);
-            sqlite3_finalize(stmt);
+            sqlite3_stmt* stUserInfo;
+            INT changeUserId = sqlite3_column_int(stGetId, 0);
             //sqlite3_column_int - берет строку из stmt и преобразует строку в integer значение, записывая
             //в выделенную int переменную;
             //Второй аргумент номер колонки из которой берём значение;
             userId = changeUserId;
-            const char* dataUser = "SELECT nickname, phone, email FROM users WHERE user_id = ";
+            const char* dataUser = "SELECT nickname, phone, email FROM contacts WHERE contact_id = ";
             //!SQLITE все работает через запросы которые мы собираем в переменной формата const char*
             WCHAR wId[IDXSIZE]{};
             CHAR chId[IDXSIZE]{};
@@ -894,15 +890,15 @@ INT classModUserInfo(HWND hWnd, INT idx)
             strcpy_s(command, dataUser);
             strcat_s(command, chId);
             strcat_s(command, ";");
-            if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+            if (sqlite3_prepare_v2(db, command, -1, &stUserInfo, NULL) == SQLITE_OK)
             {
-                INT curRow = sqlite3_step(stmt);
+                INT curRow = sqlite3_step(stUserInfo);
                 //sqlite3_step возвращает значение в sqlite3_stmt, а sqlite3_exec просто выполняет запрос
                 if (curRow == SQLITE_ROW) 
                 {
-                    const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
-                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                    const char* chEmail = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                    const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(stUserInfo, 0));
+                    const char* chPhone = reinterpret_cast<const char*>(sqlite3_column_text(stUserInfo, 1));
+                    const char* chEmail = reinterpret_cast<const char*>(sqlite3_column_text(stUserInfo, 2));
                     CHAR buffer[SIZE]{};
                     strcpy_s(buffer, checkPlusInPhone(chPhone));
                     WCHAR wcNickname[SIZE];
@@ -925,7 +921,7 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     userWnd.lpszMenuName = NULL;
                     userWnd.lpszClassName = szInfoModificationClass;
                     ATOM reg = RegisterClassEx(&userWnd);
-                    HWND userClass = CreateWindow(szInfoModificationClass, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
+                    userClass = CreateWindow(szInfoModificationClass, L"Измененить", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MODIFY_CLASS_WIDTH, MODIFY_CLASS_HEIGHT, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HFONT hFont = CreateFont(FONT_THE_REGISTRATION_WINDOW, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Times New Roman");
                     HWND hNickname = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_MOD_POS_X(-10), DESCRIPT_FIELD_MOD_POS_Y(-10), MOD_DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_MOD_HEIGHT(0), userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
                     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_MOD_POS_X(-10), DESCRIPT_FIELD_MOD_POS_Y(30), MOD_DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_MOD_HEIGHT(0), userClass, NULL, NULL, GetModuleHandle(NULL), NULL);
@@ -944,24 +940,29 @@ INT classModUserInfo(HWND hWnd, INT idx)
                     SendMessage(hBtnOK, WM_SETFONT, (WPARAM)hFont, TRUE);
                     SendMessage(hBtnCanc, WM_SETFONT, (WPARAM)hFont, TRUE);
                     ShowWindow(userClass, SW_SHOWDEFAULT);
-                    MSG msg;
                     EnableWindow(hWnd, FALSE);
-                    while (IsWindow(userClass))
-                    {
-                        if (GetMessage(&msg, NULL, 0, 0))
-                        {
-                            TranslateMessage(&msg);
-                            DispatchMessage(&msg);
-                        }
-                    }
                 }
+                sqlite3_finalize(stUserInfo);
+                //stmt - обязательно очищать от старых данных, чтобы во время другого запрооса не получить ошибку: "database is locked".
+            }
+        }
+        sqlite3_finalize(stGetId);
+    }
+    sqlite3_close(db);
+    MSG msg;
+    if (userClass)
+    {
+        while (IsWindow(userClass))
+        {
+            if (GetMessage(&msg, NULL, 0, 0))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
             }
         }
     }
     EnableWindow(hWnd, TRUE);
     SetActiveWindow(hWnd);
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
     return 0;
 }
 
@@ -1442,7 +1443,7 @@ INT checkTables()
                     "birthday date NULL,"
                     "icon BLOB NULL,"
                     "path_icon TEXT NULL,"
-                    "BIO TEXT NULL"
+                    "BIO TEXT NULL,"
                     "last_login TEXT NULL);";
                 char* msg = NULL;
                 try {
@@ -1548,7 +1549,7 @@ INT checkTables()
                     "email TEXT NULL,"
                     "birth_day TEXT NULL,"
                     "icon BLOB NULL,"
-                    "BIO text);";
+                    "BIO text NULL,"
                     "last_login TEXT NULL);";
                 char* msg = NULL;
                 try 
@@ -1578,8 +1579,11 @@ INT checkTables()
                 }
             }
         }
+        sqlite3_finalize(stmt);
+        //stmt - обязательно очищать от старых данных, чтобы во время другого запрооса не получить ошибку: "database is locked".
     }
     sqlite3_close(db);
+    //Контроль за закрытием и открытием базы данных обязательный иначе получим ошибку: "database is locked".
     return 0;
 }
 

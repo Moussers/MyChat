@@ -166,6 +166,8 @@ int mysqlConnect()
         std::string crt = "CREATE DATABASE IF NOT EXISTS serv_db";
         stmt->execute(crt);
         connection->setSchema("serv_db");      /*Подключаемся к базе*/
+        std::string nms = "SET NAMES 'cp1251'";
+        stmt->execute(nms);
         delete stmt;
     }
     catch (sql::SQLException& ex) 
@@ -283,9 +285,9 @@ int checkTables(HWND log)
         //c_str - получить указатель на строку.
         //c_str - Получить массив символов (char array).
         return 1;
-    }
-    
+    } 
 }
+
 void startServer(HWND log) 
 {
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -432,14 +434,25 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
     try 
     {
         //падает если в массиве команды есть имя на русском
+        WCHAR wcId[SIZE]{};
+        CHAR chId[SIZE]{};
         CHAR chNickName[SIZE]{};
         CHAR chNumPhone[SIZE]{};
         CHAR chEmail[SIZE]{};
         CHAR chDay[SIZE]{};
         CHAR chMonth[SIZE]{};
         CHAR chYear[SIZE]{};
-        CHAR command[SIZE] = "INSERT INTO users(nickname, number_phone, email, birthday) VALUES('";
-        WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);
+        CHAR command[SIZE] = "SELECT MAX(user_id) FROM users";
+        sql::Statement* stmt = connection->createStatement();
+        sql::ResultSet* res = stmt->executeQuery(command);
+        res->next();
+        int id = res->getInt(1) + 1;
+        wsprintf(wcId, L"%d", id);
+        WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZE, NULL, NULL);
+        strcpy_s(command, "INSERT INTO users(user_id, nickname, number_phone, email, birthday) VALUES('");
+        WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);        
+        strcat_s(command, chId);
+        strcat_s(command, "','");
         strcat_s(command, chNickName);
         strcat_s(command, "',");
         WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone) + 1, chNumPhone, SIZE, NULL, NULL);
@@ -457,7 +470,8 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         WideCharToMultiByte(codePage, 0, wcDay, wcslen(wcDay) + 1, chDay, SIZE, NULL, NULL);
         strcat_s(command, chDay);
         strcat_s(command, SIZE, "');");
-        sql::Statement* stmt = connection->createStatement();
+        //MultiByteToWideChar(codePage, 0, chCommand, strlen(chCommand) + 1, wcCommand, SIZE);
+        stmt = connection->createStatement();
         stmt->execute(command);
         //executeQuery - при выполнении возвращает результат, а при insert результат не нужен
         connection->close();
