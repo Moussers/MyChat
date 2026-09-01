@@ -652,7 +652,7 @@ bool sendDataByAuthor(SOCKET* clientSocket, WCHAR* wcNumPhone, WCHAR* wcEmail, W
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
     strcat_s(answer, "/");
-    strcat_s(answer, "AUTHORIZATION");
+    strcat_s(answer, "authorization");
     int iResult = send(*clientSocket, answer, strlen(answer), 0);
     if (iResult == INVALID_SOCKET) 
     {
@@ -688,7 +688,7 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     appendToLog(logHWND, buf);
     strcpy_s(answer, status);
     strcat_s(answer, "/");
-    strcat_s(answer, "REGISTRATION");
+    strcat_s(answer, "registration");
     if(send(*clientSocket, answer, strlen(answer)+1, 0) == INVALID_SOCKET)
     {
         appendToLog(logHWND, L"Ошибка при отправке регистрационных данных клиенту!");

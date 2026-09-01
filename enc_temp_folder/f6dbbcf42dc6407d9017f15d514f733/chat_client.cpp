@@ -1678,17 +1678,13 @@ INT getUrl(CHAR* recvBuf)
         i++;
         p++;
     }
-    if (!strcmp(command, "REGISTRATION"))
+    if (!strcmp(command, "registration"))
     {
         return 0;
     }
     if (!strcmp(command, "authorization")) 
     {
         return 1;
-    }
-    if (!strcmp(command, "CONTACTS")) 
-    {
-        return 2;
     }
     return -1;
 }
