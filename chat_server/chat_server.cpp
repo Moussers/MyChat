@@ -221,7 +221,8 @@ int checkTables(HWND log)
             }
             std::string createUsers = "Create TABLE `users`("
                 "user_id INT PRIMARY KEY NOT NULL,"
-                "nickname varchar(256) NOT NULL,"
+                "first_name varchar(256) NOT NULL,"
+                "last_name varchar(256) NULL,"
                 "number_phone BIGINT NOT NULL,"
                 "email TEXT NULL,"
                 "birthday DATE NULL,"
@@ -697,27 +698,21 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR *wcNumPhone, WCHAR* wcEmail, WCHA
     return true;
 }
 
-//int checkExistPhoneFromContacts(char* numPhone) 
-//{
-//    CONST INT SIZE = 1024;
-//    CHAR command[SIZE] = "";
-//}
-
 void checkContactData(SOCKET* lSocket, char* recvBuf) 
 {
     CONST INT SIZE = 2000;
     WCHAR wcBuf[SIZE]{};
-    WCHAR wcNickname[SIZE]{};
+    WCHAR wcFirstName[SIZE]{};
+    WCHAR wcLastName[SIZE]{};
     WCHAR wcNumPhone[SIZE]{};
-    WCHAR wcEmail[SIZE]{};
     CHAR status[SIZE]{};
     int i = 0;
     int k = 0;
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
-    getSubDataFromStr(&i, &k, wcBuf, wcNickname);
+    getSubDataFromStr(&i, &k, wcBuf, wcFirstName);
+    getSubDataFromStr(&i, &k, wcBuf, wcLastName);
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail)) 
+    if (checkExistPhone(wcNumPhone)) 
     {
         strcpy_s(status, "EXIST");
         strcat_s(status, "/CONTACTS");
