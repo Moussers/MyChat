@@ -42,7 +42,7 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
 void checkContactData(SOCKET lSocket, char* recvBuf);
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -378,6 +378,7 @@ void startServer(HWND log)
     }
     serverIsReady = true;
 }
+
 void appendToLog(HWND log, CONST WCHAR* message) 
 {
     int length = GetWindowTextLength(log);
@@ -396,6 +397,7 @@ void appendToLog(HWND log, CONST WCHAR* message)
     SendMessage(log, EM_REPLACESEL, FALSE, (LPARAM)L"\n");
     //В конце добавляем новую строку для следующего текста.
 }
+
 void listenClient() 
 {
     do {
@@ -425,7 +427,8 @@ void listenClient()
         }
     } while (true);
 }
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear) 
+
+bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcEmail,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear)
 {
     if (connection->isClosed()) 
     {
@@ -437,7 +440,8 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         //падает если в массиве команды есть имя на русском
         WCHAR wcId[SIZE]{};
         CHAR chId[SIZE]{};
-        CHAR chNickName[SIZE]{};
+        CHAR chFirstName[SIZE]{};
+        CHAR chLastName[SIZE]{};
         CHAR chNumPhone[SIZE]{};
         CHAR chEmail[SIZE]{};
         CHAR chDay[SIZE]{};
@@ -450,15 +454,18 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         int id = res->getInt(1) + 1;
         wsprintf(wcId, L"%d", id);
         WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZE, NULL, NULL);
-        strcpy_s(command, "INSERT INTO users(user_id, nickname, number_phone, email, birthday) VALUES('");
-        WideCharToMultiByte(codePage, 0, wcNickname, wcslen(wcNickname) + 1, chNickName, SIZE, NULL, NULL);        
+        strcpy_s(command, "INSERT INTO users(user_id, first_name, last_name, number_phone, email, birthday) VALUES('");
+        WideCharToMultiByte(codePage, 0, wcFirstName, wcslen(wcFirstName) + 1, chFirstName, SIZE, NULL, NULL);        
         strcat_s(command, chId);
         strcat_s(command, "','");
-        strcat_s(command, chNickName);
-        strcat_s(command, "',");
+        strcat_s(command, chFirstName);
+        strcat_s(command, "','");
+        WideCharToMultiByte(codePage, 0, wcLastName, wcslen(wcLastName) + 1, chLastName, SIZE, NULL, NULL);
+        strcat_s(command, chLastName);
+        strcat_s(command, "','");
         WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone) + 1, chNumPhone, SIZE, NULL, NULL);
         strcat_s(command, SIZE, chNumPhone);
-        strcat_s(command, ",'");
+        strcat_s(command, "','");
         WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
         strcat_s(command, chEmail);
         strcat_s(command, "','");
@@ -486,9 +493,9 @@ bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcNickname, WCHAR* wc
         appendToLog(logHWND, errors);
         connection->close();
         return false;
-    }
-    
+    }   
 }
+
 int checkExistPhone(WCHAR* numberPhone) 
 {
     if (connection->isClosed()) 
@@ -531,6 +538,7 @@ int checkExistPhone(WCHAR* numberPhone)
         return -1;
     }
 }
+
 int checkExistEmail(WCHAR* email) 
 {
     if (connection->isClosed()) 
@@ -565,6 +573,7 @@ int checkExistEmail(WCHAR* email)
         return -1;
     }
 }
+
 bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDest)
 {
     if (wcSource[*indexI] == L'/' || wcSource[*indexI] == L' ')
@@ -618,6 +627,7 @@ int getUrl(CHAR* recvBuf)
     }
     return -1;
 }
+
 bool setData(WCHAR* wcSource, WCHAR* wcDest, int sizeStr) 
 {
     if (wcscmp(wcDest, L"")) 
@@ -769,7 +779,8 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
 {
     login = true;
     CONST INT SIZE = 1024;
-    WCHAR wcNickname[SIZE]{};
+    WCHAR wcFirstName[SIZE]{};
+    WCHAR wcLastName[SIZE]{};
     WCHAR wcNumPhone[SIZE]{};
     WCHAR wcEmail[SIZE]{};
     WCHAR wcDay[SIZE]{};
@@ -782,7 +793,8 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     int k = 0;
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
     getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    getSubDataFromStr(&i, &k, wcBuf, wcNickname);
+    getSubDataFromStr(&i, &k, wcBuf, wcFirstName);
+    getSubDataFromStr(&i, &k, wcBuf, wcLastName);
     getSubDataFromStr(&i, &k, wcBuf, wcDay);
     getSubDataFromStr(&i, &k, wcBuf, wcMonth);
     getSubDataFromStr(&i, &k, wcBuf, wcYear);
@@ -791,16 +803,16 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
         strcpy_s(status, SIZE, "EXIST");
         int res = strlen(status);
         status[res] = '\0';
-        sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+        sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcFirstName, status);
     }
     else
     {
-        if (insertEntry(wcNumPhone, wcEmail, wcNickname, wcDay, wcMonth, wcYear))
+        if (insertEntry(wcNumPhone, wcFirstName, wcLastName,  wcEmail, wcDay, wcMonth, wcYear))
         {
             strcpy_s(status, SIZE, "CREATED");
             int res = strlen(status);
             status[res] = '\0';
-            sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcNickname, status);
+            sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcFirstName, status);
         }
     }
     login = false;
