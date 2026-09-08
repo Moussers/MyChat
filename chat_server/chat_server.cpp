@@ -41,8 +41,9 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* 
 bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
-void checkContactData(SOCKET lSocket, char* recvBuf);
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
+void checkContactData(SOCKET* lSocket, char* recvBuf);
+bool insertingIntoUser(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
+bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -253,9 +254,10 @@ int checkTables(HWND log)
                 return 1;
             }
             std::string createContactList = "Create Table `contacts`("
-                "conctact_id INT PRIMARY KEY NOT NULL,"
-                "nickname VARCHAR(256),"
-                "number_phone INT NOT NULL,"
+                "contact_id INT PRIMARY KEY NOT NULL,"
+                "first_name VARCHAR(256),"
+                "last_name VARCHAR(256),"
+                "number_phone BIGINT NOT NULL,"
                 "email TEXT NULL,"
                 "icon BINARY NULL);";
                 "last_login DATETIME NULL);";
@@ -428,7 +430,58 @@ void listenClient()
     } while (true);
 }
 
-bool insertEntry(WCHAR* wcNumPhone, WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcEmail,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear)
+bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone) 
+{
+    if (connection->isClosed()) 
+    {
+        mysqlConnect();
+    }
+    CONST INT SIZE = 1024;
+    WCHAR wcId[SIZE]{};
+    CHAR chNumPhone[SIZE]{};
+    CHAR chFirstName[SIZE]{};
+    CHAR chLastName[SIZE]{};
+    CHAR chId[SIZE]{};
+    std::string selMaxId = "SELECT COUNT(*) FROM contacts;";
+    try 
+    {
+        sql::Statement* stmt = connection->createStatement();
+        sql::ResultSet* res = stmt->executeQuery(selMaxId);
+        res->next();
+        int id = res->getInt(1);
+        delete stmt;
+        //Чистим stmt от предыдущего запроса
+        CHAR command[SIZE] = "INSERT INTO contacts(contact_id, first_name, last_name, number_phone)VALUES('";
+        wsprintf(wcId, L"%i", id);
+        WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZE, NULL, NULL);
+        strcat_s(command, chId);
+        strcat_s(command, "','");
+        WideCharToMultiByte(codePage, 0, wcFirstName, wcslen(wcFirstName) + 1, chFirstName, SIZE, NULL, NULL);
+        strcat_s(command, chFirstName);
+        strcat_s(command, "','");
+        WideCharToMultiByte(codePage, 0, wcLastName, wcslen(wcLastName) + 1, chLastName, SIZE, NULL, NULL);
+        strcat_s(command, chLastName);
+        strcat_s(command, "','");
+        WideCharToMultiByte(codePage, 0, wcNumPhone, wcslen(wcNumPhone), chNumPhone, SIZE, NULL, NULL);
+        strcat_s(command, chNumPhone);
+        strcat_s(command, "');");
+        stmt = connection->createStatement();
+        stmt->execute(command);
+        connection->close();
+        delete stmt;
+        return true;
+    }
+    catch (sql::SQLException ex)
+    {
+        WCHAR errors[SIZE]{};
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
+        appendToLog(logHWND, errors);
+        connection->close();
+        return false;
+    };
+}
+
+bool insertingIntoUser(WCHAR* wcNumPhone, WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcEmail,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear)
 {
     if (connection->isClosed()) 
     {
@@ -716,6 +769,7 @@ void checkContactData(SOCKET* lSocket, char* recvBuf)
     WCHAR wcLastName[SIZE]{};
     WCHAR wcNumPhone[SIZE]{};
     CHAR status[SIZE]{};
+    WCHAR buffer[SIZE];
     int i = 0;
     int k = 0;
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
@@ -724,7 +778,13 @@ void checkContactData(SOCKET* lSocket, char* recvBuf)
     getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
     if (checkExistPhone(wcNumPhone)) 
     {
+        wsprintf(buffer, L"Такая учетная запись: %s существует на сервере!", wcNumPhone);
+        appendToLog(logHWND, buffer);
         strcpy_s(status, "EXIST");
+        if (!strcmp(status, "EXIST")) 
+        {
+            insertingIntoContact(wcFirstName, wcLastName, wcNumPhone);
+        }
         strcat_s(status, "/CONTACTS");
         int iResult = send(*lSocket, status, strlen(status) + 1, 0);
         if (iResult == INVALID_SOCKET) 
@@ -807,7 +867,7 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     }
     else
     {
-        if (insertEntry(wcNumPhone, wcFirstName, wcLastName,  wcEmail, wcDay, wcMonth, wcYear))
+        if (insertingIntoUser(wcNumPhone, wcFirstName, wcLastName,  wcEmail, wcDay, wcMonth, wcYear))
         {
             strcpy_s(status, SIZE, "CREATED");
             int res = strlen(status);
@@ -869,9 +929,6 @@ int clientManagement(SOCKET* clientSocket)
                     return 1;
                 }
             }
-            //!Провериить существование пользователя в базе сервера, по номеру телефона или почте, через две отдельные функции
-            //Если запись сущетсвует то вернуть приложению-клиенту, что запись аккаунт существует
-            //Во время авторизации (не регистрации), проверить через отдельную функцию сущетсвует пользватель, или нет.
         }
         else if (iResult == 0) 
         {

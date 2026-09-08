@@ -64,9 +64,7 @@
 
 //IDM
 #define IDM_ADD_MENU_FIRSTNAME			5000
-#define IDM_ADD_MENU_LAST_NAME          5001
-//#define IDM_ADD_MENU_FIRST_NAME         5001
-//#define IDM_ADD_MENU_MIDDLE_NAME        5002
+#define IDM_ADD_MENU_LASTNAME			5001
 #define IDM_ADD_MENU_PHONE              5002
 //#define IDM_ADD_MENU_EMAIL              5002
 #define IDM_MAIN_USER_LIST              5003
