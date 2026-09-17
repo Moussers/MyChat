@@ -14,12 +14,11 @@
 #include "PositionsButtonsAndWindows.h"
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
+#include "UserInfo.h"
 #define PORT "4000"
 
 //winUI3
-
 //Глобальные переменные:
-CONST INT arraySize = 2000;
 CONST INT USERSIZE = 2000;
 CONST INT IDSIZE = 1000;
 CONST UINT codePage = 1251;                     //UINT - unsigned int
@@ -49,7 +48,7 @@ INT createUserWndProc();
 INT checkTables();
 INT checkingUserInfo(HWND hWnd);
 INT modifyUserInfo(HWND hWnd);
-INT accoutSearch(HWND hField, HWND hList);
+INT accountSearch(HWND hField, HWND hList);
 INT updateList(HWND userList);
 INT recievedRegData(CHAR* recvBuf);
 INT addUser();
@@ -57,105 +56,6 @@ INT deleteUser(INT idx);
 INT sendEntryToServ(SOCKET lSocket, HWND hWnd);
 INT recievedData(SOCKET clientSocket);
 CHAR* checkPlusInPhone(const char* numPhone);
-
-class UserInfo
-{
-private:
-    CHAR m_numberPhone[arraySize];
-    CHAR m_email[arraySize];
-    CHAR m_firstName[arraySize];
-    CHAR m_lastName[arraySize];
-    CHAR m_birthdayDay[arraySize];
-    CHAR m_birthdayMonth[arraySize];
-    CHAR m_birthdayYear[arraySize];
-public:
-    UserInfo() : m_numberPhone(""), m_email(""), m_firstName(""), m_lastName(""), m_birthdayDay(""), m_birthdayMonth(""), m_birthdayYear("") {};
-public:
-    void setNumberPhone(CHAR* numberPhone);
-    CHAR* numberPhone();
-    void setEmail(CHAR* email);
-    CHAR* email();
-    void setFirstName(CHAR* userFirstName);
-    CHAR* firstName();
-    void setLastName(CHAR* userLastName);
-    CHAR* lastName();
-    void setBirthdayDay(CHAR* userBirthdayDay);
-    CHAR* birthdayDay();
-    void setBirthdayMonth(CHAR* userBirthdayMonth);
-    CHAR* birthdayMonth();
-    void setBirthdayYear(CHAR* userBirthdayYear);
-    CHAR* birthdayYear();
-};
-
-void UserInfo::setNumberPhone(CHAR* userPhone) 
-{
-    strcpy_s(m_numberPhone, userPhone);
-}
-
-CHAR* UserInfo::numberPhone() 
-{
-    return m_numberPhone;
-}
-
-void UserInfo::setEmail(CHAR* email) 
-{
-    strcpy_s(m_email, email);
-}
-
-CHAR* UserInfo::email() 
-{
-    return m_email;
-}
-
-void UserInfo::setFirstName(CHAR* userFirstName) 
-{
-    strcpy_s(m_firstName, userFirstName);
-}
-
-CHAR* UserInfo::firstName() 
-{
-    return m_firstName;
-}
-
-void UserInfo::setLastName(CHAR* userLastName) 
-{
-    strcpy_s(m_lastName, userLastName);
-}
-
-CHAR* UserInfo::lastName() 
-{
-    return m_lastName;
-}
-
-void UserInfo::setBirthdayDay(CHAR* userBirthdayDay) 
-{
-    strcpy_s(m_birthdayDay, userBirthdayDay);
-}
-
-CHAR* UserInfo::birthdayDay() 
-{
-    return m_birthdayDay;
-}
-
-void UserInfo::setBirthdayMonth(CHAR* userBirthdayMonth) 
-{
-    strcpy_s(m_birthdayMonth, userBirthdayMonth);
-}
-
-CHAR* UserInfo::birthdayMonth() 
-{
-    return m_birthdayMonth;
-}
-
-void UserInfo::setBirthdayYear(CHAR* userBirthdayYear) 
-{
-    strcpy_s(m_birthdayYear, userBirthdayYear);
-}
-
-CHAR* UserInfo::birthdayYear() 
-{
-    return m_birthdayYear;
-}
 
 UserInfo userInfo;
 INT authorizationForm();
@@ -1632,7 +1532,7 @@ INT checkTables()
     return 0;
 }
 
-INT accoutSearch(HWND hField, HWND hList) 
+INT accountSearch(HWND hField, HWND hList) 
 {
     SendMessage(hList, LB_RESETCONTENT, NULL, NULL);
     sqlite3* db;
@@ -1981,7 +1881,7 @@ INT createUserWndProc()
        return 1;
    }
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hMain, (HMENU)IDR_SEARCH_FIELD, hInst, NULL);
-   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hMain, 0, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEND_MES, hInst, NULL);
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEARCH_BUTTON_POS_X, SEARCH_BUTTON_POS_Y, SEARCH_BUTTON_WIDTH, SEARCH_BUTTON_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, BUTTON_ADDING_AN_ENTRY_POS_X, BUTTON_ADDING_AN_ENTRY_POS_Y, BUTTON_ADDING_AN_ENTRY_WIDTH, BUTTON_ADDING_AN_ENTRY_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
@@ -2287,8 +2187,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (wmId == GetDlgItem(hWnd, IDM_MAIN_USER_LIST) && idx != -1)
                 //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
             {
-                /*if (LOWORD(wParam) == VK_RBUTTON)
-                {*/
                 HMENU hMenu = CreatePopupMenu();
                 AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
                 //AppendMenu - добавляет список popup menu новые слова
@@ -2327,10 +2225,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     break;
                 }
-                //}
             }
     }
-        break;
+    break;
     case WM_COMMAND:
         {
         WORD notificationCode = HIWORD(wParam);
@@ -2341,7 +2238,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (controlID) 
             {
             case IDR_SEARCH_FIELD:
-                accoutSearch(GetDlgItem(hWnd, IDR_SEARCH_FIELD), GetDlgItem(hWnd, IDM_MAIN_USER_LIST));
+                accountSearch(GetDlgItem(hWnd, IDR_SEARCH_FIELD), GetDlgItem(hWnd, IDM_MAIN_USER_LIST));
                 break;
             }
         }
@@ -2417,7 +2314,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
-        
         default:
             return DefWindowProc(hWnd, message, wParam, lParam);
         }

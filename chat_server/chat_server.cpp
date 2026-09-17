@@ -88,6 +88,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW);
 	wcex.lpszClassName = MAIN_CLASS_NAME;
+    wcex.hbrBackground = CreateSolidBrush(RGB(34, 87, 110));
 	wcex.hIconSm = NULL;
 	//hIconSm - Поле обозначения при запуске программы для иконки внизу, то есть 
 	//в системном трее.
@@ -149,6 +150,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	break;
+    /*case WM_PAINT:
+    //WP_PAINT - отвечает за закрашивание окна
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        //HDC hdc = GetDC(hWnd);
+        //GetDC извлекает дескриптор контекста устройства (DC) для клиентской области 
+        //указанного окна или всего экрана.
+        //GetDC - берет всю область окна
+        //BeginDC - только ту область на которой будем рисовать
+        if (hdc) 
+        {
+            HPEN hGreenPen = CreatePen(PS_SOLID, 4, RGB(0, 255, 0));
+            //Функция CreatePen создает логическое перо с указанным стилем, шириной и цветом.
+            //iStyle - стиль пера;
+            //cWidth - ширина пера. Если значение равно нулю ширина пера составляет один 
+            //пиксель.
+            //color - ссылка на цвет пера.
+            //Чтобы создать структуру COLORREF, используйте макрос RGB.
+            SelectObject(hdc, hGreenPen);
+            //выбираем pencil (карандаш)
+            //SelectObject выбирает объект в указанном контексте устройства (DC)
+            //hdc - сам выбранный handle (дерскиптор) выбранного объекта.
+            //hdc - дескриптор вируального объекта (pen (перо), brush(кисть), font(шрифт), region, bitmap(картинка))
+            MoveToEx(hdc, 420, 430, NULL);
+            //MoveToEx задает точку карандша по координатам x и y;
+            //hdc - hadnle (дексриптор устройства)
+            //x - координата x;
+            //y - координата y;
+            //lppt - указатель на структуру Point. Point может хранить записанные координаты
+            //x и y.
+            LineTo(hdc, 470, 430);
+            //вправо
+            LineTo(hdc, 470, 470);
+            //вниз
+            LineTo(hdc, 420, 470);
+            //влево
+            LineTo(hdc, 420, 430);
+            //вверх
+            DeleteObject(hGreenPen);
+            //Удаляем объект карандша\пера из памяти
+        }
+        EndPaint(hWnd, &ps);
+        //EndPaint - очищает handle (дескриптор) от virtual pencil\pen (от вирутального карандша\пера)
+    }
+    break;*/
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
