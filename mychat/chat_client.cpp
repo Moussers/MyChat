@@ -15,6 +15,7 @@
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
 #include "UserInfo.h"
+#include <string>
 #define PORT "4000"
 
 //winUI3
@@ -394,49 +395,6 @@ INT checkingUserInfo(HWND hWnd)
     sqlite3_close(db);
 }
 
-//INT checkExistsEMail(HWND hWnd) 
-//{
-//    sqlite3* db;
-//    INT res = sqlite3_open("DatabaseMessanger.db", &db);
-//    if (res) 
-//    {
-//        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
-//        sqlite3_close(db);
-//        return 1;
-//    }
-//    CONST INT SIZE = 1500;
-//    CONST INT COMMANDSIZE = 2000;
-//    WCHAR wcMail[SIZE];
-//    CHAR cMail[SIZE];
-//    GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_EMAIL), wcMail, SIZE);
-//    WideCharToMultiByte(codePage, 0, wcMail, wcslen(wcMail)+1, cMail, SIZE, NULL, NULL);
-//    CHAR getMail[COMMANDSIZE];
-//    strcpy_s(getMail, "SELECT COUNT(*) FROM users WHERE email='");
-//    strcat_s(getMail, cMail);
-//    strcat_s(getMail, "'");
-//    strcat_s(getMail, ";");
-//    //strcat - для char \ANSI, то есть для латиницы
-//    INT counter = 0;
-//    sqlite3_stmt* st;
-//    if (sqlite3_prepare_v2(db, getMail, -1, &st, NULL) == SQLITE_OK) 
-//    {
-//        INT nextRow = sqlite3_step(st);
-//        if (nextRow == SQLITE_ROW) 
-//        {
-//            counter = sqlite3_column_int(st, 0);
-//            if (counter) 
-//            {
-//                MessageBox(NULL, L"Запись пользователя с указанной почтой\nуже существует!", L"Ошибка", MB_OK | MB_ICONERROR);
-//                sqlite3_close(db);
-//                return 1;
-//            }
-//        }
-//    }
-//    sqlite3_finalize(st);
-//    sqlite3_close(db);
-//    return 0;
-//}
-
 INT checkExistsNumPhone(HWND hWnd) 
 {
     sqlite3* db;
@@ -690,6 +648,9 @@ INT deleteUser(INT idx)
         return 1;
     }
     const char* selectIdUser = "SELECT contact_id FROM contacts LIMIT 1 OFFSET ";
+    //OFFSET - сдвиг по таблицам
+    //LIMIT - выбирает количество id равное количеству записей. В данном пример только 
+    //1 id, из одной записи.
     //прочитать про reinterpret_cast
     CONST INT SIZE = 2000;
     CHAR command[SIZE];
@@ -910,7 +871,6 @@ INT addUser()
     HWND hFirtName = CreateWindow(L"STATIC", L"Имя:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hLastName = CreateWindow(L"STATIC", L"Фамилия:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hPhone = CreateWindow(L"STATIC", L"Телефон:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
-    //HWND hMail = CreateWindow(L"STATIC", L"Почта:", WS_VISIBLE | WS_CHILD, DESCRIPT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), DESCRIPT_FIELD_WIDTH(80), DESCRIPT_FIELD_HEIGHT, userClass, NULL, GetModuleHandle(NULL), NULL);
     HWND hFisrstName = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(0), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_FIRSTNAME, GetModuleHandle(NULL), NULL);
     HWND hLastInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(40), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_LASTNAME, GetModuleHandle(NULL), NULL);
     HWND hPhoneInputFld = CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, INPUT_FIELD_POS_X, COUNT_FIELD_POS_Y(80), INPUT_FIELD_WIDTH, INPUT_FIELD_HEIGHT, userClass, (HMENU)IDM_ADD_MENU_PHONE, GetModuleHandle(NULL), NULL);
@@ -1259,7 +1219,7 @@ INT sendEntryToServ(SOCKET lSocket, HWND hWnd)
     strcat_s(contactData, chLastName);
     strcat_s(contactData, ",");
     strcat_s(contactData, chNumPhone);
-    strcat_s(contactData, "/checkingContactData");
+    strcat_s(contactData, "/CHECKING_CONTACT_DATA");
     INT iResult = send(lSocket, contactData, strlen(contactData) + 1, 0);
     if (iResult == INVALID_SOCKET) 
     {
@@ -1764,7 +1724,7 @@ INT recievedData(SOCKET clientSocket)
             MessageBox(NULL, L"Ошибка получения данных", L"Ошибка", MB_OK | MB_ICONERROR);
         }
         INT res = getUrl(recvBuf);
-        switch (res) 
+        switch (res)
         {
         case IDS_REGISTRATION: 
         {
@@ -1874,7 +1834,7 @@ INT createUserWndProc()
 {
    HWND hMain = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInst, NULL);
    CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, DESCRIPT_LIST_FIELD_POS_X, DESCRIPT_LIST_FIELD_POS_Y, DESCRIPT_LIST_FIELD_WIDTH, DESCRIPT_LIST_FIELD_HEIGT, hMain, 0, hInst, NULL);
-   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hMain, 0, hInst, NULL);
+   CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hMain, (HMENU)IDR_SEDNDING_MES_FIELD, hInst, NULL);
    CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hMain, (HMENU)IDM_MAIN_USER_LIST, hInst, NULL);
    if (updateList(GetDlgItem(hMain, IDM_MAIN_USER_LIST)) == 1)
    {
@@ -2026,7 +1986,7 @@ INT registrationInfo(SOCKET lSocket)
     strcat_s(regist, ",");
     strcat_s(regist, year);
     strcat_s(regist, "/");
-    strcat_s(regist,"registration");
+    strcat_s(regist,"REGISTRATION");
     INT iResult = send(lSocket, regist, strlen(regist)+1, 0);
     if (iResult == INVALID_SOCKET) 
     {
@@ -2057,7 +2017,7 @@ INT dataLogin(SOCKET lSocket)
         strcat_s(authoriz, email);
         strcat_s(authoriz, "/");
     }
-    strcat_s(authoriz, "login");
+    strcat_s(authoriz, "LOGIN");
     INT iResult = send(lSocket, authoriz, strlen(authoriz), 0);
     if (iResult == INVALID_SOCKET) 
     //Значение INVALID_SOCKET не является допустимым сокетом. 
@@ -2176,6 +2136,70 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
     return 0;
 }
 
+INT sendMesToServ(HWND hWnd, INT id) 
+//Function uses '17588' bytes of stack. - Функция использует много памяти при работе.
+//Много перменных которые используют память.
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    //sqlite3_open возвращает 0 если откритие базы данных произошло успешно
+    if (res) 
+    {
+        MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    CONST INT SIZE = 2000;
+    CONST INT SIZEID = 512;
+    WCHAR wcMesAsStr[SIZE]{};
+    WCHAR wcId[SIZEID]{};
+    WCHAR wcSenderPhone[SIZE]{};
+    CHAR chMesAsStr[SIZE]{};
+    CHAR chId[SIZEID]{};
+    CHAR chSenderPhone[SIZE]{};
+    CHAR chRecipientPhone[SIZE]{};
+    GetWindowText(GetDlgItem(hWnd, IDR_SEDNDING_MES_FIELD), wcMesAsStr, SIZE);
+    WideCharToMultiByte(codePage, 0, wcMesAsStr, wcslen(wcMesAsStr) + 1, chMesAsStr, SIZE, NULL, NULL);
+    strcat_s(chMesAsStr, ";");
+    CHAR command[SIZE] = "SELECT phone FROM contacts LIMIT 1 OFFSET ";
+    //OFFSET - сдвиг по таблицам
+    //LIMIT - выбирает количетсво записей, (в данном случае одну запись).
+    wsprintf(wcId, L"%d", id);
+    WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZEID, NULL, NULL);
+    strcat_s(command, chId);
+    strcat_s(command, ";");
+    sqlite3_stmt* stmt;
+    if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    {
+        INT nextRow;
+        nextRow = sqlite3_step(stmt);
+        if(nextRow == SQLITE_ROW)
+        //Код результата SQLITE_ROW, возвращаемый функцией sqlite3_step(), 
+        //указывает на то, что доступна следующая строка вывода.
+        {
+            INT64 numPhone = sqlite3_column_int64(stmt, 0);
+            //int занимает 4 байта,
+            //int64 занимает 8 байт.
+            std::string temp = std::to_string(numPhone);
+            strcpy_s(chRecipientPhone, temp.c_str());
+            //strcmp - сравнивает строки
+            //strcpy - копирует один массив строк в другой
+            strcpy_s(chSenderPhone, userInfo.numberPhone());
+            strcat_s(chMesAsStr, chSenderPhone);
+            strcat_s(chMesAsStr, ";");
+            strcat_s(chMesAsStr, chRecipientPhone);
+            strcat_s(chMesAsStr, "/SEND_MESSAGE");
+            INT iResult = send(listenSock, chMesAsStr, strlen(chMesAsStr) + 1, 0);
+            if (iResult == INVALID_SOCKET)
+            {
+                MessageBox(NULL, L"Ошибка отправки сообщения от\nпользователя на сервер", L"Ошибка", MB_OK | MB_ICONERROR);
+                return 1;
+            }
+        }
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -2258,6 +2282,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 return 1;
             }
             break;
+        case IDB_SEND_MES: 
+        {
+            sendMesToServ(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+        }
+        break;
         case IDB_REGISTER_REGIST:
         {
             WCHAR wcPhone[USERSIZE];

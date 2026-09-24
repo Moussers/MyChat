@@ -32,7 +32,7 @@ void startServer(HWND log);
 void appendToLog(HWND log, CONST WCHAR* message);
 void listenClient();
 void clearLog(HWND log);
-bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDestin);
+bool getSubDataFromWCStr(int& indexI, int& indexK, WCHAR* wcSource, WCHAR* wcDestin);
 int clientManagement(SOCKET* clientSocket);
 int checkTables(HWND log);
 int mysqlConnect();
@@ -55,7 +55,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -674,25 +674,25 @@ int checkExistEmail(WCHAR* email)
     }
 }
 
-bool getSubDataFromStr(int* indexI, int* indexK, WCHAR* wcSource, WCHAR* wcDest)
+bool getSubDataFromWCStr(int& indexI, int& indexK, WCHAR* wcSource, WCHAR* wcDest)
 {
-    if (wcSource[*indexI] == L'/' || wcSource[*indexI] == L' ')
+    if (wcSource[indexI] == L'/' || wcSource[indexI] == L' ')
     {
         return false;
     }
-    if (wcSource[*indexI] == L',') 
+    if (wcSource[indexI] == L',') 
     {
-        (*indexI)++;
+        (indexI)++;
     }
-    while (wcSource[*indexI] != L',' && wcSource[*indexI] != L'/')
+    while (wcSource[indexI] != L',' && wcSource[indexI] != L'/')
     //=! - отрицание какого-то числа, строка превращается в нулевую строку
     {
-        wcDest[*indexK] = wcSource[*indexI];
-        (*indexI)++;
-        (*indexK)++;
+        wcDest[indexK] = wcSource[indexI];
+        (indexI)++;
+        (indexK)++;
     }
-    wcDest[*indexK] = L'\0';
-    *indexK = 0;
+    wcDest[indexK] = L'\0';
+    indexK = 0;
     return true;
 }
 int getUrl(CHAR* recvBuf) 
@@ -713,17 +713,21 @@ int getUrl(CHAR* recvBuf)
         p++;
     }
     command[p] = '\0';
-    if(!strcmp(command, "registration"))
+    if(!strcmp(command, "REGISTRATION"))
     {
         return 0;
     }
-    if (!strcmp(command, "login")) 
+    if (!strcmp(command, "LOGIN")) 
     {
         return 1;
     }
-    if (!strcmp(command, "checkingContactData")) 
+    if (!strcmp(command, "CHECKING_CONTACT_DATA")) 
     {
         return 2;
+    }
+    if (!strcmp(command, "SEND_MESSAGE")) 
+    {
+        return 3;
     }
     return -1;
 }
@@ -820,9 +824,9 @@ void checkContactData(SOCKET* lSocket, char* recvBuf)
     int i = 0;
     int k = 0;
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
-    getSubDataFromStr(&i, &k, wcBuf, wcFirstName);
-    getSubDataFromStr(&i, &k, wcBuf, wcLastName);
-    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
+    getSubDataFromWCStr(i, k, wcBuf, wcFirstName);
+    getSubDataFromWCStr(i, k, wcBuf, wcLastName);
+    getSubDataFromWCStr(i, k, wcBuf, wcNumPhone);
     if (checkExistPhone(wcNumPhone)) 
     {
         wsprintf(buffer, L"Такая учетная запись: %s существует на сервере!", wcNumPhone);
@@ -863,8 +867,8 @@ void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf)
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf)+1, wcBuf, SIZE);
     int i = 0;
     int k = 0;
-    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    if (getSubDataFromStr(&i, &k, wcBuf, wcEmail));
+    getSubDataFromWCStr(i, k, wcBuf, wcNumPhone);
+    getSubDataFromWCStr(i, k, wcBuf, wcEmail);
     if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
         strcpy_s(status, "EXIST");
@@ -898,13 +902,13 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
     int i = 0;
     int k = 0;
-    getSubDataFromStr(&i, &k, wcBuf, wcNumPhone);
-    getSubDataFromStr(&i, &k, wcBuf, wcEmail);
-    getSubDataFromStr(&i, &k, wcBuf, wcFirstName);
-    getSubDataFromStr(&i, &k, wcBuf, wcLastName);
-    getSubDataFromStr(&i, &k, wcBuf, wcDay);
-    getSubDataFromStr(&i, &k, wcBuf, wcMonth);
-    getSubDataFromStr(&i, &k, wcBuf, wcYear);
+    getSubDataFromWCStr(i, k, wcBuf, wcNumPhone);
+    getSubDataFromWCStr(i, k, wcBuf, wcEmail);
+    getSubDataFromWCStr(i, k, wcBuf, wcFirstName);
+    getSubDataFromWCStr(i, k, wcBuf, wcLastName);
+    getSubDataFromWCStr(i, k, wcBuf, wcDay);
+    getSubDataFromWCStr(i, k, wcBuf, wcMonth);
+    getSubDataFromWCStr(i, k, wcBuf, wcYear);
     if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail))
     {
         strcpy_s(status, SIZE, "EXIST");
@@ -923,6 +927,23 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
         }
     }
     login = false;
+    return true;
+}
+
+bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK) 
+{
+    if (!strcmp(source, "")) 
+    {
+        return false;
+    }
+    while (source[indexI] != ';' && source[indexI] != '/0' && source[indexI] != '/')
+    {
+        dest[indexK] = source[indexI];
+        indexI++;
+        indexK++;
+    }
+    indexI++;
+    indexK = 0;
     return true;
 }
 
@@ -972,9 +993,24 @@ int clientManagement(SOCKET* clientSocket)
                     checkContactData(clientSocket, recvBuf);
                 }
                 break;
+                case SENDING_A_MESSAGE: 
+                {
+                    CONST INT SIZE = 2000;
+                    CONST INT PHONESIZE = 512;
+                    int i = 0;
+                    int k = 0;
+                    CHAR message[SIZE]{};
+                    CHAR recipNumPhone[SIZE]{};
+                    CHAR sendNumPhone[SIZE]{};
+                    getSubDataFromStr(recvBuf, message, i, k);
+                    getSubDataFromStr(recvBuf, recipNumPhone, i, k);
+                    getSubDataFromStr(recvBuf, sendNumPhone, i, k);
+                }
+                break;
                 default:
                     return 1;
                 }
+                
             }
         }
         else if (iResult == 0) 

@@ -15,7 +15,8 @@
 #define IDC_MYCHAT                      109
 
 //IDR
-#define IDR_SEARCH_FIELD				100
+#define IDR_SEARCH_FIELD				120
+#define IDR_SEDNDING_MES_FIELD			121
 #define IDR_MAINFRAME                   128
 #define IDR_ENTERING_PHONE				129
 #define IDR_ENTERING_MAIL				130
