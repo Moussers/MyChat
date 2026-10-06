@@ -41,9 +41,11 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* 
 bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
+int getIdFromUser(CHAR* sendNumPhone);
 void checkContactData(SOCKET* lSocket, char* recvBuf);
 bool insertingIntoUser(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone);
+bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -290,9 +292,9 @@ int checkTables(HWND log)
                 "file_field BINARY,"
                 "sender INT,"
                 "`group` INT,"
-                "recipent INT,"
+                "recipient INT,"
                 "FOREIGN KEY (sender) REFERENCES `users`(user_id),"
-                "FOREIGN KEY (recipent) REFERENCES users(user_id),"
+                "FOREIGN KEY (recipient) REFERENCES users(user_id),"
                 "FOREIGN KEY (`group`) REFERENCES `groups`(group_id));";
             if (stmt->execute(createMessages))
             {
@@ -475,6 +477,72 @@ void listenClient()
             listenNewClient = false;
         }
     } while (true);
+}
+int getIdFromUser(CHAR* sendNumPhone) 
+{
+    CONST INT SIZE = 2000;
+    CHAR command[SIZE] = "SELECT user_id FROM users WHERE number_phone = '";
+    strcat_s(command, sendNumPhone);
+    strcat_s(command, "';");
+    sql::Statement* stmt = connection->createStatement();
+    sql::ResultSet* res = stmt->executeQuery(command);
+    res->next();
+    int id = res->getInt(1);
+    //BIGINT - это INT64;
+    delete stmt;
+    return id;
+}
+
+bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone)
+{
+    CONST INT SIZE = 2000;
+    CONST INT SIZEID = 512;
+    try {
+        if (connection->isClosed())
+        {
+            mysqlConnect();
+        }
+        CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
+        WCHAR wcId[SIZEID]{};
+        WCHAR wcSenderId[SIZEID]{};
+        WCHAR wcRecipientId[SIZEID]{};
+        CHAR chId[SIZEID]{};
+        CHAR chSenderId[SIZEID]{};
+        CHAR chRecipientId[SIZEID]{};
+        sql::Statement* stmt = connection->createStatement();
+        sql::ResultSet* res = stmt->executeQuery(command);
+        res->next();
+        int id = res->getInt(1);
+        wsprintf(wcId, L"%d", id);
+        WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZEID, NULL, NULL);
+        int senderId = getIdFromUser(sendNumPhone);
+        int recipientId = getIdFromUser(recipNumPhone);
+        wsprintf(wcSenderId, L"%d", senderId);
+        WideCharToMultiByte(codePage, 0, wcSenderId, wcslen(wcSenderId), chSenderId, SIZEID, NULL, NULL);
+        wsprintf(wcRecipientId, L"%d", recipientId);
+        WideCharToMultiByte(codePage, 0, wcRecipientId, wcslen(wcRecipientId), chRecipientId, SIZEID, NULL, NULL);
+        strcpy_s(command, "INSERT INTO messages(message_id, text_field, sender, recipient)VALUES(");
+        strcat_s(command, chId);
+        strcat_s(command, ",'");
+        strcat_s(command, message);
+        strcat_s(command, "',");
+        strcat_s(command, chSenderId);
+        strcat_s(command, ",");
+        strcat_s(command, chRecipientId);
+        strcat_s(command, ");");
+        delete stmt;
+        stmt = connection->createStatement();
+        stmt->execute(command);
+        return true;
+    }
+    catch (sql::SQLException ex) 
+    {
+        WCHAR errors[SIZE]{};
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
+        appendToLog(logHWND, errors);
+        connection->close();
+        return false;
+    }
 }
 
 bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone) 
@@ -1003,8 +1071,9 @@ int clientManagement(SOCKET* clientSocket)
                     CHAR recipNumPhone[SIZE]{};
                     CHAR sendNumPhone[SIZE]{};
                     getSubDataFromStr(recvBuf, message, i, k);
-                    getSubDataFromStr(recvBuf, recipNumPhone, i, k);
                     getSubDataFromStr(recvBuf, sendNumPhone, i, k);
+                    getSubDataFromStr(recvBuf, recipNumPhone, i, k);
+                    insertingIntoMessage(message, sendNumPhone, recipNumPhone);
                 }
                 break;
                 default:
