@@ -41,7 +41,7 @@ bool sendDataByReg(SOCKET* clientSocket, WCHAR* wcPhone, WCHAR* wcEmail, WCHAR* 
 bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf);
 void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf);
 int checkExistEmail(WCHAR* email);
-int getIdFromUser(CHAR* sendNumPhone);
+//int getIdFromUser(CHAR* sendNumPhone);
 void checkContactData(SOCKET* lSocket, char* recvBuf);
 bool insertingIntoUser(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone);
@@ -478,20 +478,21 @@ void listenClient()
         }
     } while (true);
 }
-int getIdFromUser(CHAR* sendNumPhone) 
-{
-    CONST INT SIZE = 2000;
-    CHAR command[SIZE] = "SELECT user_id FROM users WHERE number_phone = '";
-    strcat_s(command, sendNumPhone);
-    strcat_s(command, "';");
-    sql::Statement* stmt = connection->createStatement();
-    sql::ResultSet* res = stmt->executeQuery(command);
-    res->next();
-    int id = res->getInt(1);
-    //BIGINT - это INT64;
-    delete stmt;
-    return id;
-}
+//Получение id номера телефона
+//int getIdFromUser(CHAR* sendNumPhone) 
+//{
+//    CONST INT SIZE = 2000;
+//    CHAR command[SIZE] = "SELECT user_id FROM users WHERE number_phone = '";
+//    strcat_s(command, sendNumPhone);
+//    strcat_s(command, "';");
+//    sql::Statement* stmt = connection->createStatement();
+//    sql::ResultSet* res = stmt->executeQuery(command);
+//    res->next();
+//    int id = res->getInt(1);
+//    //BIGINT - это INT64;
+//    delete stmt;
+//    return id;
+//}
 
 bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone)
 {
@@ -514,25 +515,29 @@ bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone
         res->next();
         int id = res->getInt(1);
         wsprintf(wcId, L"%d", id);
+        delete stmt;
         WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZEID, NULL, NULL);
-        int senderId = getIdFromUser(sendNumPhone);
+        /*int senderId = getIdFromUser(sendNumPhone);
         int recipientId = getIdFromUser(recipNumPhone);
         wsprintf(wcSenderId, L"%d", senderId);
         WideCharToMultiByte(codePage, 0, wcSenderId, wcslen(wcSenderId), chSenderId, SIZEID, NULL, NULL);
         wsprintf(wcRecipientId, L"%d", recipientId);
-        WideCharToMultiByte(codePage, 0, wcRecipientId, wcslen(wcRecipientId), chRecipientId, SIZEID, NULL, NULL);
-        strcpy_s(command, "INSERT INTO messages(message_id, text_field, sender, recipient)VALUES(");
+        WideCharToMultiByte(codePage, 0, wcRecipientId, wcslen(wcRecipientId), chRecipientId, SIZEID, NULL, NULL);*/
+        /*CHAR command[SIZE] = "INSERT INTO messages (message_id, text_field, sender, recipient) VALUE('";*/
+        strcpy_s(command, "INSERT INTO messages(message_id, text_field, sender, recipient) VALUE('");
         strcat_s(command, chId);
-        strcat_s(command, ",'");
+        strcat_s(command, "','");
         strcat_s(command, message);
-        strcat_s(command, "',");
-        strcat_s(command, chSenderId);
-        strcat_s(command, ",");
-        strcat_s(command, chRecipientId);
-        strcat_s(command, ");");
-        delete stmt;
+        strcat_s(command, "', (SELECT u1.user_id FROM `users` AS u1 WHERE u1.number_phone = ");
+        //AS - пишем новове название предыдущей переменной. (Пример: 'users' AS u1.);
+        strcat_s(command, sendNumPhone);
+        strcat_s(command, "), (SELECT u2.user_id FROM `users` AS u2 WHERE u2.number_phone = ");
+        strcat_s(command, recipNumPhone);
+        strcat_s(command, "));");
         stmt = connection->createStatement();
-        stmt->execute(command);
+        bool status = stmt->execute(command);
+        connection->close();
+        delete stmt;
         return true;
     }
     catch (sql::SQLException ex) 
