@@ -87,6 +87,7 @@ INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AdditionalInfoClass(hInstance);
     AddingEntryClass(hInstance);
     NicknameClass(hInstance);
+
     checkTables();
     // Выполнить инициализацию приложения:
     authorizationForm();
@@ -544,7 +545,7 @@ INT insertingIntoContact(HWND hWnd)
     catch (...) 
     {
         CONST INT SIZE = 2000;
-        WCHAR mesError[SIZE];
+        WCHAR mesError[SIZE]{};
         size_t n_size;
         mbstowcs_s(&n_size, mesError, msg, SIZE);
         //mbstowcs_s - преобразует многобайтовую символьную строку из массива, в расширенное 
@@ -564,6 +565,8 @@ INT insertingIntoContact(HWND hWnd)
 }
 
 INT modifyUserInfo(HWND hWnd)
+//Function uses '17588' bytes of stack. - Функция использует много памяти при работе.
+//Много перменных которые используют память.
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -1583,6 +1586,11 @@ INT getUrl(CHAR* recvBuf)
     {
         return 2;
     }
+    if (!strcmp(command, "SEND_MESSAGE_FAILED")) 
+    {
+        MessageBox(NULL, L"Ошибка отправки соощения!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return -1;
+    }
     return -1;
 }
 
@@ -2136,18 +2144,50 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
     return 0;
 }
 
-INT sendMesToServ(HWND hWnd, INT id) 
-//Function uses '17588' bytes of stack. - Функция использует много памяти при работе.
-//Много перменных которые используют память.
+CHAR* getNumPhoneByID(INT ID) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
     //sqlite3_open возвращает 0 если откритие базы данных произошло успешно
-    if (res) 
+    if (res)
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
-        return 1;
+        return NULL;
     }
+    CONST INT SIZE = 2000;
+    CONST INT SIZEID = 512;
+    WCHAR wcID[SIZEID]{};
+    CHAR chID[SIZEID]{};
+    CHAR str[SIZE]{};
+    CHAR command[SIZE] = "SELECT phone FROM contacts LIMIT 1 OFFSET ";
+    //OFFSET - сдвиг по таблицам
+    //LIMIT - выбирает количетсво записей, (в данном случае одну запись).
+    wsprintf(wcID, L"%d", ID);
+    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID) + 1, chID, SIZEID, NULL, NULL);
+    strcat_s(command, chID);
+    strcat_s(command, ";");
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    {
+        INT nextRow;
+        nextRow = sqlite3_step(stmt);
+        if (nextRow == SQLITE_ROW)
+            //Код результата SQLITE_ROW, возвращаемый функцией sqlite3_step(), 
+            //указывает на то, что доступна следующая строка вывода.
+        {
+            INT64 numPhone = sqlite3_column_int64(stmt, 0);
+            //int занимает 4 байта,
+            //int64 занимает 8 байт.
+            std::string temp = std::to_string(numPhone);
+            strcpy_s(str, temp.c_str());
+        }
+    }
+    sqlite3_finalize(stmt);
+    return str;
+}
+
+INT sendMesToServ(HWND hWnd, INT id) 
+{
     CONST INT SIZE = 2000;
     CONST INT SIZEID = 512;
     WCHAR wcMesAsStr[SIZE]{};
@@ -2160,44 +2200,98 @@ INT sendMesToServ(HWND hWnd, INT id)
     GetWindowText(GetDlgItem(hWnd, IDR_SEDNDING_MES_FIELD), wcMesAsStr, SIZE);
     WideCharToMultiByte(codePage, 0, wcMesAsStr, wcslen(wcMesAsStr) + 1, chMesAsStr, SIZE, NULL, NULL);
     strcat_s(chMesAsStr, ";");
-    CHAR command[SIZE] = "SELECT phone FROM contacts LIMIT 1 OFFSET ";
-    //OFFSET - сдвиг по таблицам
-    //LIMIT - выбирает количетсво записей, (в данном случае одну запись).
-    wsprintf(wcId, L"%d", id);
-    WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZEID, NULL, NULL);
-    strcat_s(command, chId);
-    strcat_s(command, ";");
-    sqlite3_stmt* stmt;
-    if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    strcpy_s(chRecipientPhone, getNumPhoneByID(id));
+    strcpy_s(chSenderPhone, userInfo.numberPhone());
+    strcat_s(chMesAsStr, chSenderPhone);
+    strcat_s(chMesAsStr, ";");
+    strcat_s(chMesAsStr, chRecipientPhone);
+    strcat_s(chMesAsStr, "/SEND_MESSAGE");
+    INT iResult = send(listenSock, chMesAsStr, strlen(chMesAsStr) + 1, 0);
+    if (iResult == INVALID_SOCKET)
     {
-        INT nextRow;
-        nextRow = sqlite3_step(stmt);
-        if(nextRow == SQLITE_ROW)
-        //Код результата SQLITE_ROW, возвращаемый функцией sqlite3_step(), 
-        //указывает на то, что доступна следующая строка вывода.
+        MessageBox(NULL, L"Ошибка отправки сообщения от\nпользователя на сервер", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
+
+BOOL getMsgFromServ(SOCKET lSocket, INT id) 
+{
+    CONST INT SIZE = 1024;
+    CONST INT SIZEID = 512;
+    WCHAR wcID[SIZEID]{};
+    CHAR chID[SIZEID]{};
+    wsprintf(wcID, L"%d", id);
+    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
+    CHAR request[SIZE]{};
+    strcpy_s(request, chID);
+    strcat_s(request, "/GET_MESSAGE");
+    INT iResult = send(lSocket, request, strlen(request)+1, 0);
+    if (iResult == INVALID_SOCKET)
+    //INVALID SOKCET - содержит тип (SOCKET)(~0)
+    {
+        MessageBox(NULL, L"Ошибка оптавки запроса на сервер", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL getLocalMSG(SOCKET lSocket, INT id) 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        sqlite3_close(db);
+        return FALSE;
+    }
+    if (id == -1)
+    {
+        /*MessageBox(NULL, L"Пользователь не найден", MB_OK | MB_ICONERROR);*/
+        return FALSE;
+    }
+    CONST INT SIZE = 2000;
+    sqlite3_stmt* stmt;
+    WCHAR str[SIZE]{};
+    CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
+    /*try 
+    {*/
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    {
+        INT next = sqlite3_step(stmt);
+        if (next == SQLITE_ROW)
         {
-            INT64 numPhone = sqlite3_column_int64(stmt, 0);
-            //int занимает 4 байта,
-            //int64 занимает 8 байт.
-            std::string temp = std::to_string(numPhone);
-            strcpy_s(chRecipientPhone, temp.c_str());
-            //strcmp - сравнивает строки
-            //strcpy - копирует один массив строк в другой
-            strcpy_s(chSenderPhone, userInfo.numberPhone());
-            strcat_s(chMesAsStr, chSenderPhone);
-            strcat_s(chMesAsStr, ";");
-            strcat_s(chMesAsStr, chRecipientPhone);
-            strcat_s(chMesAsStr, "/SEND_MESSAGE");
-            INT iResult = send(listenSock, chMesAsStr, strlen(chMesAsStr) + 1, 0);
-            if (iResult == INVALID_SOCKET)
+            INT count = sqlite3_column_int(stmt, 0);
+            if (!count) 
             {
-                MessageBox(NULL, L"Ошибка отправки сообщения от\nпользователя на сервер", L"Ошибка", MB_OK | MB_ICONERROR);
-                return 1;
+                if (!getMsgFromServ(lSocket, id))
+                {
+                    return FALSE;
+                }
+                recievedData(lSocket);
+                sqlite3_finalize(stmt);
+                return TRUE;
             }
         }
+        /*strcpy_s(command, "SELECT text_field FROM messages");
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+        {
+            if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK) 
+            {
+
+            }
+        }*/
     }
-    sqlite3_finalize(stmt);
-    return 0;
+
+    /*}
+    catch (...) */
+    //{
+    //    /*CONST INT SIZE = */
+    //    WCHAR mesError[SIZE]{};
+    //    ex
+    //    return FALSE;
+    //}
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -2206,54 +2300,72 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CONTEXTMENU:
     {
-        HWND wmId = (HWND)wParam;
-        int idx = SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0);
-            if (wmId == GetDlgItem(hWnd, IDM_MAIN_USER_LIST) && idx != -1)
-                //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
-            {
-                HMENU hMenu = CreatePopupMenu();
-                AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
-                //AppendMenu - добавляет список popup menu новые слова
-                //hMENU - handle hmenu
-                //uFlags - сюда пишем команду которая нужно выполнить
-                //uIDNewItem - id объекта
-                //lpNewItem - название объекта
-                AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
-                //TrackPopupMenu(hMenu, TPM_RIGHTALIGN, TPM_TOPALIGN, TPM_RETURNCMD, TPM_LEFTBUTTON, TPM_VERPOSANIMATION,  );
-                POINT pos;
-                GetCursorPos(&pos);
-                //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
-                SetForegroundWindow(hWnd);
-                //SetForegroundWindow - выводит окно POOPUP на передний план
-                INT num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
-                //TrackPopupMenu - отображает контекстное POPUP меню 
-                //TPM_RETURNCMD - вернуть выбранный номер
-                switch (num)
+    //WM_CONTEXTMENU - оптравляет сообщение (срабатывает), и входит в WM_CONTEXTMENU при клике 
+    //правой кнопкой мыши;
+    //WM_LBUTTONDOWN - оптправляет сообщение (срабатывает), и входит в WM_LBUTTONUP при нажатии 
+    //левой кнопки мыши во время клика;
+    //WM_LBUTTONUP - оптравляет сообщение (срабатывает), и входит в WM_LBUTTONUP при отпускании
+    //левой кнопки мыши во время клика;
+    HWND wmId = (HWND)wParam;
+    int idx = SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0);
+    //SendMessage(GetDlgItem(hWnd, define_hwnd), LB_GETCURSEL, 0, 0) -
+    //позволяет получать id выбранного объекта из ListBox
+    if (wmId == GetDlgItem(hWnd, IDM_MAIN_USER_LIST) && idx != -1)
+    //LBN_SELCHANGE - работает когда при выборе мышки мы нажимаем левую кнопку мышки
+        {
+        HMENU hMenu = CreatePopupMenu();
+        AppendMenu(hMenu, MF_STRING, IDB_MODIFY_USER, L"Изменить");
+        //AppendMenu - добавляет список popup menu новые слова
+        //hMENU - handle hmenu
+        //uFlags - сюда пишем команду которая нужно выполнить
+        //uIDNewItem - id объекта
+        //lpNewItem - название объекта
+        AppendMenu(hMenu, MF_STRING, IDB_DELETE_USER, L"Удалить");
+        //TrackPopupMenu(hMenu, TPM_RIGHTALIGN, TPM_TOPALIGN, TPM_RETURNCMD, TPM_LEFTBUTTON, TPM_VERPOSANIMATION,  );
+        POINT pos;
+        GetCursorPos(&pos);
+        //GetCursorPos - сохраняет положение мышки и сохраняет данные в объекте структуры POINT
+        SetForegroundWindow(hWnd);
+        //SetForegroundWindow - выводит окно POOPUP на передний план
+        INT num = TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD, pos.x, pos.y, 0, hWnd, NULL);
+        //TrackPopupMenu - отображает контекстное POPUP меню 
+        //TPM_RETURNCMD - вернуть выбранный номер
+        switch (num)
+        {
+        case IDB_MODIFY_USER:
+             classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+             if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
+             {
+                return 1;
+             }
+             break;
+        case IDB_DELETE_USER:
+                deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
+                //чтобы получить id/индекс выбранного пользователя
+                //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
+                //выполняется через SendMessage работающий с системой Windows
+                if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
                 {
-                case IDB_MODIFY_USER:
-                    classModUserInfo(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
-                    {
-                        return 1;
-                    }
-                    break;
-                case IDB_DELETE_USER:
-                    deleteUser(SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                    //SendMessage(GetDlgItem(hWnd, IDM_USER_LIST), LB_GETCURSEL, 0, 0) - конструкция 
-                    //чтобы получить id/индекс выбранного пользователя
-                    //LB_GETCURSEL - флаг на получение индекса пользователя из дескриптора и всё это
-                    //выполняется через SendMessage работающий с системой Windows
-                    if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1)
-                    {
-                        return 1;
-                    }
-                    break;
+                    return 1;
                 }
+            break;
             }
+        }
     }
     break;
     case WM_COMMAND:
+    {
+    //WM_COMMAND - оптравляет сообщение (срабатывает) при клике на какой либо из элементов 
+    //родительского окна, самой формы окна;
+        if (MK_LBUTTON & wParam)
+        //MK_LBUTTON - define, или же константа для обработки нажатия левой кнопки мыши 
         {
+            if (getLocalMSG(listenSock, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0))) 
+            {
+
+            }
+        };
         WORD notificationCode = HIWORD(wParam);
         //WORD - unsigned short
         WORD controlID = LOWORD(wParam);
@@ -2263,38 +2375,39 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
             case IDR_SEARCH_FIELD:
                 accountSearch(GetDlgItem(hWnd, IDR_SEARCH_FIELD), GetDlgItem(hWnd, IDM_MAIN_USER_LIST));
-                break;
+            break;
             }
-        }
-        INT wmId = LOWORD(wParam);
-        switch (wmId)
-        {
-        case IDB_ABOUT_PROGRAM:
-            CreatingAuthorWindow(hWnd);
+            }
+            INT wmId = LOWORD(wParam);
+            switch (wmId)
+            {
+            case IDB_ABOUT_PROGRAM:
+                CreatingAuthorWindow(hWnd);
             break;
-        case IDB_EXIT:
-            DestroyWindow(hWnd);
+            case IDB_EXIT:
+                DestroyWindow(hWnd);
             break;
-        case IDB_ADD_USER:
-            addUser();
+            case IDB_ADD_USER:
+                addUser();
             if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
             {
                 return 1;
             }
             break;
-        case IDB_SEND_MES: 
-        {
-            sendMesToServ(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-        }
-        break;
-        case IDB_REGISTER_REGIST:
-        {
-            WCHAR wcPhone[USERSIZE];
-            CHAR buffer[USERSIZE];
-            if (connectToServ()) 
+            case IDB_SEND_MES: 
             {
-                return 1;
+                sendMesToServ(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+                recievedData(listenSock);
             }
+            break;
+            case IDB_REGISTER_REGIST:
+            {
+                WCHAR wcPhone[USERSIZE];
+                CHAR buffer[USERSIZE];
+                if (connectToServ()) 
+                {
+                    return 1;
+                }
             GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), wcPhone, USERSIZE);
             WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, buffer, USERSIZE, NULL, NULL);
             if (checkingNumberPhone(buffer) == 1)

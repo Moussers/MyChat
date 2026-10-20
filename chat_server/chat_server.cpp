@@ -45,7 +45,7 @@ int checkExistEmail(WCHAR* email);
 void checkContactData(SOCKET* lSocket, char* recvBuf);
 bool insertingIntoUser(WCHAR* wcNumPhone, WCHAR* wcEmail, WCHAR* wcFirstName, WCHAR* wcLastName,  WCHAR* wcDay, WCHAR* wcMonth, WCHAR* wcYear);
 bool insertingIntoContact(WCHAR* wcFirstName, WCHAR* wcLastName, WCHAR* wcNumPhone);
-bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone);
+bool insertingIntoMessage(SOCKET* lSocket ,CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone);
 LRESULT CALLBACK  WndProc(HWND, UINT, WPARAM, LPARAM);
 //Прототип функции - внизу пишем его расширенную версию
 //LRESULT CALLBACK - функция самовызова;
@@ -57,7 +57,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3, GET_MESSAGE = 4};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -494,11 +494,12 @@ void listenClient()
 //    return id;
 //}
 
-bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone)
+bool insertingIntoMessage(SOCKET* lSocket, CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone)
 {
     CONST INT SIZE = 2000;
     CONST INT SIZEID = 512;
-    try {
+    try 
+    {
         if (connection->isClosed())
         {
             mysqlConnect();
@@ -529,7 +530,7 @@ bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone
         strcat_s(command, "','");
         strcat_s(command, message);
         strcat_s(command, "', (SELECT u1.user_id FROM `users` AS u1 WHERE u1.number_phone = ");
-        //AS - пишем новове название предыдущей переменной. (Пример: 'users' AS u1.);
+        //AS - пишем новое название предыдущего поля таблицы. (Пример: 'users' AS u1.);
         strcat_s(command, sendNumPhone);
         strcat_s(command, "), (SELECT u2.user_id FROM `users` AS u2 WHERE u2.number_phone = ");
         strcat_s(command, recipNumPhone);
@@ -538,6 +539,14 @@ bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone
         bool status = stmt->execute(command);
         connection->close();
         delete stmt;
+        CHAR response[SIZE] = "SEND_MESSAGE_ADDED";
+        int iResult = send(*lSocket, response, strlen(response) + 1, 0);
+        if (iResult == INVALID_SOCKET) 
+        {
+            appendToLog(NULL, L"Ошибка при отравке ответа на получение сообщения от sender.");
+            return false;
+        }
+        connection->close();
         return true;
     }
     catch (sql::SQLException ex) 
@@ -545,6 +554,13 @@ bool insertingIntoMessage(CHAR* message, CHAR* sendNumPhone, CHAR* recipNumPhone
         WCHAR errors[SIZE]{};
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
         appendToLog(logHWND, errors);
+        CHAR response[SIZE] = "SEND_MESSAGE_FAILE";
+        int iResult = send(*lSocket, response, strlen(response) + 1, 0);
+        if (iResult == INVALID_SOCKET)
+        {
+            appendToLog(NULL, L"Ошибка при отравке ответа на получение сообщения от sender.");
+            return false;
+        }
         connection->close();
         return false;
     }
@@ -772,6 +788,7 @@ int getUrl(CHAR* recvBuf)
 {
     int i = 0;
     int p = 0;
+    //if(recvBuf)
     while (recvBuf[i] != '/')
     {
         i++;
@@ -779,7 +796,7 @@ int getUrl(CHAR* recvBuf)
     i++;
     CONST INT SIZE = 1024;
     CHAR command[SIZE];
-    while (recvBuf[i] != '\0') 
+    while (recvBuf[i] != '\0')
     {
         command[p] = recvBuf[i];
         i++;
@@ -801,6 +818,10 @@ int getUrl(CHAR* recvBuf)
     if (!strcmp(command, "SEND_MESSAGE")) 
     {
         return 3;
+    }
+    if (!strcmp(command, "GET_MESSAGE")) 
+    {
+        return 4;
     }
     return -1;
 }
@@ -1020,6 +1041,41 @@ bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK)
     return true;
 }
 
+bool getMsg(SOCKET* lSocket, CHAR* recievedData) 
+{
+    if (connection->isClosed()) 
+    {
+        mysqlConnect();
+    }
+    int i = 0;
+    int k = 0;
+    CONST INT SIZEID = 512;
+    CHAR chID[SIZEID]{};
+    getSubDataFromStr(recievedData, chID, i, k);
+    sql::Statement *stmt = connection->createStatement();
+    std::string command = "SELECT text_field FROM messages WHERE sender = '";
+    command += chID;
+    command += "'";
+    sql::ResultSet *res = stmt->executeQuery(command);
+    std::string nameField = "text_field";
+    std::string str;
+    //send(*lSocket, "STARTMSG;", 9, 0);
+    while (res->next()) 
+    {
+        //str += "MSG ";
+        //str += res->getString("text_field");
+        str += res->getString(nameField.c_str());
+        //getString - получает хранящуюся строку по названию поля;
+        //Название поля char-массив.
+        str += ";";
+    }
+    str += "/MESSAGES_FROM_SERVER";
+    send(*lSocket, str.c_str(), str.length(), 0);
+    //send(*lSocket, "ENDMSG;", 7, 0);
+    connection->close();
+    return true;
+}
+
 int clientManagement(SOCKET* clientSocket) 
 {
     CONST INT SIZE = 1024;
@@ -1078,7 +1134,12 @@ int clientManagement(SOCKET* clientSocket)
                     getSubDataFromStr(recvBuf, message, i, k);
                     getSubDataFromStr(recvBuf, sendNumPhone, i, k);
                     getSubDataFromStr(recvBuf, recipNumPhone, i, k);
-                    insertingIntoMessage(message, sendNumPhone, recipNumPhone);
+                    insertingIntoMessage(clientSocket, message, sendNumPhone, recipNumPhone);
+                }
+                break;
+                case GET_MESSAGE: 
+                {
+                    getMsg(clientSocket, recvBuf);
                 }
                 break;
                 default:
