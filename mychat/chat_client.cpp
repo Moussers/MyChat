@@ -1591,6 +1591,14 @@ INT getUrl(CHAR* recvBuf)
         MessageBox(NULL, L"Ошибка отправки соощения!", L"Ошибка", MB_OK | MB_ICONERROR);
         return -1;
     }
+    if (!strcmp(command, "MESSAGES_IS")) 
+    {
+        return 3;
+    }
+    if (!strcmp(command, "MESSAGES_IS_NOT")) 
+    {
+        return -1;
+    }
     return -1;
 }
 
@@ -1718,6 +1726,18 @@ BOOL recievedResponse(CHAR* recvBuf)
     return -1;
 }
 
+BOOL insertDataToLocalDB() 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+}
+
 INT recievedData(SOCKET clientSocket)
 {
     INT iResuslt = 0;
@@ -1759,6 +1779,11 @@ INT recievedData(SOCKET clientSocket)
                 return 1;
             }
             return 0;
+        }
+        break;
+        case IDS_INSERT_DATA_TO_LOCAL:
+        {
+            insertDataToLocalDB();
         }
         break;
         default: 
@@ -2215,22 +2240,52 @@ INT sendMesToServ(HWND hWnd, INT id)
     return 0;
 }
 
-BOOL getMsgFromServ(SOCKET lSocket, INT id) 
+BOOL getLastMsgFromServ(SOCKET lSocket, INT id, INT lstMsgID) 
 {
     CONST INT SIZE = 1024;
     CONST INT SIZEID = 512;
     WCHAR wcID[SIZEID]{};
+    WCHAR wcMsgID[SIZEID]{};
     CHAR chID[SIZEID]{};
+    CHAR chMsgID[SIZEID]{};
     wsprintf(wcID, L"%d", id);
-    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
+    wsprintf(wcMsgID, L"%d", lstMsgID);
+    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID), chID, SIZEID, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcMsgID, wcslen(wcMsgID), chMsgID, SIZEID, NULL, NULL);
     CHAR request[SIZE]{};
     strcpy_s(request, chID);
-    strcat_s(request, "/GET_MESSAGE");
+    strcat_s(request, ";");
+    strcat_s(request, chMsgID);
+    strcat_s(request, "/GET_LAST_MESSAGE");
+    INT iResult = send(lSocket, request, strlen(request) + 1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        MessageBox(NULL, L"Ошибка отправки запроса сообщения на сервер!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+BOOL getMsgFromServ(SOCKET lSocket, INT msgID, INT userID) 
+{
+    CONST INT SIZE = 1024;
+    CONST INT SIZEID = 512;
+    WCHAR wcMsgID[SIZEID]{};
+    CHAR chMsgID[SIZEID]{};
+    CHAR chRecipientPhone[SIZE]{};
+    wsprintf(wcMsgID, L"%d", msgID);
+    WideCharToMultiByte(codePage, 0, wcMsgID, wcslen(wcMsgID)+1, chMsgID, SIZEID, NULL, NULL);
+    CHAR request[SIZE]{};
+    strcpy_s(chRecipientPhone, getNumPhoneByID(userID));
+    strcpy_s(request, chMsgID);
+    strcat_s(request, ";");
+    strcat_s(request, chRecipientPhone);
+    strcat_s(request, "/GET_MESSAGES");
     INT iResult = send(lSocket, request, strlen(request)+1, 0);
     if (iResult == INVALID_SOCKET)
     //INVALID SOKCET - содержит тип (SOCKET)(~0)
     {
-        MessageBox(NULL, L"Ошибка оптавки запроса на сервер", L"Ошибка", MB_OK | MB_ICONERROR);
+        MessageBox(NULL, L"Ошибка отправки запроса сообщения на сервер!", L"Ошибка", MB_OK | MB_ICONERROR);
         return FALSE;
     }
     return TRUE;
@@ -2255,8 +2310,6 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
     sqlite3_stmt* stmt;
     WCHAR str[SIZE]{};
     CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
-    /*try 
-    {*/
     if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
     {
         INT next = sqlite3_step(stmt);
@@ -2265,33 +2318,26 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
             INT count = sqlite3_column_int(stmt, 0);
             if (!count) 
             {
-                if (!getMsgFromServ(lSocket, id))
+                if (!getMsgFromServ(lSocket, count, id))
                 {
+                    sqlite3_finalize(stmt);
+                    return FALSE;
+                }
+                recievedData(lSocket);               
+            }
+            else 
+            {
+                if (!getLastMsgFromServ(lSocket, id, count)) 
+                {
+                    sqlite3_finalize(stmt);
                     return FALSE;
                 }
                 recievedData(lSocket);
-                sqlite3_finalize(stmt);
-                return TRUE;
             }
         }
-        /*strcpy_s(command, "SELECT text_field FROM messages");
-        while (sqlite3_step(stmt) == SQLITE_ROW)
-        {
-            if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK) 
-            {
-
-            }
-        }*/
     }
-
-    /*}
-    catch (...) */
-    //{
-    //    /*CONST INT SIZE = */
-    //    WCHAR mesError[SIZE]{};
-    //    ex
-    //    return FALSE;
-    //}
+    sqlite3_finalize(stmt);
+    return TRUE;
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -2358,8 +2404,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     //WM_COMMAND - оптравляет сообщение (срабатывает) при клике на какой либо из элементов 
     //родительского окна, самой формы окна;
-        if (MK_LBUTTON & wParam)
+        if (MK_LBUTTON & wParam && LOWORD(wParam) == IDM_MAIN_USER_LIST)
         //MK_LBUTTON - define, или же константа для обработки нажатия левой кнопки мыши 
+        //LOWORD(wParam) - берёт два нижних байта и сравнивает с номером (id) HMENU Listbox
         {
             if (getLocalMSG(listenSock, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0))) 
             {

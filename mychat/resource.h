@@ -6,7 +6,8 @@
 #define IDS_REGISTRATION				0
 #define IDS_AUTHORIZATION				1
 #define IDS_RECV_CONTACT_STATUS			2
-#define IDS_APP_TITLE                   3
+#define IDS_INSERT_DATA_TO_LOCAL		3
+#define IDS_APP_TITLE                   4
 
 #define IDD_MYCHAT_DIALOG               102
 #define IDD_ABOUTBOX                    103

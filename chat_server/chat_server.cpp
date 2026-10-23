@@ -57,7 +57,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3, GET_MESSAGE = 4};
+enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3, GET_MESSAGES = 4};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -537,13 +537,13 @@ bool insertingIntoMessage(SOCKET* lSocket, CHAR* message, CHAR* sendNumPhone, CH
         strcat_s(command, "));");
         stmt = connection->createStatement();
         bool status = stmt->execute(command);
-        connection->close();
         delete stmt;
         CHAR response[SIZE] = "SEND_MESSAGE_ADDED";
         int iResult = send(*lSocket, response, strlen(response) + 1, 0);
-        if (iResult == INVALID_SOCKET) 
+        if (iResult == INVALID_SOCKET)
         {
             appendToLog(NULL, L"Ошибка при отравке ответа на получение сообщения от sender.");
+            connection->close();
             return false;
         }
         connection->close();
@@ -819,7 +819,7 @@ int getUrl(CHAR* recvBuf)
     {
         return 3;
     }
-    if (!strcmp(command, "GET_MESSAGE")) 
+    if (!strcmp(command, "GET_MESSAGES")) 
     {
         return 4;
     }
@@ -1040,6 +1040,11 @@ bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK)
     indexK = 0;
     return true;
 }
+ 
+//bool getIDByPhone() 
+//{
+//
+//}
 
 bool getMsg(SOCKET* lSocket, CHAR* recievedData) 
 {
@@ -1051,27 +1056,57 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     int k = 0;
     CONST INT SIZEID = 512;
     CHAR chID[SIZEID]{};
+    CHAR senderPhone[SIZEID]{};
     getSubDataFromStr(recievedData, chID, i, k);
+    getSubDataFromStr(recievedData, senderPhone, i, k);
     sql::Statement *stmt = connection->createStatement();
-    std::string command = "SELECT text_field FROM messages WHERE sender = '";
-    command += chID;
-    command += "'";
+    std::string command = "SELECT Count(*) FROM messages";
     sql::ResultSet *res = stmt->executeQuery(command);
-    std::string nameField = "text_field";
+    res->next();
     std::string str;
-    //send(*lSocket, "STARTMSG;", 9, 0);
+    int iResult;
+    int count = res->getInt(1);
+    if (!count) 
+    {
+        str += "/MESSAGES_IS_NOT";
+        iResult = send(*lSocket, str.c_str(), str.length()+1, 0);
+        connection->close();
+        if (iResult == INVALID_SOCKET) 
+        {
+            appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+            delete stmt;
+            return false;
+        }
+        delete stmt;
+        return true;
+    }
+    delete stmt;
+    stmt = connection->createStatement();
+    command = "SELECT text_field FROM messages WHERE sender = (SELECT user_id FROM `users` WHERE number_phone = ";
+    command += senderPhone;
+    command += ")";
+    command += " AND message_id = ";
+    command += chID;
+    command += ";";
+    res = stmt->executeQuery(command);
+    std::string nameField = "text_field";
     while (res->next()) 
     {
-        //str += "MSG ";
         //str += res->getString("text_field");
         str += res->getString(nameField.c_str());
         //getString - получает хранящуюся строку по названию поля;
         //Название поля char-массив.
         str += ";";
     }
-    str += "/MESSAGES_FROM_SERVER";
-    send(*lSocket, str.c_str(), str.length(), 0);
-    //send(*lSocket, "ENDMSG;", 7, 0);
+    str += "/MESSAGES_IS";
+    iResult = send(*lSocket, str.c_str(), str.length()+1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+        delete stmt;
+        return false;
+    }
+    delete stmt;
     connection->close();
     return true;
 }
@@ -1137,7 +1172,7 @@ int clientManagement(SOCKET* clientSocket)
                     insertingIntoMessage(clientSocket, message, sendNumPhone, recipNumPhone);
                 }
                 break;
-                case GET_MESSAGE: 
+                case GET_MESSAGES: 
                 {
                     getMsg(clientSocket, recvBuf);
                 }
