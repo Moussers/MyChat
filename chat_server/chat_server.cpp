@@ -1055,10 +1055,10 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     int i = 0;
     int k = 0;
     CONST INT SIZEID = 512;
-    CHAR chID[SIZEID]{};
-    CHAR senderPhone[SIZEID]{};
-    getSubDataFromStr(recievedData, chID, i, k);
-    getSubDataFromStr(recievedData, senderPhone, i, k);
+    CHAR chMsgID[SIZEID]{};
+    CHAR userPhone[SIZEID]{};
+    getSubDataFromStr(recievedData, chMsgID, i, k);
+    getSubDataFromStr(recievedData, userPhone, i, k);
     sql::Statement *stmt = connection->createStatement();
     std::string command = "SELECT Count(*) FROM messages";
     sql::ResultSet *res = stmt->executeQuery(command);
@@ -1082,33 +1082,48 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     }
     delete stmt;
     stmt = connection->createStatement();
-    command = "SELECT text_field FROM messages WHERE sender = (SELECT user_id FROM `users` WHERE number_phone = ";
-    command += senderPhone;
-    command += ")";
-    command += " AND message_id = ";
-    command += chID;
-    command += ";";
-    res = stmt->executeQuery(command);
-    std::string nameField = "text_field";
-    while (res->next()) 
-    {
-        //str += res->getString("text_field");
-        str += res->getString(nameField.c_str());
-        //getString - получает хранящуюся строку по названию поля;
-        //Название поля char-массив.
-        str += ";";
-    }
-    str += "/MESSAGES_IS";
-    iResult = send(*lSocket, str.c_str(), str.length()+1, 0);
-    if (iResult == INVALID_SOCKET) 
-    {
-        appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+    try {
+        command = "SELECT text_field FROM messages AS m INNER JOIN users AS ussnd ON (m.recipient=ussnd.user_id OR m.sender = ussnd.user_id) AND ussnd.number_phone = ";
+        command += userPhone;
+        command += ";";
+        res = stmt->executeQuery(command);
+        int skip = atoi(chMsgID);
+        for (int i = 0; i < skip; i++) 
+        {
+            res->next();
+            //Проходимся циклом до нужного id сообщения
+        }
+        std::string nameField = "text_field";
+        while (res->next())
+        {
+            //str += res->getString("text_field");
+            str += res->getString(nameField.c_str());
+            //getString - получает хранящуюся строку по названию поля;
+            //Название поля char-массив.
+            str += ";";
+        }
+        str += "/MESSAGES_IS";
+        iResult = send(*lSocket, str.c_str(), str.length() + 1, 0);
+        if (iResult == INVALID_SOCKET)
+        {
+            appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+            delete stmt;
+            return false;
+        }
         delete stmt;
+        connection->close();
+        return true;
+    }
+    catch (sql::SQLException ex) 
+    {
+        CONST INT SIZE = 1500;
+        WCHAR errors[SIZE];
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
+        appendToLog(logHWND, errors);
+        delete stmt;
+        connection->close();
         return false;
     }
-    delete stmt;
-    connection->close();
-    return true;
 }
 
 int clientManagement(SOCKET* clientSocket) 

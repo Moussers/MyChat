@@ -409,12 +409,12 @@ INT checkExistsNumPhone(HWND hWnd)
     CONST INT SIZE = 1500;
     CONST INT COMMANDSIZE = 2000;
     WCHAR wcPhone[SIZE];
-    CHAR cPhone[SIZE];
+    CHAR chPhone[SIZE];
     GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcPhone, SIZE);
-    WideCharToMultiByte(codePage, 0, wcPhone, SIZE + 1, cPhone, SIZE, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcPhone, SIZE + 1, chPhone, SIZE, NULL, NULL);
     CHAR getPhone[COMMANDSIZE];
     strcpy_s(getPhone, "SELECT COUNT(*) FROM users WHERE phone='");
-    strcat_s(getPhone, cPhone);
+    strcat_s(getPhone, chPhone);
     strcat_s(getPhone, "'");
     strcat_s(getPhone, ";");
     INT counter = 0;
@@ -1735,7 +1735,32 @@ BOOL insertDataToLocalDB()
         MessageBox(NULL, L"Ошибка подключения к базе данных", L"Ошибка", MB_OK | MB_ICONERROR);
         return FALSE;
     }
-
+    CONST INT SIZE = 2000;
+    CONST INT SIZEID = 512;
+    INT lastID;
+    WCHAR wcID[SIZEID]{};
+    CHAR chID[SIZEID]{};
+    CHAR senderPhone[SIZEID]{};
+    CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    {
+        INT nextRow = sqlite3_step(stmt);
+        if (nextRow == SQLITE_ROW) 
+        {
+            lastID = sqlite3_column_int(stmt, 0);
+        }
+    }
+    sqlite3_finalize(stmt);
+    strcpy_s(command, "INSERT INTO messages (message_id, text_field, sender, recipient)VALUES(");
+    wsprintf(wcID, L"%d", lastID);
+    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
+    strcat_s(command, chID);
+    strcpy_s(senderPhone, userInfo.numberPhone());
+    strcat_s(command, ", (SELECT user_id FROM users as u1 WHERE u1.phone = ");
+    strcat_s(command, senderPhone);
+    strcat_s(command, "), (SELECT user_id FROM users as u2 WHERE u2.phone = )");
+    return TRUE;
 }
 
 INT recievedData(SOCKET clientSocket)
@@ -1878,7 +1903,6 @@ INT createUserWndProc()
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEARCH_BUTTON_POS_X, SEARCH_BUTTON_POS_Y, SEARCH_BUTTON_WIDTH, SEARCH_BUTTON_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
    //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, BUTTON_ADDING_AN_ENTRY_POS_X, BUTTON_ADDING_AN_ENTRY_POS_Y, BUTTON_ADDING_AN_ENTRY_WIDTH, BUTTON_ADDING_AN_ENTRY_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
-   //recieveData(listenSock);
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);
    MSG msg;
@@ -1950,6 +1974,7 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 }
                 else 
                 {
+                    insertMainUser();
                     MessageBox(NULL, L"Аккаунт успешно создан!\nВойдите в него.", L"Ифно", MB_OK | MB_ICONINFORMATION);
                     createExtraAthorizWnd();
                 }
@@ -2098,7 +2123,6 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             }
             else 
             {
-                //INT len = strlen(chEmail);
                 userInfo.setEmail(chEmail);
                 WideCharToMultiByte(codePage, 0, wcDays, wcslen(wcDays) + 1, chDays, SIZE, NULL, NULL);
                 WideCharToMultiByte(codePage, 0, wcMonths, wcslen(wcMonths) + 1, chMonths, SIZE, NULL, NULL);
@@ -2121,6 +2145,79 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     }
     return 0;
 }
+
+BOOL insertMainUser() 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    CONST INT SIZE = 1500;
+    CONST INT SIZEID = 512;
+    INT userID = 0;
+    WCHAR wcID[SIZEID]{};
+    CHAR chID[SIZEID]{};
+    CHAR chLstNm[SIZE]{};
+    CHAR chFrstNm[SIZE]{};
+    CHAR chDateDay[SIZE]{};
+    CHAR chDateMonth[SIZE]{};
+    CHAR chDateYear[SIZE]{};
+    CHAR command[SIZE] = "SELECT COUNT(*) FROM users;";
+    sqlite3_stmt* stmt;
+    if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+    {
+        INT nextRow = sqlite3_step(stmt);
+        if (nextRow == SQLITE_OK) 
+        {
+            userID = sqlite3_column_int(stmt, 0);
+        }
+    }
+    sqlite3_finalize(stmt);
+    strcpy_s(command, "INSERT INTO users(user_id, nickname, phone, birthday)VALUES(");
+    wsprintf(wcID, L"%d", userID);
+    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
+    strcpy_s(chLstNm, userInfo.lastName());
+    strcpy_s(chFrstNm, userInfo.firstName());
+    strcpy_s(chDateYear,userInfo.birthdayYear());
+    strcpy_s(chDateMonth, userInfo.birthdayMonth());
+    strcpy_s(chDateDay, userInfo.birthdayDay());
+    strcat_s(command, chID);
+    strcat_s(command, ", '");
+    strcat_s(command, chFrstNm);
+    strcat_s(command, "' '");
+    strcat_s(command, chLstNm);
+    strcat_s(command, "', ");
+    strcat_s(command, chDateYear);
+    strcat_s(command, ":");
+    strcat_s(command, chDateMonth);
+    strcat_s(command, ":");
+    strcat_s(command, chDateDay);
+    char* msg = NULL;
+    try {
+        if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+        {
+            INT nextRow = sqlite3_step(stmt);
+            if (nextRow == SQLITE_ROW)
+            {
+                sqlite3_exec(db, command, NULL, NULL, &msg);
+            }
+        }
+    }
+    catch (...) 
+    {
+        WCHAR errors[SIZE]{};
+        size_t n_size;
+        mbstowcs_s(&n_size, errors, msg, SIZE);
+        msg = cleaningMemory(msg);
+        writtingDownLog(errors);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -2152,6 +2249,7 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
                 else 
                 {
                     SendMessage(hWnd, WM_CLOSE, 0, NULL);
+
                     createUserWndProc();
                 }
             }
@@ -2167,6 +2265,32 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+}
+INT getIDByPhone(CHAR* numberPhone) 
+{
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка подключения к базе данных", L"Ошибка", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    CONST INT SIZE = 2000;
+    CHAR command[SIZE] = "SELECT user_id FROM users WHERE phone = ";
+    strcat_s(command, numberPhone);
+    strcat_s(command, ";");
+    INT userID = 0;
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK) 
+    {
+        INT nextRow = sqlite3_step(stmt);
+        if (nextRow == SQLITE_ROW) 
+        {
+            userID = sqlite3_column_int(stmt, 0);
+        }
+    }
+    sqlite3_finalize(stmt);
+    return userID;
 }
 
 CHAR* getNumPhoneByID(INT ID) 
