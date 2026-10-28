@@ -15,6 +15,7 @@
 #include <WrittingDownLog.h>
 #include <CleaningMemory.h>
 #include "UserInfo.h"
+#include "ListOfMonths.h"
 #include <string>
 #define PORT "4000"
 
@@ -57,6 +58,8 @@ INT deleteUser(INT idx);
 INT sendEntryToServ(SOCKET lSocket, HWND hWnd);
 INT recievedData(SOCKET clientSocket);
 CHAR* checkPlusInPhone(const char* numPhone);
+BOOL insertMainUser();
+BOOL checkingData(CHAR* chDay, CHAR* chMonth);
 
 UserInfo userInfo;
 INT authorizationForm();
@@ -2085,6 +2088,530 @@ INT dataLogin(SOCKET lSocket)
     }
     return 0;
 }
+BOOL checkingData(CHAR* chDay, CHAR* chMonth) 
+{
+    INT i = 0;
+    while (chDay[i] != '\0') 
+    {
+        if (isalpha(chDay[i]))
+        {
+            MessageBox(NULL, L"Был символ вместо числа в поле день!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
+        i++;
+    }
+    i = 0;
+    while (chMonth[i] != '\0')
+    {
+        if (isalpha(chMonth[i]))
+        {
+            MessageBox(NULL, L"Был символ вместо числа в поле месяц!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
+        i++;
+    }
+    try 
+    {
+        INT day = atoi(chDay);
+        INT month = atoi(chMonth);
+        switch (month)
+        {
+        case JANUARY:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Январе 31 день!", NULL, MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case FEBRUARY:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Феврале 28 дней!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case MARCH:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Марте 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case APRIL:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Апреле 30 дней!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case MAY:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Мае 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case JUNE:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Июне 30 июнь!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case JULY:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Июль 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case AUGUST:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Августе 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case SEPTEMBER:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Сентябре 30 дней!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case OCTOBER:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Октябре 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case NOVEMBER:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Ноябре 30 дней!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        case DECEMBER:
+        {
+            switch (day) 
+            {
+            case 1: break;
+            case 2: break;
+            case 3: break;
+            case 4: break;
+            case 5: break;
+            case 6: break;
+            case 7: break;
+            case 8: break;
+            case 9: break;
+            case 10: break;
+            case 11: break;
+            case 12: break;
+            case 13: break;
+            case 14: break;
+            case 15: break;
+            case 16: break;
+            case 17: break;
+            case 18: break;
+            case 19: break;
+            case 20: break;
+            case 21: break;
+            case 22: break;
+            case 23: break;
+            case 24: break;
+            case 25: break;
+            case 26: break;
+            case 27: break;
+            case 28: break;
+            case 29: break;
+            case 30: break;
+            case 31: break;
+            default:
+                MessageBox(NULL, L"Введён некоректный день,\nв Декабре 31 день!", L"Ошибка", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+        }
+        break;
+        default:
+            MessageBox(NULL, L"Введено некоректное число месяцев!", L"Ошибка", MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
+    }
+    catch (...) 
+    {
+        MessageBox(NULL, L"Произошла ошибка при приобразовании даты юзера", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+}
 
 LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
@@ -2114,6 +2641,12 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_EMAIL), wcEmail, SIZE);
             GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_DAYS), wcDays, SIZE);
             GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_MONTHS), wcMonths, SIZE);
+            WideCharToMultiByte(codePage, 0, wcDays, wcslen(wcDays) + 1, chDays, SIZE, NULL, NULL);
+            WideCharToMultiByte(codePage, 0, wcMonths, wcslen(wcMonths) + 1, chMonths, SIZE, NULL, NULL);
+            if (!checkingData(chDays, chMonths)) 
+            {
+                return FALSE;
+            }
             GetWindowText(GetDlgItem(hWnd, IDC_EXTRA_WIN_COMB_YEARS), wcYears, SIZE);
             WideCharToMultiByte(codePage, 0, wcEmail, wcslen(wcEmail) + 1, chEmail, SIZE, NULL, NULL);
             if (checkingEMail(chEmail) == 1)
@@ -2124,8 +2657,6 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             else 
             {
                 userInfo.setEmail(chEmail);
-                WideCharToMultiByte(codePage, 0, wcDays, wcslen(wcDays) + 1, chDays, SIZE, NULL, NULL);
-                WideCharToMultiByte(codePage, 0, wcMonths, wcslen(wcMonths) + 1, chMonths, SIZE, NULL, NULL);
                 WideCharToMultiByte(codePage, 0, wcYears, wcslen(wcYears) + 1, chYears, SIZE, NULL, NULL);
                 userInfo.setBirthdayDay(chDays);
                 userInfo.setBirthdayMonth(chMonths);
@@ -2205,6 +2736,7 @@ BOOL insertMainUser()
                 sqlite3_exec(db, command, NULL, NULL, &msg);
             }
         }
+        return TRUE;
     }
     catch (...) 
     {

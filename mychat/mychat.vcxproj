@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\..\Downloads\sqlite-amalgamation-3510300\sqlite-amalgamation-3510300\sqlite3.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="ListOfMonths.h" />
     <ClInclude Include="mychat.h" />
     <ClInclude Include="NamesOfWndowClasses.h" />
     <ClInclude Include="PositionsButtonsAndWindows.h" />
