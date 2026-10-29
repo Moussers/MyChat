@@ -1602,6 +1602,14 @@ INT getUrl(CHAR* recvBuf)
     {
         return -1;
     }
+    if (!strcmp(command, "DOES_NOT_EXIST")) 
+    {
+        return 4;
+    }
+    if (!strcmp(command, "EXISTS")) 
+    {
+        return -1;
+    }
     return -1;
 }
 
@@ -1814,6 +1822,8 @@ INT recievedData(SOCKET clientSocket)
             insertDataToLocalDB();
         }
         break;
+        case IDS_WAS_VERIFICATED:
+            return 0;
         default: 
             return 1;
         }       
@@ -1970,17 +1980,21 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 userInfo.setLastName(chLastName);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
                 registrationInfo(listenSock);
-                if (recievedData(listenSock)) 
+                if (!recievedData(listenSock)) 
                 {
-                    MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
-                    authorizationForm();
-                }
-                else 
-                {
-                    insertMainUser();
+                    if (!insertMainUser())
+                    {
+                        return FALSE;
+                    }
                     MessageBox(NULL, L"Аккаунт успешно создан!\nВойдите в него.", L"Ифно", MB_OK | MB_ICONINFORMATION);
                     createExtraAthorizWnd();
+                    
                 }
+                //else 
+                //{
+                //    MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
+                //    authorizationForm();
+                //}
 
             }
                 break;
@@ -2613,6 +2627,27 @@ BOOL checkingData(CHAR* chDay, CHAR* chMonth)
     }
 }
 
+BOOL accountConfirmation(SOCKET& lSocket) 
+{
+    CONST INT SIZE = 1024;
+    CHAR chPhone[SIZE]{};
+    CHAR chEmail[SIZE]{};
+    CHAR request[SIZE]{};
+    strcpy_s(chPhone, userInfo.numberPhone());
+    strcpy_s(chEmail, userInfo.email());
+    strcpy_s(request, chPhone);
+    strcat_s(request, ";");
+    strcat_s(request, chEmail);
+    strcat_s(request, "/VERIFICATION_DATA");
+    INT iResult = send(lSocket, request, strlen(request) + 1, 0);
+    if (iResult == INVALID_SOCKET) 
+    {
+        MessageBox(NULL, L"Ошибка отправки данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 {
     switch (message) 
@@ -2653,17 +2688,25 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
             {
                 //MessageBox(NULL, L"Неправильно введена почта!", L"Ошибка", MB_OK | MB_ICONERROR);
                 SetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_EMAIL), L"");
+                return FALSE;
             }
-            else 
+            userInfo.setEmail(chEmail);
+            if (!accountConfirmation(listenSock)) 
             {
-                userInfo.setEmail(chEmail);
-                WideCharToMultiByte(codePage, 0, wcYears, wcslen(wcYears) + 1, chYears, SIZE, NULL, NULL);
-                userInfo.setBirthdayDay(chDays);
-                userInfo.setBirthdayMonth(chMonths);
-                userInfo.setBirthdayYear(chYears);
-                SendMessage(hWnd, WM_CLOSE, NULL, 0);
-                nicknameWindow();
+                return FALSE;
             }
+            if (recievedData(listenSock)) 
+            {
+                SendMessage(hWnd, WM_CLOSE, NULL, 0);
+                MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
+                authorizationForm();
+            }
+            WideCharToMultiByte(codePage, 0, wcYears, wcslen(wcYears) + 1, chYears, SIZE, NULL, NULL);
+            userInfo.setBirthdayDay(chDays);
+            userInfo.setBirthdayMonth(chMonths);
+            userInfo.setBirthdayYear(chYears);
+            SendMessage(hWnd, WM_CLOSE, NULL, 0);
+            nicknameWindow();
         }
         break;
         default:
@@ -2693,6 +2736,7 @@ BOOL insertMainUser()
     CHAR chID[SIZEID]{};
     CHAR chLstNm[SIZE]{};
     CHAR chFrstNm[SIZE]{};
+    CHAR chPhone[SIZE]{};
     CHAR chDateDay[SIZE]{};
     CHAR chDateMonth[SIZE]{};
     CHAR chDateYear[SIZE]{};
@@ -2701,7 +2745,7 @@ BOOL insertMainUser()
     if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
     {
         INT nextRow = sqlite3_step(stmt);
-        if (nextRow == SQLITE_OK) 
+        if (nextRow == SQLITE_ROW) 
         {
             userID = sqlite3_column_int(stmt, 0);
         }
@@ -2712,30 +2756,30 @@ BOOL insertMainUser()
     WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
     strcpy_s(chLstNm, userInfo.lastName());
     strcpy_s(chFrstNm, userInfo.firstName());
+    strcpy_s(chPhone, userInfo.numberPhone());
     strcpy_s(chDateYear,userInfo.birthdayYear());
     strcpy_s(chDateMonth, userInfo.birthdayMonth());
     strcpy_s(chDateDay, userInfo.birthdayDay());
     strcat_s(command, chID);
+    strcat_s(command, ", ");
+    strcat_s(command, chPhone);
     strcat_s(command, ", '");
     strcat_s(command, chFrstNm);
-    strcat_s(command, "' '");
+    strcat_s(command, " ");
     strcat_s(command, chLstNm);
-    strcat_s(command, "', ");
+    strcat_s(command, "', '");
     strcat_s(command, chDateYear);
-    strcat_s(command, ":");
+    strcat_s(command, "-");
     strcat_s(command, chDateMonth);
-    strcat_s(command, ":");
+    strcat_s(command, "-");
+    //Дата год, месяц и день разделяется тире (-). Также для коректной вставки, 
+    //дату рождения нужно обернуть в одинарные кавычки ('')
     strcat_s(command, chDateDay);
+    strcat_s(command, "');");
     char* msg = NULL;
-    try {
-        if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
-        {
-            INT nextRow = sqlite3_step(stmt);
-            if (nextRow == SQLITE_ROW)
-            {
-                sqlite3_exec(db, command, NULL, NULL, &msg);
-            }
-        }
+    try 
+    {
+        sqlite3_exec(db, command, NULL, NULL, &msg);
         return TRUE;
     }
     catch (...) 
@@ -2747,7 +2791,6 @@ BOOL insertMainUser()
         writtingDownLog(errors);
         return FALSE;
     }
-    return TRUE;
 }
 
 LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
@@ -2965,7 +3008,7 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
     CONST INT SIZE = 2000;
     sqlite3_stmt* stmt;
     WCHAR str[SIZE]{};
-    CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
+    CHAR command[SIZE] = "SELECT COUNT(*) FROM messages;";
     if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
     {
         INT next = sqlite3_step(stmt);

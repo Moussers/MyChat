@@ -57,7 +57,7 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {REGISTRATION = 0, AUTHORIZATION = 1, CHECKING_CONTACT_DATA = 2, SENDING_A_MESSAGE = 3, GET_MESSAGES = 4};
+enum ActionsAtServer {VERIFICATION_DATA = 0, REGISTRATION = 1, AUTHORIZATION = 2, CHECKING_CONTACT_DATA = 3, SENDING_A_MESSAGE = 4, GET_MESSAGES = 5};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -803,25 +803,29 @@ int getUrl(CHAR* recvBuf)
         p++;
     }
     command[p] = '\0';
-    if(!strcmp(command, "REGISTRATION"))
+    if(!strcmp(command, "VERIFICATION_DATA"))
     {
         return 0;
     }
-    if (!strcmp(command, "LOGIN")) 
+    if(!strcmp(command, "REGISTRATION"))
     {
         return 1;
     }
-    if (!strcmp(command, "CHECKING_CONTACT_DATA")) 
+    if (!strcmp(command, "LOGIN")) 
     {
         return 2;
     }
-    if (!strcmp(command, "SEND_MESSAGE")) 
+    if (!strcmp(command, "CHECKING_CONTACT_DATA")) 
     {
         return 3;
     }
-    if (!strcmp(command, "GET_MESSAGES")) 
+    if (!strcmp(command, "SEND_MESSAGE")) 
     {
         return 4;
+    }
+    if (!strcmp(command, "GET_MESSAGES")) 
+    {
+        return 5;
     }
     return -1;
 }
@@ -983,16 +987,16 @@ void checkAuthorizEntry(SOCKET* clientSocket, CHAR* recvBuf)
 bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf) 
 {
     login = true;
-    CONST INT SIZE = 1024;
-    WCHAR wcFirstName[SIZE]{};
-    WCHAR wcLastName[SIZE]{};
-    WCHAR wcNumPhone[SIZE]{};
-    WCHAR wcEmail[SIZE]{};
-    WCHAR wcDay[SIZE]{};
-    WCHAR wcMonth[SIZE]{};
-    WCHAR wcYear[SIZE]{};
-    WCHAR wcBuf[SIZE]{};
-    CHAR status[SIZE]{};
+    const int SIZE = 1024;
+    wchar_t wcFirstName[SIZE]{};
+    wchar_t wcLastName[SIZE]{};
+    wchar_t wcNumPhone[SIZE]{};
+    wchar_t wcEmail[SIZE]{};
+    wchar_t wcDay[SIZE]{};
+    wchar_t wcMonth[SIZE]{};
+    wchar_t wcYear[SIZE]{};
+    wchar_t wcBuf[SIZE]{};
+    char status[SIZE]{};
     MultiByteToWideChar(codePage, 0, recvBuf, strlen(recvBuf) + 1, wcBuf, SIZE);
     int i = 0;
     int k = 0;
@@ -1003,22 +1007,21 @@ bool checkRegEntry(SOCKET* clientSocket, CHAR* recvBuf)
     getSubDataFromWCStr(i, k, wcBuf, wcDay);
     getSubDataFromWCStr(i, k, wcBuf, wcMonth);
     getSubDataFromWCStr(i, k, wcBuf, wcYear);
-    if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail))
+    //if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail))
+    //{
+    //    strcpy_s(status, SIZE, "EXIST");
+    //    int res = strlen(status);
+    //    status[res] = '\0';
+    //    sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcFirstName, status);
+    //}
+    //else
+    //{
+    if (insertingIntoUser(wcNumPhone, wcFirstName, wcLastName,  wcEmail, wcDay, wcMonth, wcYear))
     {
-        strcpy_s(status, SIZE, "EXIST");
+        strcpy_s(status, SIZE, "CREATED");
         int res = strlen(status);
         status[res] = '\0';
         sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcFirstName, status);
-    }
-    else
-    {
-        if (insertingIntoUser(wcNumPhone, wcFirstName, wcLastName,  wcEmail, wcDay, wcMonth, wcYear))
-        {
-            strcpy_s(status, SIZE, "CREATED");
-            int res = strlen(status);
-            status[res] = '\0';
-            sendDataByReg(clientSocket, wcNumPhone, wcEmail, wcFirstName, status);
-        }
     }
     login = false;
     return true;
@@ -1040,11 +1043,6 @@ bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK)
     indexK = 0;
     return true;
 }
- 
-//bool getIDByPhone() 
-//{
-//
-//}
 
 bool getMsg(SOCKET* lSocket, CHAR* recievedData) 
 {
@@ -1054,9 +1052,9 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     }
     int i = 0;
     int k = 0;
-    CONST INT SIZEID = 512;
-    CHAR chMsgID[SIZEID]{};
-    CHAR userPhone[SIZEID]{};
+    const int SIZEID = 512;
+    char chMsgID[SIZEID]{};
+    char userPhone[SIZEID]{};
     getSubDataFromStr(recievedData, chMsgID, i, k);
     getSubDataFromStr(recievedData, userPhone, i, k);
     sql::Statement *stmt = connection->createStatement();
@@ -1116,14 +1114,51 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     }
     catch (sql::SQLException ex) 
     {
-        CONST INT SIZE = 1500;
-        WCHAR errors[SIZE];
+        const int SIZE = 1500;
+        wchar_t errors[SIZE];
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
         appendToLog(logHWND, errors);
         delete stmt;
         connection->close();
         return false;
     }
+}
+
+bool checkData(SOCKET* clientSocket, CHAR* recvBuf) 
+{
+    const int SIZE = 1024;
+    char chNumPhone[SIZE]{};
+    char chEmail[SIZE]{};
+    wchar_t wcNumPhone[SIZE]{};
+    wchar_t wcEmail[SIZE]{};
+    char status[SIZE]{};
+    int i = 0;
+    int k = 0;
+    getSubDataFromStr(recvBuf, chNumPhone, i, k);
+    getSubDataFromStr(recvBuf, chEmail, i, k);
+    MultiByteToWideChar(codePage, 0, chNumPhone, strlen(chNumPhone) + 1, wcNumPhone, SIZE);
+    MultiByteToWideChar(codePage, 0, chEmail, strlen(chEmail) + 1, wcEmail, SIZE);
+    if (checkExistPhone(wcNumPhone) || checkExistEmail(wcEmail)) 
+    {
+        strcpy_s(status, "/EXISTS");
+        int iResult = send(*clientSocket, status, strlen(status) + 1, 0);
+        if (iResult == INVALID_SOCKET) 
+        {
+            appendToLog(logHWND, L"Ошибка отправки данных клиенту");
+            return false;
+        }
+    }
+    else 
+    {
+        strcpy_s(status, "/DOES_NOT_EXIST");
+        int iResult = send(*clientSocket, status, strlen(status) + 1, 0);
+        if (iResult == INVALID_SOCKET) 
+        {
+            appendToLog(logHWND, L"Ошибка отправки данных клиенту");
+            return false;
+        }
+    }
+    return true;
 }
 
 int clientManagement(SOCKET* clientSocket) 
@@ -1157,6 +1192,11 @@ int clientManagement(SOCKET* clientSocket)
                 ActionsAtServer action = static_cast<ActionsAtServer>(res);
                 switch (action) 
                 {
+                case VERIFICATION_DATA:
+                {
+                    checkData(clientSocket, recvBuf);
+                }
+                break;
                 case REGISTRATION:
                 {
                     checkRegEntry(clientSocket, recvBuf);
