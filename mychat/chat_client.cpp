@@ -17,6 +17,7 @@
 #include "UserInfo.h"
 #include "ListOfMonths.h"
 #include <string>
+#include <cstdlib>
 #define PORT "4000"
 
 //winUI3
@@ -349,21 +350,12 @@ INT updateList(HWND userList)
             //sqlite3_column_int - достает int значение из массива stmt по указанной ячейке
             CONST INT SIZE = 2000;
             WCHAR wNickname[SIZE];
-            /*WCHAR firstName[SIZE];
-            WCHAR lastName[SIZE];*/ 
             const char* chNickname = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
-            /*const char* chFirstName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 1));
-            const char* chLastName = reinterpret_cast<const char*>(sqlite3_column_text(userTb, 2));*/
             MultiByteToWideChar(codePage, 0, (char*)chNickname, strlen((char*)chNickname)+1, wNickname, SIZE);
-            /*MultiByteToWideChar(codePage, 0, (char*)chFirstName, strlen((char*)chFirstName)+1, firstName, SIZE);
-            MultiByteToWideChar(codePage, 0, (char*)chLastName, strlen((char*)chLastName) + 1, lastName, SIZE);*/
             WCHAR toList[SIZE];
             wcscpy_s(toList, wNickname);
-            //wcscpy_s(toList, lastName);
             //wcscpy - перезаписывает данные из одного массива в другой, в последнем
             //стирая прежние данные замещая новыми
-            /*wcscat_s(toList, L" ");
-            wcscat_s(toList, firstName);*/
             SendMessage(userList, LB_ADDSTRING, 0, (LPARAM)toList);
             //LB_ADDSTRING - добавить строку в lixtBox.
         }
@@ -551,8 +543,8 @@ INT insertingIntoContact(HWND hWnd)
         WCHAR mesError[SIZE]{};
         size_t n_size;
         mbstowcs_s(&n_size, mesError, msg, SIZE);
-        //mbstowcs_s - преобразует многобайтовую символьную строку из массива, в расширенное 
-        //символьное представление (WCHAR);
+        //mbstowcs_s - преобразует многобайтовую символьную строку (CHAR) из массива, в расширенное 
+        //символьное представление (WCHAR - wide char);
         //pReturnValue / retval - указатель на тип данных в котором будут храниться данные, 
         //то есть размер и тип буфера;
         //dst - указатель на переменную в которую будут записаны преобразованные данные;
@@ -1665,7 +1657,7 @@ INT insertDataToDb(CHAR* id, CHAR* nickname, CHAR* numPhone, CHAR* email)
 
 BOOL getStringFromArr(INT& indexI, INT& indexK, CHAR* chSource, CHAR* chDest) 
 {
-    while (chSource[indexI] != ',' && chSource[indexI] != ';')
+    while (chSource[indexI] != ',' && chSource[indexI] != ';' && chSource[indexI] != '/')
     {
         chDest[indexK] = chSource[indexI];
         indexK++;
@@ -1737,7 +1729,7 @@ BOOL recievedResponse(CHAR* recvBuf)
     return -1;
 }
 
-BOOL insertDataToLocalDB() 
+BOOL insertDataToLocalDB(CHAR* recvBuf) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -1748,10 +1740,17 @@ BOOL insertDataToLocalDB()
     }
     CONST INT SIZE = 2000;
     CONST INT SIZEID = 512;
-    INT lastID;
+    INT lastID = 0;
     WCHAR wcID[SIZEID]{};
     CHAR chID[SIZEID]{};
     CHAR senderPhone[SIZEID]{};
+    CHAR chMsg[SIZE]{};
+    CHAR buffer[SIZE]{};
+    CHAR chRecPhone[SIZE]{};
+    INT i = 0;
+    INT k = 0;
+    while (recvBuf[i++] != '*');
+    getStringFromArr(i, k, recvBuf, chRecPhone);
     CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
     sqlite3_stmt* stmt;
     if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
@@ -1763,14 +1762,40 @@ BOOL insertDataToLocalDB()
         }
     }
     sqlite3_finalize(stmt);
-    strcpy_s(command, "INSERT INTO messages (message_id, text_field, sender, recipient)VALUES(");
-    wsprintf(wcID, L"%d", lastID);
-    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
-    strcat_s(command, chID);
-    strcpy_s(senderPhone, userInfo.numberPhone());
-    strcat_s(command, ", (SELECT user_id FROM users as u1 WHERE u1.phone = ");
-    strcat_s(command, senderPhone);
-    strcat_s(command, "), (SELECT user_id FROM users as u2 WHERE u2.phone = )");
+    i = 0;
+    while (recvBuf[i] != '*') 
+    {
+        getStringFromArr(i, k, recvBuf, chMsg);
+        i++;
+        strcpy_s(senderPhone, userInfo.numberPhone());
+        strcpy_s(command, "INSERT INTO messages (message_id, text_field, sender, recipent)VALUES(");
+        wsprintf(wcID, L"%d", lastID);
+        WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID) + 1, chID, SIZEID, NULL, NULL);
+        strcat_s(command, chID);
+        strcat_s(command, ", '");
+        strcat_s(command, chMsg);
+        strcat_s(command, "', (SELECT user_id FROM users as u1 WHERE u1.phone = '");
+        strcat_s(command, senderPhone);
+        strcat_s(command, "'), (SELECT user_id FROM users as u2 WHERE u2.phone = '");
+        strcat_s(command, chRecPhone);
+        strcat_s(command, "'));");
+        char* msg = NULL;
+        try
+        {
+            sqlite3_exec(db, command, NULL, NULL, &msg);
+        }
+        catch (...)
+        {
+            WCHAR errors[SIZE]{};
+            size_t n_size;
+            mbstowcs_s(&n_size, errors, SIZE, msg, SIZE);
+            msg = cleaningMemory(msg);
+            writtingDownLog(errors);
+            sqlite3_close(db);
+            return FALSE;
+        }
+    }
+    sqlite3_close(db);
     return TRUE;
 }
 
@@ -1819,7 +1844,10 @@ INT recievedData(SOCKET clientSocket)
         break;
         case IDS_INSERT_DATA_TO_LOCAL:
         {
-            insertDataToLocalDB();
+            if (!insertDataToLocalDB(recvBuf)) 
+            {
+                return 0;
+            }
         }
         break;
         case IDS_WAS_VERIFICATED:
@@ -1979,6 +2007,7 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 userInfo.setFirstName(chFirstStr);
                 userInfo.setLastName(chLastName);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
+                //insertMainUser();
                 registrationInfo(listenSock);
                 if (!recievedData(listenSock)) 
                 {
@@ -1990,11 +2019,6 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                     createExtraAthorizWnd();
                     
                 }
-                //else 
-                //{
-                //    MessageBox(NULL, L"Учетная запись существует!", L"Инфо!", MB_OK | MB_ICONINFORMATION);
-                //    authorizationForm();
-                //}
 
             }
                 break;
@@ -2719,7 +2743,24 @@ LRESULT CALLBACK WndExtraInfo(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
     }
     return 0;
 }
-
+CHAR* checkNumber(CHAR* number) 
+{
+    if(!strcmp(number, "0")) 
+    {
+        MessageBox(NULL, L"В дате рождения пользователя обнаружен\nбыл ноль день/месяц!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return NULL;
+    }
+    CHAR str[10] = "0";
+    INT len = strlen(number);
+    if (len < 2) 
+    {
+        strcat_s(str, number);
+        len = strlen(str);
+        str[len] = '\0';
+        return str;
+    }
+    return number;
+}
 BOOL insertMainUser() 
 {
     sqlite3* db;
@@ -2737,9 +2778,13 @@ BOOL insertMainUser()
     CHAR chLstNm[SIZE]{};
     CHAR chFrstNm[SIZE]{};
     CHAR chPhone[SIZE]{};
+    CHAR chEmail[SIZE]{};
     CHAR chDateDay[SIZE]{};
     CHAR chDateMonth[SIZE]{};
     CHAR chDateYear[SIZE]{};
+    CHAR buffer[SIZE]{};
+    WCHAR wcFrstNm[SIZE]{};
+    WCHAR wcLstNm[SIZE]{};
     CHAR command[SIZE] = "SELECT COUNT(*) FROM users;";
     sqlite3_stmt* stmt;
     if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
@@ -2751,23 +2796,35 @@ BOOL insertMainUser()
         }
     }
     sqlite3_finalize(stmt);
-    strcpy_s(command, "INSERT INTO users(user_id, nickname, phone, birthday)VALUES(");
+    strcpy_s(command, "INSERT INTO users(user_id,nickname,phone,email,birthday)VALUES(");
     wsprintf(wcID, L"%d", userID);
     WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID)+1, chID, SIZEID, NULL, NULL);
-    strcpy_s(chLstNm, userInfo.lastName());
+    size_t n_size;
+    //strcpy_s(buffer, userInfo.lastName());
+    //mbstowcs_s(&n_size, wcLstNm, buffer, SIZE);
+    /*mbstowcs_s(&n_size, wcLstNm, userInfo.lastName(), strlen(userInfo.lastName()));*/
+    MultiByteToWideChar(codePage, 0, userInfo.lastName(), strlen(userInfo.lastName()) + 1, wcLstNm, SIZE);
+    WideCharToMultiByte(codePage, 0, wcLstNm, wcslen(wcLstNm), chLstNm, SIZE, NULL, NULL);
+    MultiByteToWideChar(codePage, 0, userInfo.firstName(), strlen(userInfo.firstName()) + 1, wcFrstNm, SIZE);
+    WideCharToMultiByte(codePage, 0, wcFrstNm, wcslen(wcFrstNm) + 1, chFrstNm, SIZE, NULL, NULL);
     strcpy_s(chFrstNm, userInfo.firstName());
     strcpy_s(chPhone, userInfo.numberPhone());
+    strcpy_s(chEmail, userInfo.email());
     strcpy_s(chDateYear,userInfo.birthdayYear());
     strcpy_s(chDateMonth, userInfo.birthdayMonth());
+    strcpy_s(chDateMonth, checkNumber(chDateMonth));
     strcpy_s(chDateDay, userInfo.birthdayDay());
+    strcpy_s(chDateDay, checkNumber(chDateDay));
     strcat_s(command, chID);
-    strcat_s(command, ", ");
-    strcat_s(command, chPhone);
-    strcat_s(command, ", '");
+    strcat_s(command, ",'");
     strcat_s(command, chFrstNm);
     strcat_s(command, " ");
     strcat_s(command, chLstNm);
-    strcat_s(command, "', '");
+    strcat_s(command, "',");
+    strcat_s(command, chPhone);
+    strcat_s(command, ",'");
+    strcat_s(command, chEmail);
+    strcat_s(command, "','");
     strcat_s(command, chDateYear);
     strcat_s(command, "-");
     strcat_s(command, chDateMonth);
@@ -2776,10 +2833,16 @@ BOOL insertMainUser()
     //дату рождения нужно обернуть в одинарные кавычки ('')
     strcat_s(command, chDateDay);
     strcat_s(command, "');");
+    //Программа в sqlite3 отображает инфомрацию в окне browse при исполнении sql
+    //команд в формате UTF 8, в результате строки в формате кирилицы, может 
+    //отображать как BLOB, но берёт из таблицы также в формате строки без ошибок.
+    //В результате отображение имени в формате кирилицы в sqlite browse графический 
+    //баг, строки в формате латиницы (англиские имена) отображает без ошибок.
     char* msg = NULL;
     try 
     {
         sqlite3_exec(db, command, NULL, NULL, &msg);
+        sqlite3_close(db);
         return TRUE;
     }
     catch (...) 
@@ -2789,6 +2852,7 @@ BOOL insertMainUser()
         mbstowcs_s(&n_size, errors, msg, SIZE);
         msg = cleaningMemory(msg);
         writtingDownLog(errors);
+        sqlite3_close(db);
         return FALSE;
     }
 }

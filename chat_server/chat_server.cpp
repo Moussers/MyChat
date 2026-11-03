@@ -1054,9 +1054,9 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     int k = 0;
     const int SIZEID = 512;
     char chMsgID[SIZEID]{};
-    char userPhone[SIZEID]{};
+    char recPhone[SIZEID]{};
     getSubDataFromStr(recievedData, chMsgID, i, k);
-    getSubDataFromStr(recievedData, userPhone, i, k);
+    getSubDataFromStr(recievedData, recPhone, i, k);
     sql::Statement *stmt = connection->createStatement();
     std::string command = "SELECT Count(*) FROM messages";
     sql::ResultSet *res = stmt->executeQuery(command);
@@ -1082,7 +1082,7 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     stmt = connection->createStatement();
     try {
         command = "SELECT text_field FROM messages AS m INNER JOIN users AS ussnd ON (m.recipient=ussnd.user_id OR m.sender = ussnd.user_id) AND ussnd.number_phone = ";
-        command += userPhone;
+        command += recPhone;
         command += ";";
         res = stmt->executeQuery(command);
         int skip = atoi(chMsgID);
@@ -1100,6 +1100,8 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
             //Название поля char-массив.
             str += ";";
         }
+        str += "*";
+        str += recPhone;
         str += "/MESSAGES_IS";
         iResult = send(*lSocket, str.c_str(), str.length() + 1, 0);
         if (iResult == INVALID_SOCKET)
