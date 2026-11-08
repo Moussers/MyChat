@@ -91,7 +91,6 @@ INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     AdditionalInfoClass(hInstance);
     AddingEntryClass(hInstance);
     NicknameClass(hInstance);
-
     checkTables();
     // Выполнить инициализацию приложения:
     authorizationForm();
@@ -169,9 +168,6 @@ LRESULT CALLBACK AddNewUserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
                     if (!insertingIntoContact(hWnd))
                     {
                         SendMessage(hWnd, WM_CLOSE, 0, NULL);
-                        /*CONST INT SIZE = 1024;
-                        WCHAR wcNumPhone[SIZE];
-                        GetWindowText(GetDlgItem(hWnd, IDM_ADD_MENU_PHONE), wcNumPhone, SIZE);*/
                     }
                 }
                 else 
@@ -1328,6 +1324,7 @@ INT checkTables()
                     writtingDownLog(errorMes);
                     free(msg);
                     msg = NULL;
+                    sqlite3_finalize(stmt);
                     sqlite3_close(db);
                     return 1;
                 }
@@ -1349,7 +1346,7 @@ INT checkTables()
                     "CREATE TABLE users ("
                     "user_id INT PRIMARY KEY NOT NULL,"
                     "nickname TEXT NOT NULL,"
-                    "phone INTEGER NOT NULL,"
+                    "phone INT NOT NULL,"
                     "email TEXT NULL,"
                     "birthday date NULL,"
                     "icon BLOB NULL,"
@@ -1377,6 +1374,7 @@ INT checkTables()
                     free(msg);
                     msg = NULL;
                     sqlite3_close(db);
+                    sqlite3_finalize(stmt);
                     return 1;
                 }
                 
@@ -1399,11 +1397,11 @@ INT checkTables()
                     "text_field TEXT NOT NULL,"
                     "file_field BLOB,"
                     "sender INT,"
-                    "group_id INT,"
-                    "recipent INT,"
-                    "FOREIGN KEY (sender) REFERENCES users(user_id),"
-                    "FOREIGN KEY (recipent) REFERENCES users(user_id),"
-                    "FOREIGN KEY (group_id) REFERENCES groups(groupd_id))";
+                    "`group` INT,"
+                    "recipient INT,"
+                    "FOREIGN KEY (sender) REFERENCES contacts(contact_id),"
+                    "FOREIGN KEY (recipient) REFERENCES users(user_id),"
+                    "FOREIGN KEY (`group`) REFERENCES groups(group_id));";
                 char* msg = NULL;
                 try {
                     status = sqlite3_exec(db, createTable, NULL, NULL, &msg);
@@ -1426,6 +1424,7 @@ INT checkTables()
                     free(msg);
                     msg = NULL;
                     sqlite3_close(db);
+                    sqlite3_finalize(stmt);
                     return 1;
                 }
             }
@@ -1478,6 +1477,7 @@ INT checkTables()
                     free(msg);
                     msg = NULL;
                     sqlite3_close(db);
+                    sqlite3_finalize(stmt);
                     return 1;
                 }
             }
@@ -1524,9 +1524,6 @@ INT accountSearch(HWND hField, HWND hList)
     char getUserFirstName[1024] = "SELECT nickname FROM users WHERE nickname LIKE '%";
     strcat_s(getUserFirstName, chStr);
     strcat_s(getUserFirstName, "%'");
-    //strcat_s(getUserFirstName, "%' OR last_name LIKE '%");
-    /*strcat_s(getUserFirstName, chStr);
-    strcat_s(getUserFirstName, "%'");*/
     if (sqlite3_prepare_v2(db, getUserFirstName, -1, &stmt, NULL) == SQLITE_OK) 
     {
         INT curRow;
@@ -1615,7 +1612,6 @@ INT insertDataToDb(CHAR* id, CHAR* nickname, CHAR* numPhone, CHAR* email)
         return 1;
     }
     CONST INT SIZE = 1024;
-    //"INSERT INTO users (user_id, nickname, phone, email, status) VALUES(
     CHAR command[SIZE]{};
     strcpy_s(command, "INSERT INTO users(user_id, nickname, phone, email,status)VALUES(");
     strcat_s(command, id);
@@ -1631,7 +1627,6 @@ INT insertDataToDb(CHAR* id, CHAR* nickname, CHAR* numPhone, CHAR* email)
     strcat_s(command, "',0");
     strcat_s(command, ");");
     char* msg;
-    //"INSERT INTO users(user_id, nickname, number_phone, email)VALUES(2,dog,79324781441,dog@mail.ru);"
     try 
     {
         if(sqlite3_exec(db, command, NULL, NULL, &msg) != SQLITE_OK)
@@ -1750,39 +1745,39 @@ BOOL insertDataToLocalDB(CHAR* recvBuf)
     INT i = 0;
     INT k = 0;
     while (recvBuf[i++] != '*');
-    getStringFromArr(i, k, recvBuf, chRecPhone);
-    CHAR command[SIZE] = "SELECT COUNT(*) FROM messages";
+    getStringFromArr(i, k, recvBuf, senderPhone);
+    CHAR command[SIZE]{}; 
     sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
-    {
-        INT nextRow = sqlite3_step(stmt);
-        if (nextRow == SQLITE_ROW) 
-        {
-            lastID = sqlite3_column_int(stmt, 0);
-        }
-    }
-    sqlite3_finalize(stmt);
     i = 0;
     while (recvBuf[i] != '*') 
     {
+        strcpy_s(command,"SELECT COUNT(*) FROM messages");
+        if (sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK)
+        {
+            INT nextRow = sqlite3_step(stmt);
+            if (nextRow == SQLITE_ROW) 
+            {
+                lastID = sqlite3_column_int(stmt, 0);
+            }
+        }
+        sqlite3_finalize(stmt);
         getStringFromArr(i, k, recvBuf, chMsg);
-        i++;
-        strcpy_s(senderPhone, userInfo.numberPhone());
-        strcpy_s(command, "INSERT INTO messages (message_id, text_field, sender, recipent)VALUES(");
+        strcpy_s(chRecPhone, userInfo.numberPhone());
+        strcpy_s(command, "INSERT INTO messages (message_id, text_field, sender, recipient)VALUES(");
         wsprintf(wcID, L"%d", lastID);
         WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID) + 1, chID, SIZEID, NULL, NULL);
         strcat_s(command, chID);
         strcat_s(command, ", '");
         strcat_s(command, chMsg);
-        strcat_s(command, "', (SELECT user_id FROM users as u1 WHERE u1.phone = '");
+        strcat_s(command, "', (SELECT contact_id FROM contacts as cont WHERE cont.phone = ");
         strcat_s(command, senderPhone);
-        strcat_s(command, "'), (SELECT user_id FROM users as u2 WHERE u2.phone = '");
+        strcat_s(command, "), (SELECT user_id FROM users as u WHERE u.phone = ");
         strcat_s(command, chRecPhone);
-        strcat_s(command, "'));");
+        strcat_s(command, "));");
         char* msg = NULL;
         try
         {
-            sqlite3_exec(db, command, NULL, NULL, &msg);
+            res = sqlite3_exec(db, command, NULL, NULL, &msg);         
         }
         catch (...)
         {
@@ -1794,6 +1789,7 @@ BOOL insertDataToLocalDB(CHAR* recvBuf)
             sqlite3_close(db);
             return FALSE;
         }
+        //sqlite3_finalize(stmt);
     }
     sqlite3_close(db);
     return TRUE;
@@ -2007,7 +2003,6 @@ LRESULT CALLBACK WndNickName(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
                 userInfo.setFirstName(chFirstStr);
                 userInfo.setLastName(chLastName);
                 SendMessage(hWnd, WM_CLOSE, NULL, 0);
-                //insertMainUser();
                 registrationInfo(listenSock);
                 if (!recievedData(listenSock)) 
                 {
@@ -2888,7 +2883,6 @@ LRESULT CALLBACK WndAuthorizationForm(HWND hWnd, UINT message, WPARAM wParam, LP
                 else 
                 {
                     SendMessage(hWnd, WM_CLOSE, 0, NULL);
-
                     createUserWndProc();
                 }
             }
@@ -2929,6 +2923,7 @@ INT getIDByPhone(CHAR* numberPhone)
         }
     }
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
     return userID;
 }
 
@@ -2971,6 +2966,7 @@ CHAR* getNumPhoneByID(INT ID)
         }
     }
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
     return str;
 }
 
@@ -3086,6 +3082,10 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
                     sqlite3_finalize(stmt);
                     return FALSE;
                 }
+                sqlite3_finalize(stmt);
+                sqlite3_close(db);
+                //нужно закрывать базу данных после использования, чтобы при дальнейшем 
+                //открытии и использовании не получить: "database is locked!"
                 recievedData(lSocket);               
             }
             else 
@@ -3095,11 +3095,14 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
                     sqlite3_finalize(stmt);
                     return FALSE;
                 }
+                sqlite3_finalize(stmt);
+                sqlite3_close(db);
                 recievedData(lSocket);
             }
         }
     }
-    sqlite3_finalize(stmt);
+    //sqlite3_finalize(stmt);
+    sqlite3_close(db);
     return TRUE;
 }
 
