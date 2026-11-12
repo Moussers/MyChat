@@ -69,3 +69,12 @@ CHAR* UserInfo::birthdayYear()
 {
     return m_birthdayYear;
 }
+
+void Sender::setNumberPhone(CHAR* userNumberPhone) 
+{
+    strcpy_s(m_numberPhone ,userNumberPhone);
+}
+CHAR* Sender::numberPhone() 
+{
+    return m_numberPhone;
+}

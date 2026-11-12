@@ -72,9 +72,10 @@
 #define IDM_ADD_MENU_PHONE              5002
 //#define IDM_ADD_MENU_EMAIL              5002
 #define IDM_MAIN_USER_LIST              5003
-#define IDM_REGISTER_PHONE				5004
-#define IDM_REGISTER_EMAIL				5005
-#define IDM_EXTRA_FIELD_REG_MAIL		5006
+#define IDM_MAIN_LIST_OF_MESSAGES       5004
+#define IDM_REGISTER_PHONE				5005
+#define IDM_REGISTER_EMAIL				5006
+#define IDM_EXTRA_FIELD_REG_MAIL		5007
 
 #define ID_32780                        32780
 #define ID_32781                        32781

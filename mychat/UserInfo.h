@@ -32,4 +32,12 @@ public:
     void setBirthdayYear(CHAR* userBirthdayYear);
     CHAR* birthdayYear();
 };
+class Sender 
+{
+private:
+    CHAR m_numberPhone[arraySize];
+public:
+    void setNumberPhone(CHAR* userNumberPhone);
+    CHAR* numberPhone();
+};
 #endif

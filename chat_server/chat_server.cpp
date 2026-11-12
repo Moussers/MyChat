@@ -57,7 +57,8 @@ CONST WCHAR MAIN_CLASS_NAME[] = L"MainClassWIND";
 //HINSTANCE hInstance – дескриптор экземпляра приложения. Этот дескриптор 
 //содержит адрес начала кода программы в ее адресном пространстве. Дескриптор 
 //hInstance чаще всего требуется функциям, работающим с ресурсами программы;
-enum ActionsAtServer {VERIFICATION_DATA = 0, REGISTRATION = 1, AUTHORIZATION = 2, CHECKING_CONTACT_DATA = 3, SENDING_A_MESSAGE = 4, GET_MESSAGES = 5};
+enum ActionsAtServer {VERIFICATION_DATA = 0, REGISTRATION = 1, AUTHORIZATION = 2, CHECKING_CONTACT_DATA = 3, 
+    SENDING_A_MESSAGE = 4, GET_MESSAGES = 5, GET_LAST_MESSAGE = 6};
 SOCKET listenSocket = INVALID_SOCKET; 
 bool listenNewClient = false;
 bool serverIsReady = false;
@@ -518,13 +519,6 @@ bool insertingIntoMessage(SOCKET* lSocket, CHAR* message, CHAR* sendNumPhone, CH
         wsprintf(wcId, L"%d", id);
         delete stmt;
         WideCharToMultiByte(codePage, 0, wcId, wcslen(wcId) + 1, chId, SIZEID, NULL, NULL);
-        /*int senderId = getIdFromUser(sendNumPhone);
-        int recipientId = getIdFromUser(recipNumPhone);
-        wsprintf(wcSenderId, L"%d", senderId);
-        WideCharToMultiByte(codePage, 0, wcSenderId, wcslen(wcSenderId), chSenderId, SIZEID, NULL, NULL);
-        wsprintf(wcRecipientId, L"%d", recipientId);
-        WideCharToMultiByte(codePage, 0, wcRecipientId, wcslen(wcRecipientId), chRecipientId, SIZEID, NULL, NULL);*/
-        /*CHAR command[SIZE] = "INSERT INTO messages (message_id, text_field, sender, recipient) VALUE('";*/
         strcpy_s(command, "INSERT INTO messages(message_id, text_field, sender, recipient) VALUE('");
         strcat_s(command, chId);
         strcat_s(command, "','");
@@ -788,7 +782,6 @@ int getUrl(CHAR* recvBuf)
 {
     int i = 0;
     int p = 0;
-    //if(recvBuf)
     while (recvBuf[i] != '/')
     {
         i++;
@@ -826,6 +819,10 @@ int getUrl(CHAR* recvBuf)
     if (!strcmp(command, "GET_MESSAGES")) 
     {
         return 5;
+    }
+    if (!strcmp(command, "GET_LAST_MESSAGES")) 
+    {
+        return 6;
     }
     return -1;
 }
@@ -1232,6 +1229,11 @@ int clientManagement(SOCKET* clientSocket)
                 case GET_MESSAGES: 
                 {
                     getMsg(clientSocket, recvBuf);
+                }
+                break;
+                case GET_LAST_MESSAGE: 
+                {
+
                 }
                 break;
                 default:

@@ -63,6 +63,7 @@ BOOL insertMainUser();
 BOOL checkingData(CHAR* chDay, CHAR* chMonth);
 
 UserInfo userInfo;
+Sender sender;
 INT authorizationForm();
 INT insertingIntoContact(HWND hwnd);
 INT checkExistsNumPhone(HWND hWnd);
@@ -326,6 +327,7 @@ INT updateList(HWND userList)
 {
     SendMessage(userList, LB_RESETCONTENT, 0, 0);
     //LB_RESETCONTENT - очищает данные дескриптора, который является listBox.
+    //LB_RESETCONTENT - удаляет все элементы из listBox;
     sqlite3* db;
     INT result = sqlite3_open("DatabaseMessanger.db", &db);
     if (result) 
@@ -355,6 +357,7 @@ INT updateList(HWND userList)
             SendMessage(userList, LB_ADDSTRING, 0, (LPARAM)toList);
             //LB_ADDSTRING - добавить строку в lixtBox.
         }
+        sqlite3_finalize(userTb);
     }
     sqlite3_close(db);
     return 0;
@@ -475,8 +478,7 @@ INT insertingIntoContact(HWND hWnd)
         INT curRow = sqlite3_step(stmt);
         if (curRow == SQLITE_ROW)
         {
-            number = sqlite3_column_int(stmt, 0) + 1;
-            //+1 - получаем следующий id;
+            number = sqlite3_column_int(stmt, 0);
             //Второй аргумент номер колонки из которой берём значение;
         }
     }
@@ -1746,6 +1748,7 @@ BOOL insertDataToLocalDB(CHAR* recvBuf)
     INT k = 0;
     while (recvBuf[i++] != '*');
     getStringFromArr(i, k, recvBuf, senderPhone);
+    sender.setNumberPhone(senderPhone);
     CHAR command[SIZE]{}; 
     sqlite3_stmt* stmt;
     i = 0;
@@ -1790,6 +1793,57 @@ BOOL insertDataToLocalDB(CHAR* recvBuf)
             return FALSE;
         }
         //sqlite3_finalize(stmt);
+    }
+    sqlite3_close(db);
+    return TRUE;
+}
+
+BOOL showMessages(HWND hwList) 
+{
+    SendMessage(hwList, LB_RESETCONTENT, NULL, NULL);
+    sqlite3* db;
+    INT res = sqlite3_open("DatabaseMessanger.db", &db);
+    if (res) 
+    {
+        MessageBox(NULL, L"Ошибка при подключении к базе данных!", L"Ошибка", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    CONST INT SIZE = 1024;
+    CHAR recipPhone[SIZE]{};
+    CHAR senderPhone[SIZE]{};
+    strcpy_s(recipPhone, userInfo.numberPhone());
+    strcpy_s(senderPhone, sender.numberPhone());
+    //INT i = 0;
+    //INT k = 0;
+    //while (recvBuf[i++] != '*');
+    //getStringFromArr(i, k, recvBuf, senderPhone);
+    /*CHAR command[SIZE] = "SELECT text_field FROM messages WHERE sender = (SELECT contact_id FROM contacts WHERE phone = '";
+    strcat_s(command, senderPhone);
+    strcat_s(command, "' AND recipient = (SELECT user_id FROM users WHERE phone = ");
+    strcat_s(command, recipPhone);
+    strcat_s(command, "));");*/
+    CHAR command[SIZE] = "SELECT text_field FROM messages as m INNER JOIN contacts as cont ON m.sender = cont.contact_id AND cont.phone = '";
+    strcat_s(command, senderPhone);
+    strcat_s(command, "' INNER JOIN users AS u ON m.recipient = u.user_id AND u.phone = '");
+    strcat_s(command, recipPhone);
+    strcat_s(command, "';");
+    sqlite3_stmt* stmt;
+    if(sqlite3_prepare_v2(db, command, -1, &stmt, NULL) == SQLITE_OK) 
+    {
+        INT nextRow = 0;
+        while((nextRow = sqlite3_step(stmt)) == SQLITE_ROW)
+        {
+            const char* lstMsg = reinterpret_cast<const char*> (sqlite3_column_text(stmt, 0));
+            //const char - неизменяемый текст (char массив), const показывает что строку нельзя менять 
+            //или перезаписывать
+            WCHAR wcLstMsg[SIZE]{};
+            MultiByteToWideChar(codePage, 0, lstMsg, strlen(lstMsg)+1, wcLstMsg, SIZE);
+            WCHAR toList[SIZE]{};
+            wcscpy_s(toList, wcLstMsg);
+            SendMessage(hwList, LB_ADDSTRING, 0, LPARAM(toList));
+            //LB_ADDSTRING - добавляет строку в listBox
+        }
+        sqlite3_finalize(stmt);
     }
     sqlite3_close(db);
     return TRUE;
@@ -1928,7 +1982,7 @@ INT createExtraAthorizWnd()
 INT createUserWndProc()
 {
    HWND hMain = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, MAIN_WINDOW_POSITION_WIDTH, MAIN_WINDOW_POSITION_HEIGHT, NULL, NULL, hInst, NULL);
-   CreateWindow(L"STATIC", L"", WS_VISIBLE| WS_CHILD| WS_BORDER | ES_MULTILINE | WS_VSCROLL | ES_READONLY | ES_WANTRETURN | ES_AUTOVSCROLL, DESCRIPT_LIST_FIELD_POS_X, DESCRIPT_LIST_FIELD_POS_Y, DESCRIPT_LIST_FIELD_WIDTH, DESCRIPT_LIST_FIELD_HEIGT, hMain, 0, hInst, NULL);
+   CreateWindow(L"LISTBOX", L"", WS_VISIBLE| WS_CHILD| WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | ES_READONLY, DESCRIPT_LIST_FIELD_POS_X, DESCRIPT_LIST_FIELD_POS_Y, DESCRIPT_LIST_FIELD_WIDTH, DESCRIPT_LIST_FIELD_HEIGT, hMain, (HMENU)IDM_MAIN_LIST_OF_MESSAGES, hInst, NULL);
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, MES_FIELD_X, MES_FIELD_Y, MES_FIELD_WIDTH, MES_FIELD_HEIGHT, hMain, (HMENU)IDR_SEDNDING_MES_FIELD, hInst, NULL);
    CreateWindow(L"LISTBOX", L"", WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_AUTOVSCROLL | WS_BORDER | LBS_NOTIFY, MAIN_LIST_USERS_POS_X, MAIN_LIST_USERS_POS_Y, MAIN_LIST_USERS_WIDTH, MAIN_LIST_USERS_HEIGHT, hMain, (HMENU)IDM_MAIN_USER_LIST, hInst, NULL);
    if (updateList(GetDlgItem(hMain, IDM_MAIN_USER_LIST)) == 1)
@@ -1936,10 +1990,10 @@ INT createUserWndProc()
        return 1;
    }
    CreateWindow(L"EDIT", L"", WS_VISIBLE | WS_CHILD | WS_BORDER, 10, 450, 240, 20, hMain, (HMENU)IDR_SEARCH_FIELD, hInst, NULL);
-   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEND_MES, hInst, NULL);
    CreateWindow(L"BUTTON", L"Поиск", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEARCH_BUTTON_POS_X, SEARCH_BUTTON_POS_Y, SEARCH_BUTTON_WIDTH, SEARCH_BUTTON_HEIGHT, hMain, (HMENU)IDB_SEARCH, hInst, NULL);
-   //WS-CHILD - не родительское окно
    CreateWindow(L"BUTTON", L"Добавить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, BUTTON_ADDING_AN_ENTRY_POS_X, BUTTON_ADDING_AN_ENTRY_POS_Y, BUTTON_ADDING_AN_ENTRY_WIDTH, BUTTON_ADDING_AN_ENTRY_HEIGHT, hMain, (HMENU)IDB_ADD_USER, hInst, NULL);
+   CreateWindow(L"BUTTON", L"Отправить", WS_VISIBLE | WS_CHILD | LBS_NOTIFY | WS_BORDER, SEND_MES_WINDOW_X, SEND_MES_WINDOW_Y, SEND_MES_WINDOW_WIDTH, SEND_MES_WINDOW_HEIGHT, hMain, (HMENU)IDB_SEND_MES, hInst, NULL);
+   //WS-CHILD - не родительское окно
    ShowWindow(hMain, SW_SHOWDEFAULT);
    UpdateWindow(hMain);
    MSG msg;
@@ -2931,7 +2985,7 @@ CHAR* getNumPhoneByID(INT ID)
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
-    //sqlite3_open возвращает 0 если откритие базы данных произошло успешно
+    //sqlite3_open возвращает 0 если открытие базы данных произошло успешно
     if (res)
     {
         MessageBox(NULL, L"База данных не подключена", L"Ошибка", MB_OK | MB_ICONERROR);
@@ -2999,7 +3053,7 @@ INT sendMesToServ(HWND hWnd, INT id)
     return 0;
 }
 
-BOOL getLastMsgFromServ(SOCKET lSocket, INT id, INT lstMsgID) 
+BOOL getLastMsgFromServ(SOCKET lSocket, INT lstMsgID, INT id)
 {
     CONST INT SIZE = 1024;
     CONST INT SIZEID = 512;
@@ -3050,7 +3104,7 @@ BOOL getMsgFromServ(SOCKET lSocket, INT msgID, INT userID)
     return TRUE;
 }
 
-BOOL getLocalMSG(SOCKET lSocket, INT id) 
+BOOL getLocalMSG(SOCKET lSocket, INT id, HWND hWnd) 
 {
     sqlite3* db;
     INT res = sqlite3_open("DatabaseMessanger.db", &db);
@@ -3086,11 +3140,12 @@ BOOL getLocalMSG(SOCKET lSocket, INT id)
                 sqlite3_close(db);
                 //нужно закрывать базу данных после использования, чтобы при дальнейшем 
                 //открытии и использовании не получить: "database is locked!"
-                recievedData(lSocket);               
+                recievedData(lSocket);
+                showMessages(GetDlgItem(hWnd, IDM_MAIN_LIST_OF_MESSAGES));
             }
             else 
             {
-                if (!getLastMsgFromServ(lSocket, id, count)) 
+                if (!getLastMsgFromServ(lSocket, count, id))
                 {
                     sqlite3_finalize(stmt);
                     return FALSE;
@@ -3174,7 +3229,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         //MK_LBUTTON - define, или же константа для обработки нажатия левой кнопки мыши 
         //LOWORD(wParam) - берёт два нижних байта и сравнивает с номером (id) HMENU Listbox
         {
-            if (getLocalMSG(listenSock, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0))) 
+            if (getLocalMSG(listenSock, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0), hWnd)) 
             {
 
             }
