@@ -820,7 +820,7 @@ int getUrl(CHAR* recvBuf)
     {
         return 5;
     }
-    if (!strcmp(command, "GET_LAST_MESSAGES")) 
+    if (!strcmp(command, "GET_LAST_MESSAGE")) 
     {
         return 6;
     }
@@ -1041,6 +1041,47 @@ bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK)
     return true;
 }
 
+bool getLastMessage(CHAR* recievedData) 
+{
+    if (connection->isClosed()) 
+    {
+        mysqlConnect();
+    }
+    const int SIZEID = 512;
+    const int SIZE = 1500;
+    char chUserID[SIZEID]{};
+    char chMsgID[SIZEID]{};
+    int i = 0;
+    int k = 0;
+    getSubDataFromStr(recievedData, chUserID, i, k);
+    getSubDataFromStr(recievedData, chMsgID, i, k);
+    try 
+    {
+        char command[SIZE] = "SELECT COUNT(*) FROM messages;";
+        sql::Statement* stmt = connection->createStatement();
+        sql::ResultSet* res = stmt->executeQuery(command);
+        int msgCounter = res->getInt(1);
+        int numMsgID = atoi(chUserID);
+        if (numMsgID > msgCounter) 
+        {
+
+        }
+        else 
+        {
+
+        }
+        delete stmt;
+        return true;
+    }
+    catch (sql::SQLException ex) 
+    {
+        wchar_t errors[SIZE]{};
+        MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()) + 1, errors, SIZE);
+        appendToLog(logHWND, errors);
+        return false;
+    }
+}
+
 bool getMsg(SOCKET* lSocket, CHAR* recievedData) 
 {
     if (connection->isClosed()) 
@@ -1233,7 +1274,7 @@ int clientManagement(SOCKET* clientSocket)
                 break;
                 case GET_LAST_MESSAGE: 
                 {
-
+                    getLastMessage(recvBuf);
                 }
                 break;
                 default:

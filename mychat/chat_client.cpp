@@ -3053,20 +3053,20 @@ INT sendMesToServ(HWND hWnd, INT id)
     return 0;
 }
 
-BOOL getLastMsgFromServ(SOCKET lSocket, INT lstMsgID, INT id)
+BOOL getLastMsgFromServ(SOCKET lSocket, INT lstMsgID, INT userID)
 {
     CONST INT SIZE = 1024;
     CONST INT SIZEID = 512;
-    WCHAR wcID[SIZEID]{};
+    WCHAR wcUserID[SIZEID]{};
     WCHAR wcMsgID[SIZEID]{};
-    CHAR chID[SIZEID]{};
+    CHAR chUserID[SIZEID]{};
     CHAR chMsgID[SIZEID]{};
-    wsprintf(wcID, L"%d", id);
+    wsprintf(wcUserID, L"%d", userID);
     wsprintf(wcMsgID, L"%d", lstMsgID);
-    WideCharToMultiByte(codePage, 0, wcID, wcslen(wcID), chID, SIZEID, NULL, NULL);
+    WideCharToMultiByte(codePage, 0, wcUserID, wcslen(wcUserID), chUserID, SIZEID, NULL, NULL);
     WideCharToMultiByte(codePage, 0, wcMsgID, wcslen(wcMsgID), chMsgID, SIZEID, NULL, NULL);
     CHAR request[SIZE]{};
-    strcpy_s(request, chID);
+    strcpy_s(request, chUserID);
     strcat_s(request, ";");
     strcat_s(request, chMsgID);
     strcat_s(request, "/GET_LAST_MESSAGE");
@@ -3152,7 +3152,7 @@ BOOL getLocalMSG(SOCKET lSocket, INT id, HWND hWnd)
                 }
                 sqlite3_finalize(stmt);
                 sqlite3_close(db);
-                recievedData(lSocket);
+                //recievedData(lSocket);
             }
         }
     }
