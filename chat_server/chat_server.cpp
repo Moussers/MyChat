@@ -1041,7 +1041,7 @@ bool getSubDataFromStr(CHAR* source, CHAR* dest, int& indexI, int& indexK)
     return true;
 }
 
-bool getLastMessage(CHAR* recievedData) 
+bool getLastMessage(SOCKET* lSocket , CHAR* recievedData) 
 {
     if (connection->isClosed()) 
     {
@@ -1049,35 +1049,78 @@ bool getLastMessage(CHAR* recievedData)
     }
     const int SIZEID = 512;
     const int SIZE = 1500;
-    char chUserID[SIZEID]{};
+    char chSenderID[SIZEID]{};
     char chMsgID[SIZEID]{};
     int i = 0;
     int k = 0;
-    getSubDataFromStr(recievedData, chUserID, i, k);
+    getSubDataFromStr(recievedData, chSenderID, i, k);
     getSubDataFromStr(recievedData, chMsgID, i, k);
     try 
     {
-        char command[SIZE] = "SELECT COUNT(*) FROM messages;";
+        char command[SIZE] = "SELECT COUNT(*) FROM `messages`;";
         sql::Statement* stmt = connection->createStatement();
         sql::ResultSet* res = stmt->executeQuery(command);
+        res->next();
+        //next после создания ResultSet next делать обязательно, чтобы не получить в дальнейшем 
+        //ошибку\исключение
         int msgCounter = res->getInt(1);
-        int numMsgID = atoi(chUserID);
-        if (numMsgID > msgCounter) 
+        int msgID = atoi(chMsgID);
+        std::string message;
+        if (msgID > msgCounter) 
         {
-
+            delete stmt;
+            delete res;
+            strcpy_s(command, "SELECT text_field FROM `messages`;");
+            stmt = connection->createStatement();
+            res = stmt->executeQuery(command);
+            for (int i = 0; i < msgID; i++) 
+            {
+                res->next();
+            }
+            while (res->next()) 
+            {
+                message += res->getString("text_field");
+                //message += res->getString(fieldName.c_str());
+                message += ";";
+            }
+            message += "/SENDING_LAST_MESSAGES";
+            int iResult = send(*lSocket, message.c_str(), strlen(message.c_str()) + 1, 0);
+            if (iResult == INVALID_SOCKET) 
+            {
+                delete stmt;
+                delete res;
+                connection->close();
+                appendToLog(logHWND, L"Ошибка отправки последних сообщений.");
+                return false;
+            }
         }
         else 
         {
-
+            message = "*";
+            message += chSenderID;
+            message += ";";
+            message += "/IS_LAST_MESSAGE";
+            int iResult = send(*lSocket, message.c_str(), strlen(message.c_str()) + 1, 0);
+            if (iResult == INVALID_SOCKET) 
+            {
+                delete stmt;
+                delete res;
+                connection->close();
+                appendToLog(logHWND, L"Ошибка отправки последних сообщений.");
+                return false;
+            }
+            delete stmt;
+            delete res;
+            connection->close();
+            return true;
         }
-        delete stmt;
-        return true;
     }
     catch (sql::SQLException ex) 
     {
         wchar_t errors[SIZE]{};
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()) + 1, errors, SIZE);
         appendToLog(logHWND, errors);
+        connection->close();
         return false;
     }
 }
@@ -1096,7 +1139,7 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
     getSubDataFromStr(recievedData, chMsgID, i, k);
     getSubDataFromStr(recievedData, recPhone, i, k);
     sql::Statement *stmt = connection->createStatement();
-    std::string command = "SELECT Count(*) FROM messages";
+    std::string command = "SELECT Count(*) FROM `messages`";
     sql::ResultSet *res = stmt->executeQuery(command);
     res->next();
     std::string str;
@@ -1110,9 +1153,11 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
         if (iResult == INVALID_SOCKET) 
         {
             appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+            delete res;
             delete stmt;
             return false;
         }
+        delete res;
         delete stmt;
         return true;
     }
@@ -1129,11 +1174,9 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
             res->next();
             //Проходимся циклом до нужного id сообщения
         }
-        std::string nameField = "text_field";
         while (res->next())
         {
-            //str += res->getString("text_field");
-            str += res->getString(nameField.c_str());
+            str += res->getString("text_field");
             //getString - получает хранящуюся строку по названию поля;
             //Название поля char-массив.
             str += ";";
@@ -1145,9 +1188,11 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
         if (iResult == INVALID_SOCKET)
         {
             appendToLog(logHWND, L"Ошибка при отправке данных клиенту.");
+            delete res;
             delete stmt;
             return false;
         }
+        delete res;
         delete stmt;
         connection->close();
         return true;
@@ -1158,6 +1203,7 @@ bool getMsg(SOCKET* lSocket, CHAR* recievedData)
         wchar_t errors[SIZE];
         MultiByteToWideChar(codePage, 0, ex.what(), strlen(ex.what()), errors, SIZE);
         appendToLog(logHWND, errors);
+        delete res;
         delete stmt;
         connection->close();
         return false;
@@ -1274,7 +1320,7 @@ int clientManagement(SOCKET* clientSocket)
                 break;
                 case GET_LAST_MESSAGE: 
                 {
-                    getLastMessage(recvBuf);
+                    getLastMessage(clientSocket, recvBuf);
                 }
                 break;
                 default:

@@ -73,6 +73,7 @@ INT classModUserInfo(HWND hWnd, INT idx);
 INT registrationInfo(SOCKET listenSock);
 INT connectToServ();
 INT disconnectFromServ(SOCKET listenSock);
+CHAR* getNumPhoneByID(INT ID);
 //Точка входа APIENTRY
 //APIENTRY - это как и CALLBACK, фукнция обратного вызова
 INT APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -1572,7 +1573,6 @@ INT getUrl(CHAR* recvBuf)
         return 0;
     }
     if (!strcmp(command, "AUTHORIZATION"))
-        //"EXIST/AUTHORIZATION"
     {
         return 1;
     }
@@ -1589,7 +1589,7 @@ INT getUrl(CHAR* recvBuf)
     {
         return 3;
     }
-    if (!strcmp(command, "MESSAGES_IS_NOT")) 
+    if (!strcmp(command, "MESSAGES_IS_NOT") || !strcmp(command, "EXISTS"))
     {
         return -1;
     }
@@ -1597,9 +1597,9 @@ INT getUrl(CHAR* recvBuf)
     {
         return 4;
     }
-    if (!strcmp(command, "EXISTS")) 
+    if (!strcmp(command, "IS_LAST_MESSAGE")) 
     {
-        return -1;
+        return 5;
     }
     return -1;
 }
@@ -1902,6 +1902,20 @@ INT recievedData(SOCKET clientSocket)
         break;
         case IDS_WAS_VERIFICATED:
             return 0;
+        case IDS_SHOW_LAST_MESSAGE: 
+        {
+            INT i = 0;
+            INT k = 0;
+            CONST INT SIZEID = 512;
+            CHAR chSenderID[SIZEID];
+            CHAR chSenderPhone[SIZE]{};
+            while (chSenderID[i++] == '*');
+            getStringFromArr(i, k, recvBuf, chSenderID);
+            INT ID = atoi(chSenderID);
+            strcpy_s(chSenderPhone, getNumPhoneByID(ID));
+            sender.setNumberPhone(chSenderPhone);
+        }
+        break;
         default: 
             return 1;
         }       
@@ -3152,7 +3166,8 @@ BOOL getLocalMSG(SOCKET lSocket, INT id, HWND hWnd)
                 }
                 sqlite3_finalize(stmt);
                 sqlite3_close(db);
-                //recievedData(lSocket);
+                recievedData(lSocket);
+                showMessages(GetDlgItem(hWnd, IDM_MAIN_LIST_OF_MESSAGES));
             }
         }
     }
@@ -3245,37 +3260,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 accountSearch(GetDlgItem(hWnd, IDR_SEARCH_FIELD), GetDlgItem(hWnd, IDM_MAIN_USER_LIST));
             break;
             }
-            }
-            INT wmId = LOWORD(wParam);
-            switch (wmId)
-            {
-            case IDB_ABOUT_PROGRAM:
-                CreatingAuthorWindow(hWnd);
-            break;
-            case IDB_EXIT:
-                DestroyWindow(hWnd);
-            break;
-            case IDB_ADD_USER:
-                addUser();
-            if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+        }
+        switch (LOWORD(wParam))
+        {
+        case IDB_ABOUT_PROGRAM:
+            CreatingAuthorWindow(hWnd);
+        break;
+        case IDB_EXIT:
+            DestroyWindow(hWnd);
+        break;
+        case IDB_ADD_USER:
+            addUser();
+        if (updateList(GetDlgItem(hWnd, IDM_MAIN_USER_LIST)) == 1) 
+        {
+            return 1;
+        }
+        break;
+        case IDB_SEND_MES: 
+        {
+            sendMesToServ(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
+            recievedData(listenSock);
+        }
+        break;
+        case IDB_REGISTER_REGIST:
+        {
+            WCHAR wcPhone[USERSIZE];
+            CHAR buffer[USERSIZE];
+            if (connectToServ()) 
             {
                 return 1;
             }
-            break;
-            case IDB_SEND_MES: 
-            {
-                sendMesToServ(hWnd, SendMessage(GetDlgItem(hWnd, IDM_MAIN_USER_LIST), LB_GETCURSEL, 0, 0));
-                recievedData(listenSock);
-            }
-            break;
-            case IDB_REGISTER_REGIST:
-            {
-                WCHAR wcPhone[USERSIZE];
-                CHAR buffer[USERSIZE];
-                if (connectToServ()) 
-                {
-                    return 1;
-                }
             GetWindowText(GetDlgItem(hWnd, IDR_REGISTRATION_PHONE), wcPhone, USERSIZE);
             WideCharToMultiByte(codePage, 0, wcPhone, wcslen(wcPhone) + 1, buffer, USERSIZE, NULL, NULL);
             if (checkingNumberPhone(buffer) == 1)

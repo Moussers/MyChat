@@ -8,7 +8,8 @@
 #define IDS_RECV_CONTACT_STATUS			2
 #define IDS_INSERT_DATA_TO_LOCAL		3
 #define IDS_WAS_VERIFICATED				4
-#define IDS_APP_TITLE                   5
+#define IDS_SHOW_LAST_MESSAGE			5
+#define IDS_APP_TITLE                   6
 
 #define IDD_MYCHAT_DIALOG               102
 #define IDD_ABOUTBOX                    103
